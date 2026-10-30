@@ -1,6 +1,7 @@
 -- @description Dubbing SubOverlay
--- @version 0.10.0
--- @author Dubbing System
+-- @version 8.0.1
+-- @author zaraki999kenpachi
+-- @license MIT
 -- @about
 --   # Dubbing SubOverlay
 --   Subtitles over the REAPER Video window: transparent background, centered text, next line,

@@ -8,3 +8,6 @@ REAPER scripts for dubbing: **Dubbing Prompter** (prompter, subtitle import, rol
 3. Extensions → ReaPack → Browse packages → search "Dubbing".
 
 Subtitles embedded in MKV/MP4 need ffmpeg and ffprobe (in `Scripts/DubbingSystem` or on PATH). The video overlay needs ReaImGui and js_ReaScriptAPI.
+
+## License
+MIT, see [LICENSE](LICENSE). Free to use, modify and share.

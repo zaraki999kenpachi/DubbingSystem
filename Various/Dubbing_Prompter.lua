@@ -1,6 +1,7 @@
 -- @description Dubbing Prompter
--- @version 2.5.4
--- @author Dubbing System
+-- @version 8.0.1
+-- @author zaraki999kenpachi
+-- @license MIT
 -- @about
 --   # Dubbing Prompter
 --   Sound director's workstation for dubbing: SRT/ASS/SSA/TXT import, roles, "recorded" marks,
