@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<index version="1" name="Dubbing System">
+  <category name="Various">
+    <reapack name="Dubbing_Prompter.lua" type="script" desc="Dubbing Prompter: subtitles, roles and takes for dubbing">
+      <metadata>
+        <description><![CDATA[Workstation for dubbing sound directors: prompter with the current line, subtitle import (SRT/ASS/SSA/VTT/TXT or tracks embedded in MKV/MP4 via ffmpeg), roles, recorded marks, takes, regions and text items synced with the cursor. Works together with Dubbing_SubOverlay.lua.]]></description>
+      </metadata>
+      <version name="8.0.0" author="zaraki999kenpachi" time="2026-10-31T00:00:00Z">
+        <changelog><![CDATA[First public release.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+      </version>
+    </reapack>
+    <reapack name="Dubbing_SubOverlay.lua" type="script" desc="Dubbing SubOverlay: subtitles over the video window">
+      <version name="8.0.0" author="zaraki999kenpachi" time="2026-10-31T00:00:00Z">
+        <changelog><![CDATA[First public release.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_SubOverlay.lua</source>
+      </version>
+    </reapack>
+  </category>
+</index>
