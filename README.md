@@ -3,7 +3,7 @@
 REAPER scripts for dubbing: **Dubbing Prompter** (prompter, subtitle import, roles, takes) and **Dubbing SubOverlay** (subtitles over the video).
 
 ## Install
-**Windows installer** (scripts + dark theme + fonts): download the `.exe` from [Releases](https://github.com/zaraki999kenpachi/DubbingSystem/releases/latest).
+**Windows installer** (scripts + theme of your choice + fonts): download the `.exe` from [Releases](https://github.com/zaraki999kenpachi/DubbingSystem/releases/latest). At install you pick the gray or black Reapertips theme, or keep your current theme.
 
 ## Install with ReaPack
 1. Extensions → ReaPack → Import repositories…
