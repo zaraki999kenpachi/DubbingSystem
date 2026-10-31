@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.2
+-- @version 8.0.3
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -607,7 +607,7 @@ end
 
 -- ---------- overlay ----------
 local function launch_overlay()
- local dirs={reaper.GetResourcePath().."/Scripts/DubbingSystem/"}
+ local dirs={reaper.GetResourcePath().."/Scripts/Dubbing System/Various/",reaper.GetResourcePath().."/Scripts/DubbingSystem/"}
  local sp=({reaper.get_action_context()})[2]
  if sp then local d=sp:match("^(.*[/\\])"); if d then table.insert(dirs,1,d) end end
  for _,d in ipairs(dirs) do
@@ -624,7 +624,7 @@ local function launch_overlay()
    return
   end
  end
- status="Помести Dubbing_SubOverlay.lua рядом с Prompter или в Scripts/DubbingSystem"
+ status="Помести Dubbing_SubOverlay.lua рядом с Prompter или в Scripts/Dubbing System/Various"
 end
 
 -- restore: close any running overlay, reset its saved settings to defaults and start it again
@@ -1512,7 +1512,7 @@ function check_env()
   "Дорожка дубляжа: "..(extget(K.dub,"")~="" and "назначена" or "НЕ назначена"),
  }
  local found=false
- local dd={reaper.GetResourcePath().."/Scripts/DubbingSystem/"}
+ local dd={reaper.GetResourcePath().."/Scripts/Dubbing System/Various/",reaper.GetResourcePath().."/Scripts/DubbingSystem/"}
  local sp=({reaper.get_action_context()})[2]
  if sp then local d0=sp:match("^(.*[/\\])"); if d0 then table.insert(dd,1,d0) end end
  for _,d in ipairs(dd) do
@@ -2685,12 +2685,14 @@ function clear_session()
 end
 
 -- ---------- subtitles embedded in a video (MKV/MP4) via ffprobe / ffmpeg ----------
--- Needs ffmpeg.exe and ffprobe.exe either in Scripts\DubbingSystem or on PATH.
+-- Needs ffmpeg.exe and ffprobe.exe either in Scripts\Dubbing System or on PATH.
 function ffq(x) return '"'..(tostring(x):gsub('"',''))..'"' end
 function ff_tool(name)
- local exe=reaper.GetResourcePath().."/Scripts/DubbingSystem/"..name..".exe"
- local f=io.open(exe,"rb")
- if f then f:close(); return ffq(exe) end
+ for _,d in ipairs({"/Scripts/Dubbing System/","/Scripts/DubbingSystem/"}) do
+  local exe=reaper.GetResourcePath()..d..name..".exe"
+  local f=io.open(exe,"rb")
+  if f then f:close(); return ffq(exe) end
+ end
  return name
 end
 -- runs a command and returns its output. ExecProcess passes Unicode paths (Cyrillic folders)
@@ -2709,7 +2711,7 @@ function probe_subs(video)
  local out=ff_capture(ff_tool("ffprobe").." -v error -select_streams s -show_entries stream=index,codec_name:stream_tags=language,title:stream_disposition=default -of flat "..ffq(video))
  out=out or ""
  if not out:find("streams%.stream") then
-  if out:find("not recognized") or out:find("not found") or out:find("не является") then return nil,"Нужен ffprobe: положи ffmpeg.exe и ffprobe.exe в папку Scripts\\DubbingSystem" end
+  if out:find("not recognized") or out:find("not found") or out:find("не является") then return nil,"Нужен ffprobe: положи ffmpeg.exe и ffprobe.exe в папку Scripts\\Dubbing System" end
   return nil,"В файле нет дорожек субтитров (или ffprobe не запустился)"
  end
  local st={}
@@ -3438,7 +3440,7 @@ function Mobile.makevideo()
  if Mobile.enc then
   reaper.ShowMessageBox("Подготовка уже идёт, прогресс показан в строке состояния.",T,0); return
  end
- local ans=reaper.ShowMessageBox("Создать лёгкую копию видео для телефона?\n\n"..Mobile.vname..(((Mobile.nsrc or 1)>1) and "\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)" or "").."\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\DubbingSystem или в PATH.",T,1)
+ local ans=reaper.ShowMessageBox("Создать лёгкую копию видео для телефона?\n\n"..Mobile.vname..(((Mobile.nsrc or 1)>1) and "\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)" or "").."\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\Dubbing System или в PATH.",T,1)
  if ans~=1 then return end
  local www=Mobile.www()
  reaper.RecursiveCreateDirectory(www,0)
