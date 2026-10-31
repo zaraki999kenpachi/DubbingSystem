@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.1
+-- @version 8.0.2
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -1512,11 +1512,14 @@ function check_env()
   "Дорожка дубляжа: "..(extget(K.dub,"")~="" and "назначена" or "НЕ назначена"),
  }
  local found=false
- for _,d in ipairs({reaper.GetResourcePath().."/Scripts/DubbingSystem/"}) do
+ local dd={reaper.GetResourcePath().."/Scripts/DubbingSystem/"}
+ local sp=({reaper.get_action_context()})[2]
+ if sp then local d0=sp:match("^(.*[/\\])"); if d0 then table.insert(dd,1,d0) end end
+ for _,d in ipairs(dd) do
   local f=io.open(d.."Dubbing_SubOverlay.lua","r")
   if f then f:close(); found=true end
  end
- L[#L+1]="Файл оверлея в Scripts/DubbingSystem: "..(found and "найден" or "не найден (положи рядом с Prompter)")
+ L[#L+1]="Файл оверлея рядом с Prompter: "..(found and "найден" or "не найден (положи рядом с Prompter)")
  reaper.ShowMessageBox(table.concat(L,"\n"),"Dubbing — проверка окружения",0)
  status="Проверка окружения показана"
 end

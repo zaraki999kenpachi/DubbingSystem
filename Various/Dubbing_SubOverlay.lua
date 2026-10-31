@@ -1,5 +1,5 @@
 -- @description Dubbing SubOverlay
--- @version 8.0.1
+-- @version 8.0.2
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
