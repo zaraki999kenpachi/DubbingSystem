@@ -5,6 +5,10 @@
       <metadata>
         <description><![CDATA[Workstation for dubbing sound directors: prompter with the current line, subtitle import (SRT/ASS/SSA/VTT/TXT or tracks embedded in MKV/MP4 via ffmpeg), roles, recorded marks, takes, regions and text items synced with the cursor. Works together with Dubbing_SubOverlay.lua.]]></description>
       </metadata>
+      <version name="8.0.4" author="zaraki999kenpachi" time="2026-11-01T06:00:00Z">
+        <changelog><![CDATA[Menus no longer click the button under them; the replica list scrolls to the current replica; file dialogs remember the last folder; F1-F5 switch screens directly (F5 = text with the top bar), F6 = help.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+      </version>
       <version name="8.0.3" author="zaraki999kenpachi" time="2026-11-01T03:00:00Z">
         <changelog><![CDATA[Single script folder: ffmpeg/ffprobe are found in Scripts/Dubbing System.]]></changelog>
         <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>

@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.3
+-- @version 8.0.4
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -399,7 +399,7 @@ end
 
 local function import_orig()
  if #rows==0 then status="Сначала импортируй субтитры (перевод)"; return end
- local ok,path=reaper.GetUserFileNameForRead("","Оригинальные субтитры (SRT / ASS / SSA / TXT)","")
+ local ok,path=pick_file("Оригинальные субтитры (SRT / ASS / SSA / TXT)")
  if not ok then return end
  local list=read_subs_file(path)
  if not list or #list==0 then status="Оригинал не прочитан"; return end
@@ -849,7 +849,9 @@ end
 -- ---------- menus / dialogs ----------
 local function popup(items)
  gfx.x,gfx.y=gfx.mouse_x,gfx.mouse_y
- return gfx.showmenu(table.concat(items,"|"))
+ local r=gfx.showmenu(table.concat(items,"|"))
+ lastcap=lastcap|1 -- the click that picked a menu item must not also press a button drawn later in this frame
+ return r
 end
 
 local function shift_time()
@@ -1801,7 +1803,7 @@ local function export_project()
 end
 
 local function import_project()
- local ok,path=reaper.GetUserFileNameForRead("","Проект Dubbing (.dubproj)","")
+ local ok,path=pick_file("Проект Dubbing (.dubproj)")
  if not ok then return end
  local f=io.open(path,"rb"); if not f then status="Не удалось открыть файл"; return end
  local data=f:read("*a"); f:close()
@@ -2687,6 +2689,26 @@ end
 -- ---------- subtitles embedded in a video (MKV/MP4) via ffprobe / ffmpeg ----------
 -- Needs ffmpeg.exe and ffprobe.exe either in Scripts\Dubbing System or on PATH.
 function ffq(x) return '"'..(tostring(x):gsub('"',''))..'"' end
+-- file picker that remembers the last folder (falls back to project / user folder)
+function pick_file(title)
+ local d=reaper.GetExtState("DubbingPrompter","lastdir") or ""
+ if d=="" then
+  local pp=reaper.GetProjectPath("") or ""
+  if pp~="" then d=pp:match("^(.*)[/\\][^/\\]*$") or pp end
+ end
+ if d=="" then
+  local home=os.getenv("USERPROFILE") or os.getenv("HOME") or ""
+  if home~="" then d=home.."\\Videos" end
+ end
+ local init=(d~="" and (d.."\\")) or ""
+ local ok,path=reaper.GetUserFileNameForRead(init,title,"")
+ if ok and path and path~="" then
+  local nd=path:match("^(.*)[/\\][^/\\]*$")
+  if nd then reaper.SetExtState("DubbingPrompter","lastdir",nd,true) end
+ end
+ return ok,path
+end
+
 function ff_tool(name)
  for _,d in ipairs({"/Scripts/Dubbing System/","/Scripts/DubbingSystem/"}) do
   local exe=reaper.GetResourcePath()..d..name..".exe"
@@ -2736,7 +2758,7 @@ function sub_is_graphic(codec)
 end
 function import_from_video(video,auto)
  if not video then
-  local ok,v=reaper.GetUserFileNameForRead("","Видео со вшитыми субтитрами (MKV / MP4)","")
+  local ok,v=pick_file("Видео со вшитыми субтитрами (MKV / MP4)")
   if not ok then return end
   video=v
  end
@@ -2778,7 +2800,7 @@ end
 
 -- одна кнопка: выбрать файл (видео или .srt/.ass/.ssa/.txt) → субтитры → регионы → текстовые итемы
 function import_all()
- local ok,path=reaper.GetUserFileNameForRead("","Импорт: видео (MKV/MP4) или субтитры (SRT/ASS/SSA/TXT)","")
+ local ok,path=pick_file("Импорт: видео (MKV/MP4) или субтитры (SRT/ASS/SSA/TXT)")
  if not ok then return end
  local ext=(path:match("%.([%w]+)$") or ""):lower()
  if ext=="srt" or ext=="ass" or ext=="ssa" or ext=="txt" then load_subs_path(path)
@@ -3736,10 +3758,10 @@ local function handle_key(ch)
   return true
  end
  if show_help then
-  if ch==27 or ch==13 or ch==26161 then show_help=false end
+  if ch==27 or ch==13 or ch==26166 then show_help=false end
   return true
  end
- if ch==26161 then show_help=true; return true end                  -- F1: help
+ if ch==26166 then show_help=true; return true end                  -- F6: help
  if search_focus then
   if ch==27 then
    if search~="" then search=""; mark_dirty() else search_focus=false end
@@ -4181,7 +4203,7 @@ TOOL_ITEMS={
  [17]={l="Сценарии (текст)",h="Текстовые сценарии для каждого актёра, по одному файлу на роль."},
  [18]={l="Дубли на N кадров",h="Сдвинуть дубли выбранной реплики на заданное число кадров."},
  [19]={l="Лучший дубль",h="Выбрать лучший дубль выбранной реплики, остальные приглушить."},
- [20]={l="Справка (F1)",h="Открыть окно с горячими клавишами и описанием."},
+ [20]={l="Справка (F6)",h="Открыть окно с горячими клавишами и описанием."},
  [21]={l="Записано по дорожке",h="Отметить как записанные реплики, по которым на дорожке дубляжа уже есть запись."},
  [22]={l="Громкость дублей",h="Проверить клиппинг и тишину в дублях, записать отчёт."},
  [23]={l="Сценарии (HTML)",h="HTML-сценарии по ролям, открываются для печати в PDF."},
@@ -4423,9 +4445,12 @@ function draw_shell()
  local playing=(reaper.GetPlayState()&1)==1
  local pos=playing and reaper.GetPlayPosition() or reaper.GetCursorPosition()
  local cur_idx=row_at(pos)
- if follow and playing and cur_idx>0 and cur_idx~=last_cur then
+ if follow and cur_idx>0 and cur_idx~=last_cur then
   local vp=vpos_of(cur_idx)
-  if vp>0 then scroll=math.max(0,vp-3) end
+  if vp>0 then
+   if playing then scroll=math.max(0,vp-3)
+   elseif vp-1<scroll or vp>scroll+VISIBLE then scroll=math.max(0,vp-3) end
+  end
  end
  last_cur=cur_idx
  local ci=cur_idx
@@ -4519,7 +4544,7 @@ function draw_shell()
    end
   end
  end
- if hover and TAB~=1 then   -- точки-вкладки скрыты на экране суфлёра (переключение: F2–F5, F6 — верхняя строка)
+ if hover and TAB~=1 then   -- точки-вкладки скрыты на экране суфлёра (переключение: F1–F5; F6 — справка)
   local gap=34
   local nn=#names+((TAB==1) and 1 or 0)
   local x0=W/2-(nn-1)*gap/2
@@ -4653,8 +4678,9 @@ local function loop()
   ov_restore_at=nil; launch_overlay(); status="Оверлей восстановлен с настройками по умолчанию"
  end
  if not edit_mode then
-  if ch==26162 then TAB=1 elseif ch==26163 then TAB=2 elseif ch==26164 then TAB=3 elseif ch==26165 then TAB=4
-  elseif ch==26166 then TOPBAR=not TOPBAR end
+  -- F1 text, F2 list, F3 volume, F4 tools, F5 text with the top bar (works from any screen; F5 again hides the bar), F6 help
+  if ch==26161 then TAB=1; TOPBAR=false elseif ch==26162 then TAB=2 elseif ch==26163 then TAB=3 elseif ch==26164 then TAB=4
+  elseif ch==26165 then if TAB==1 and TOPBAR then TOPBAR=false else TAB=1; TOPBAR=true end end
  end
  local handled=handle_key(ch)
  if not handled then
@@ -4671,6 +4697,23 @@ local function loop()
  gfx.set(0,0,0,1); gfx.rect(0,0,gfx.w,gfx.h,1)
  dub_rec_guard()
  draw()
+ if show_help then
+  rect(0,0,W,H,{.03,.04,.06})
+  local L={
+   "СПРАВКА — горячие клавиши",
+   "",
+   "F1  суфлёр          F2  список реплик     F3  громкость",
+   "F4  инструменты     F5  суфлёр с верхней строкой     F6  эта справка",
+   "",
+   "Пробел — play / stop        P — играть реплику        L — цикл",
+   "D — записано        B — закладка        N — следующая закладка",
+   "Стрелки вверх / вниз — предыдущая / следующая реплика",
+   "Enter — править текст реплики        Ctrl+Z — отмена",
+   "",
+   "Esc, Enter, F6 или клик — закрыть справку"}
+  for i,l in ipairs(L) do txt(40,30+(i-1)*30,l,(i==1) and 20 or 15,C.text) end
+  if pressed() then show_help=false end
+ end
  Mobile.tick()
  autosave_version()
  lastcap=gfx.mouse_cap
