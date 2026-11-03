@@ -5,6 +5,14 @@
       <metadata>
         <description><![CDATA[Workstation for dubbing sound directors: prompter with the current line, subtitle import (SRT/ASS/SSA/VTT/TXT or tracks embedded in MKV/MP4 via ffmpeg), roles, recorded marks, takes, regions and text items synced with the cursor. Works together with Dubbing_SubOverlay.lua.]]></description>
       </metadata>
+      <version name="8.0.6" author="zaraki999kenpachi" time="2026-11-03T05:30:00Z">
+        <changelog><![CDATA[Multilingual interface: Russian, English, Japanese, Chinese. The language follows the REAPER language pack automatically (including Chinese packs); change it in the "More" menu and restart the script.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+      </version>
+      <version name="8.0.5" author="zaraki999kenpachi" time="2026-11-03T01:00:00Z">
+        <changelog><![CDATA[Multilingual interface: Russian, English, Japanese, Chinese. Language follows the REAPER language pack automatically; change it in the "More" menu (restart the script after switching).]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+      </version>
       <version name="8.0.4" author="zaraki999kenpachi" time="2026-11-01T06:00:00Z">
         <changelog><![CDATA[Menus no longer click the button under them; the replica list scrolls to the current replica; file dialogs remember the last folder; F1-F5 switch screens directly (F5 = text with the top bar), F6 = help.]]></changelog>
         <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>

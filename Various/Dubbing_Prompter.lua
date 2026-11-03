@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.4
+-- @version 8.0.6
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -17,6 +17,1884 @@
 --        chars-per-second meter, notes, bookmarks, original-text compare, play line with pre-roll / loop,
 --        per-role and per-track ducking depth, ducking from real dub items, fit timing to takes,
 --        time shift, global replace, role rename, SRT per role, project export/import, auto versions.
+I18N={}
+I18N.en={
+["Пробел — play/stop · P — реплика · L — цикл · D — записано · B — закладка · N — след. закладка"]="Space — play/stop · P — line · L — loop · D — recorded · B — bookmark · N — next bookmark",
+["ок"]="ok",
+["переписать"]="rewrite",
+["спорно"]="disputed",
+["губы не совпадают"]="lip-sync off",
+["bytes %d, строк со временем: %d"]="bytes %d, timed lines: %d",
+[", первая: "]=", first: ",
+["Нечего отменять"]="Nothing to undo",
+["Отменено"]="Undone",
+["Не удалось открыть файл"]="Could not open file",
+["Субтитры не найдены ("]="No subtitles found (",
+["Импортировано реплик"]="Lines imported",
+[", ролей: "]=", roles: ",
+["Сначала импортируй субтитры (перевод)"]="Import subtitles (translation) first",
+["Оригинальные субтитры (SRT / ASS / SSA / TXT)"]="Original subtitles (SRT / ASS / SSA / TXT)",
+["Оригинал не прочитан"]="Original could not be read",
+["Оригинал привязан к "]="Original linked to ",
+[" репликам"]=" lines",
+["Сначала выдели аудиодорожку"]="Select an audio track first",
+["Оригинал: дорожек "]="Original: tracks ",
+["Дубляж: "]="Dub: ",
+["Сначала импортируй субтитры"]="Import subtitles first",
+["Выдели оригинальные дорожки и нажми «Назначить оригинал»"]="Select the original tracks and click \"Assign original\"",
+["Нет окон приглушения: на дорожке дубляжа нет звука под репликами"]="No ducking windows: the dub track has no audio under the lines",
+["Создать огибающую приглушения на дорожках: "]="Create ducking envelope on tracks: ",
+[", окон: "]=", windows: ",
+["?\n\nВНИМАНИЕ: текущие точки Volume будут заменены."]="?\n\nWARNING: existing Volume points will be replaced.",
+["Автоматизация создана: дорожек "]="Automation created: tracks ",
+[", окон "]=", windows ",
+["Настройки ducking"]="Ducking settings",
+["Приглушение (дБ),Перед репликой (мс),После реплики (мс),Плавное снижение (мс),Возврат громкости (мс)"]="Ducking (dB),Before line (ms),After line (ms),Fade down (ms),Volume return (ms)",
+["Настройки сохранены"]="Settings saved",
+["Неверные значения настроек"]="Invalid settings values",
+["В субтитрах нет ролей"]="No roles in subtitles",
+["Приглушение по ролям, дБ (пусто = общее "]="Ducking by role, dB (empty = default ",
+["Глубина по ролям сохранена"]="Per-role depth saved",
+["Сначала назначь оригинальные дорожки"]="Assign the original tracks first",
+["Приглушение по дорожкам, дБ (пусто = по окну)"]="Ducking by track, dB (empty = per window)",
+["Глубина по дорожкам сохранена"]="Per-track depth saved",
+["Оверлей: запуск / выключение (если REAPER спросит — выбери Terminate)"]="Overlay: starting / stopping (if REAPER asks, choose Terminate)",
+["Не удалось зарегистрировать оверлей как действие"]="Could not register overlay as an action",
+["Помести Dubbing_SubOverlay.lua рядом с Prompter или в Scripts/Dubbing System/Various"]="Put Dubbing_SubOverlay.lua next to Prompter or in Scripts/Dubbing System/Various",
+["Оверлей перезапускается с настройками по умолчанию…"]="Overlay restarting with default settings…",
+["Оверлей восстановлен с настройками по умолчанию"]="Overlay restored to default settings",
+["Выбери реплику"]="Select a line",
+["Время и роль"]="Time and role",
+["Начало (ЧЧ:ММ:СС.ммм),Конец (ЧЧ:ММ:СС.ммм),Роль"]="Start (HH:MM:SS.mmm),End (HH:MM:SS.mmm),Role",
+["Неверный формат"]="Invalid format",
+["Неверное время (конец должен быть позже начала)"]="Invalid time (end must be after start)",
+["Время и роль изменены"]="Time and role changed",
+["Заметка удалена"]="Note deleted",
+["Заметка сохранена"]="Note saved",
+["Текст изменён"]="Text changed",
+["Пустой текст не сохранён"]="Empty text not saved",
+["Правка отменена"]="Edit canceled",
+["В реплике нет пробелов — разбивать нечего"]="No spaces in the line — nothing to split",
+["Не получилось разбить реплику"]="Could not split the line",
+["Реплика разбита"]="Line split",
+["Нет следующей реплики"]="No next line",
+["Реплики склеены"]="Lines merged",
+["Реплика удалена (Ctrl+Z — вернуть)"]="Line deleted (Ctrl+Z to restore)",
+["записано"]="recorded",
+["отметка снята"]="mark removed",
+["Записано"]="Recorded",
+["Отметка снята"]="Unmarked",
+["Закладка поставлена"]="Bookmark set",
+["Закладка снята"]="Bookmark removed",
+["Закладка: реплика №"]="Bookmark: line #",
+["Закладок нет"]="No bookmarks",
+["Цикл реплики выключен"]="Line loop off",
+["Цикл реплики включён (L — выключить)"]="Line loop on (L to turn off)",
+["Воспроизведение реплики с пре-роллом "]="Playing line with pre-roll ",
+[" с"]=" s",
+["На дорожке дубляжа нет итемов (назначь дубляж)"]="No items on the dub track (assign the dub)",
+["Подогнать тайминг ВСЕХ реплик под записи на дорожке дубляжа?\n(по итему с наибольшим пересечением; Ctrl+Z вернёт)"]="Fit timing of ALL lines to the recordings on the dub track?\n(by item with greatest overlap; Ctrl+Z to undo)",
+["Записей под репликами не найдено"]="No recordings found under the lines",
+["Подогнано реплик: "]="Lines fitted: ",
+["Все реплики"]="All lines",
+["Только роль выбранной реплики"]="Only the selected line's role",
+["Выбранная и все после неё"]="Selected and all after it",
+["Сдвиг времени"]="Time shift",
+["Секунд (например 0.5 или -1)"]="Seconds (e.g. 0.5 or -1)",
+["Неверное значение сдвига"]="Invalid shift value",
+["Сдвинуто реплик: "]="Lines shifted: ",
+[" на "]=" by ",
+["Глобальная замена"]="Global replace",
+["Найти (с учётом регистра)"]="Find (case-sensitive)",
+["Заменить на ("]="Replace with (",
+["Не найдено: "]="Not found: ",
+["Замен: "]="Replaced: ",
+["Переименовать роль"]="Rename role",
+["Новое имя для «"]="New name for \"",
+["Роль переименована: "]="Role renamed: ",
+["Снять отметки «записано» со всех реплик?"]="Clear \"recorded\" marks from all lines?",
+["Отметки сняты"]="Marks cleared",
+["Пре-ролл"]="Pre-roll",
+["Секунд до реплики"]="Seconds before line",
+["Неверное значение пре-ролла"]="Invalid pre-roll value",
+["Пре-ролл: "]="Pre-roll: ",
+["Нечего экспортировать"]="Nothing to export",
+["SRT сохранён: "]="SRT saved: ",
+["Не удалось записать: "]="Could not write: ",
+["SRT по ролям: файлов "]="SRT by role: files ",
+[" (в папке "]=" (in folder ",
+["У реплики нет дублей на дорожке дубляжа"]="The line has no takes on the dub track",
+["Лучший дубль не выбран (все дубли звучат)"]="No best take selected (all takes audible)",
+["Лучший дубль: "]="Best take: ",
+[" из "]=" of ",
+[" (остальные заглушены)"]=" (others muted)",
+[" лучший дубль: "]=" best take: ",
+["нет"]="none",
+["Нечего проверять"]="Nothing to check",
+["№%03d  скорость %.0f зн/с  %s"]="#%03d  speed %.0f cps  %s",
+["№%03d  короткая реплика %.2f с"]="#%03d  short line %.2f s",
+["№%03d-%03d  пауза %.2f с%s"]="#%03d-%03d  gap %.2f s%s",
+[" (перекрытие)"]=" (overlap)",
+["№%03d  дубль длиннее реплики на %.1f с"]="#%03d  take longer than line by %.1f s",
+["ПРОВЕРКА (QC) — "]="CHECK (QC) — ",
+["Реплик: "]="Lines: ",
+["  скорость ≥"]="  speed ≥",
+[" зн/с: "]=" cps: ",
+["  короткие: "]="  short: ",
+["  пауза <"]="  gap <",
+[" с: "]=" s: ",
+["  дубль длиннее: "]="  take longer: ",
+["  без дубля (не записано): "]="  no take (not recorded): ",
+["Роль "]="Role ",
+[": записано "]=": recorded ",
+["\n\nПолный отчёт: "]="\n\nFull report: ",
+["QC: скорость "]="QC: speed ",
+[", пауза "]=", pause ",
+[", без дубля "]=", no take ",
+["Отчёт QC сохранён: "]="QC report saved: ",
+["СЦЕНАРИЙ — "]="SCRIPT — ",
+["№%03d  %s – %s  (%.1f с)%s"]="#%03d  %s – %s  (%.1f s)%s",
+["  [записано]"]="  [recorded]",
+["  оригинал: "]="  original: ",
+["  заметка: "]="  note: ",
+["_сценарий.txt"]="_script.txt",
+["Сценарии по ролям: "]="Scripts by role: ",
+["Сценарии по ролям: файлов "]="Scripts by role: files ",
+["Сдвиг дублей"]="Take shift",
+["Кадров (например 2 или -3)"]="Frames (e.g. 2 or -3)",
+["Неверное число кадров"]="Invalid frame count",
+[" дубли сдвинуты на "]=" takes shifted by ",
+[" кадр."]=" frame(s).",
+["Дубли сдвинуты на "]="Takes shifted by ",
+[" кадр. ("]=" fr. (",
+[" с)"]=" s)",
+["Нет реплик"]="No lines",
+["Новых записей на дорожке дубляжа не найдено"]="No new recordings found on the dub track",
+["Авто-отметка записанных по дорожке дубляжа: "]="Auto-marked as recorded from the dub track: ",
+["Отмечено как записанные: "]="Marked as recorded: ",
+[" (Ctrl+Z отменит)"]=" (Ctrl+Z to undo)",
+["Проверка громкости нужна REAPER 6.x или новее"]="Level check requires REAPER 6.x or newer",
+["Назначь дорожку дубляжа"]="Assign the dub track",
+["  КЛИППИНГ"]="  CLIPPING",
+["  очень тихо"]="  very quiet",
+["  ШУМ В ПАУЗЕ"]="  NOISE IN GAP",
+["%s  %s  пик %.1f dBFS  RMS %.1f dBFS  шум %.1f dBFS  %.1f с%s"]="%s  %s  peak %.1f dBFS  RMS %.1f dBFS  noise %.1f dBFS  %.1f s%s",
+["ПРОВЕРКА ГРОМКОСТИ ДУБЛЕЙ — "]="TAKE LEVEL CHECK — ",
+["Дублей: "]="Takes: ",
+["  клиппинг: "]="  clipping: ",
+["  очень тихо (<-30 dBFS): "]="  very quiet (<-30 dBFS): ",
+["  шум в паузе (>-50 dBFS): "]="  noise in gap (>-50 dBFS): ",
+["Громкость: дублей "]="Loudness: takes ",
+[", клиппинг "]=", clipping ",
+[", тихо "]=", quiet ",
+["Dubbing Prompter — громкость"]="Dubbing Prompter — levels",
+["Громкость проверена: клиппинг "]="Levels checked: clipping ",
+["Выравнивание нужна REAPER 6.x или новее"]="Leveling requires REAPER 6.x or newer",
+["Выровнять громкость всех дублей под медиану (±6 дБ)?\nCtrl+Z в REAPER вернёт."]="Match the level of all takes to the median (±6 dB)?\nCtrl+Z in REAPER will undo.",
+["Для выравнивания нужно хотя бы два дубля"]="At least two takes are needed for leveling",
+["Выравнивание громкости дублей: "]="Take loudness matching: ",
+["Громкость выровнена у дублей: "]="Take level matched: ",
+[" (±6 дБ, Ctrl+Z в REAPER вернёт)"]=" (±6 dB, Ctrl+Z in REAPER to undo)",
+["<h1>Сценарий: "]="<h1>Script: ",
+["<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Записано</th></tr>"]="<table><tr><th>#</th><th>Timing</th><th>Text</th><th>Recorded</th></tr>",
+["<div class='n'>оригинал: "]="<div class='n'>original: ",
+["_сценарий.html"]="_script.html",
+["HTML-сценарии по ролям: "]="HTML scripts by role: ",
+["HTML-сценарии: файлов "]="HTML scripts: files ",
+[" (открой в браузере и «Печать → Сохранить в PDF»)"]=" (open in a browser and use \"Print → Save as PDF\")",
+["\239\187\191№;Роль;Начало;Конец;Длительность, с;Зн/с;Текст;Записано;Дублей;Превышение, с;Заметка"]="\239\187\191#;Role;Start;End;Duration, s;Chars/s;Text;Recorded;Takes;Overrun, s;Note",
+["да"]="yes",
+["_лист_сессии.csv"]="_session_sheet.csv",
+["Лист сессии (CSV): реплик "]="Session sheet (CSV): lines ",
+["Лист сессии сохранён: "]="Session sheet saved: ",
+["VTT сохранён: "]="VTT saved: ",
+["СВОДКА ЗА "]="SUMMARY FOR ",
+["Сегодня отмечено записанным: "]="Marked recorded today: ",
+["Вызывных листов сделано сегодня: "]="Call sheets made today: ",
+["Всего реплик: "]="Total lines: ",
+["  записано: "]="  recorded: ",
+["Оценки: ок "]="Verdicts: ok ",
+["  переписать "]="  rewrite ",
+["  спорно "]="  disputed ",
+["Dubbing Prompter — сводка за день"]="Dubbing Prompter — daily summary",
+["Сводка за день показана"]="Daily summary shown",
+["%s: записано %d из %d, осталось %d · реплик %.0f с · дублей %d"]="%s: recorded %d of %d, left %d · lines %.0f s · takes %d",
+["Dubbing Prompter — сводка по актёрам"]="Dubbing Prompter — summary by actor",
+["Сводка по актёрам показана"]="Summary by actor shown",
+["Пороги проверки"]="Check thresholds",
+["Скорость, зн/с,Минимальная пауза, с,Короткая реплика, с"]="Speed, cps,Minimum gap, s,Short line, s",
+["Пороги сохранены: "]="Thresholds saved: ",
+[" зн/с, пауза "]=" cps, gap ",
+[" с, короткая <"]=" s, short <",
+["Неверные значения порогов"]="Invalid threshold values",
+["Оценка: "]="Verdict: ",
+["Оценка снята"]="Verdict cleared",
+[" оценка: "]=" verdict: ",
+["снята"]="removed",
+["все"]="all",
+["губы"]="lips",
+["не записано"]="not recorded",
+["Фильтр: "]="Filter: ",
+["<!doctype html><html lang='ru'><head><meta charset='utf-8'><title>Вызывной лист</title><style>"]="<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Call sheet</title><style>",
+["<h1>Вызывной лист: "]="<h1>Call sheet: ",
+[" · дата: "]=" · date: ",
+["<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Заметка</th></tr>"]="<table><tr><th>#</th><th>Timing</th><th>Text</th><th>Note</th></tr>",
+["</table><p>Реплик к записи: "]="</table><p>Lines to record: ",
+["_вызывной_"]="_callsheet_",
+["Не удалось записать файл"]="Could not write file",
+["Вызывной лист "]="Call sheet ",
+["Вызывной лист: "]="Call sheet: ",
+[" реплик (HTML в папке "]=" lines (HTML in folder ",
+["Выбрано реплик: "]="Lines selected: ",
+["Выбор снят, выбрано: "]="Selection cleared, selected: ",
+["Пакетный сдвиг"]="Batch shift",
+["Секунд для "]="Seconds for ",
+[" реплик (например 0.5 или -1)"]=" lines (e.g. 0.5 or -1)",
+["Пакетный сдвиг "]="Batch shift ",
+[" реплик на "]=" lines by ",
+[" с (Ctrl+Z отменит)"]=" s (Ctrl+Z to undo)",
+["Пакетная роль"]="Batch role",
+["Роль для "]="Role for ",
+[" реплик (пусто = без роли)"]=" lines (empty = no role)",
+["Пакетная роль «"]="Batch role «",
+["» для "]="» for ",
+[" реплик"]=" lines",
+["Роль назначена: "]="Role assigned: ",
+[" реплик (Ctrl+Z отменит)"]=" lines (Ctrl+Z to undo)",
+["Пакетно записано: "]="Batch marked recorded: ",
+["Пакетно снято: "]="Batch unmarked: ",
+["Отмечено записанными: "]="Marked as recorded: ",
+["Снята отметка у: "]="Unmarked: ",
+["Выбор реплик снят"]="Line selection cleared",
+["Актёр: "]="Actor: ",
+["ОКРУЖЕНИЕ DUBBING"]="DUBBING ENVIRONMENT",
+["ReaImGui (оверлей): "]="ReaImGui (overlay): ",
+["есть"]="found",
+["НЕТ — установи через ReaPack"]="MISSING — install via ReaPack",
+["js_ReaScriptAPI (привязка оверлея к видео): "]="js_ReaScriptAPI (overlay-to-video attach): ",
+["нет (оверлей будет без привязки)"]="missing (overlay will not attach)",
+["Аудио-доступ (громкость, шум): "]="Audio access (level, noise): ",
+["НЕТ — нужен REAPER 6.x+"]="MISSING — REAPER 6.x+ required",
+["Частота кадров проекта: "]="Project frame rate: ",
+["нет функции"]="no function",
+["Дорожка дубляжа: "]="Dub track: ",
+["назначена"]="assigned",
+["НЕ назначена"]="NOT assigned",
+["Файл оверлея рядом с Prompter: "]="Overlay file next to Prompter: ",
+["найден"]="found",
+["не найден (положи рядом с Prompter)"]="not found (put it next to Prompter)",
+["Dubbing — проверка окружения"]="Dubbing — environment check",
+["Проверка окружения показана"]="Environment check shown",
+["Нужен REAPER 6.x+"]="REAPER 6.x+ required",
+["%s  %s  интегральная %s LUFS  макс. момент. %s  макс. кратк. %s"]="%s  %s  integrated %s LUFS  max momentary %s  max short-term %s",
+["ГРОМКОСТЬ LUFS — "]="LUFS LOUDNESS — ",
+["Дублей измерено: "]="Takes measured: ",
+["  средняя интегральная: "]="  average integrated: ",
+["LUFS измерены: "]="LUFS measured: ",
+[" дублей (файл "]=" takes (file ",
+["  ⚠ отличается больше 3 дБ"]="  ⚠ differs by more than 3 dB",
+["элемент %d (%s), дубль %d: %s LUFS, %+.1f дБ к медиане%s"]="item %d (%s), take %d: %s LUFS, %+.1f dB vs median%s",
+["ТАКИ ВНУТРИ ЭЛЕМЕНТОВ — "]="TAKES WITHIN ITEMS — ",
+["Элементов с несколькими takes: "]="Items with multiple takes: ",
+["  отличаются больше 3 дБ: "]="  differ by more than 3 dB: ",
+["Takes сравнены: элементов "]="Takes compared: items ",
+["; отличаются: "]="; differing: ",
+["скорость %.0f зн/с"]="speed %.0f cps",
+["короткая"]="short",
+["пауза / перекрытие"]="gap / overlap",
+["нет дубля"]="no take",
+["дубль длиннее на %.1f с"]="take longer by %.1f s",
+["Проблемных реплик нет"]="No problem lines",
+["Перешли к реплике №"]="Jumped to line #",
+["Воспроизвести реплику,Цикл реплики,Записано,Закладка,След. закладка,Лучший дубль,Следующий актёр"]="Play line,Line loop,Recorded,Bookmark,Next bookmark,Best take,Next actor",
+["Горячие клавиши (одна латинская буква)"]="Hotkeys (one Latin letter)",
+["Клавиши не сохранены: нужны разные латинские буквы"]="Keys not saved: use different Latin letters",
+["Горячие клавиши сохранены (1–4 для оценок не меняются)"]="Hotkeys saved (1–4 for verdicts unchanged)",
+["дубли (×N)"]="takes (×N)",
+["зн/с"]="cps",
+["длительность"]="duration",
+["превышение"]="overrun",
+["заметка"]="note",
+["оценка"]="verdict",
+["Колонка «"]="Column \"",
+["показана"]="shown",
+["скрыта"]="hidden",
+["Профиль настроек"]="Settings profile",
+["Имя профиля"]="Profile name",
+["Профиль 1"]="Profile 1",
+["Пустое имя профиля"]="Empty profile name",
+["Не удалось записать профиль"]="Could not write profile",
+["Профиль сохранён: "]="Profile saved: ",
+["Сохранённых профилей нет"]="No saved profiles",
+["Профиль не открылся"]="Could not open profile",
+["Профиль загружен: "]="Profile loaded: ",
+["Таймкод в кадрах ("]="Timecode in frames (",
+["Таймкод в секундах"]="Timecode in seconds",
+["Проект сохранён: "]="Project saved: ",
+["Проект Dubbing (.dubproj)"]="Dubbing project (.dubproj)",
+["Это не файл проекта Dubbing"]="Not a Dubbing project file",
+["Файл проекта повреждён"]="Project file is corrupted",
+["Проект загружен: реплик "]="Project loaded: lines ",
+["Нет субтитров"]="No subtitles",
+["Создать "]="Create ",
+[" регионов из субтитров?\n(существующие регионы не удаляются)"]=" regions from subtitles?\n(existing regions are kept)",
+["Создано регионов: "]="Regions created: ",
+["Создать новую дорожку с "]="Create a new track with ",
+[" текстовыми итемами?"]=" text items?",
+["Создана дорожка с итемами: "]="Track with items created: ",
+["Структура сведения аниме уже есть в проекте, дубль не создан"]="Anime mix structure already exists in the project, not duplicated",
+["Сведение аниме создано, цепочка не записана у: "]="Anime mix created, chain not saved for: ",
+["Сведение аниме создано: 20 дорожек, роутинг и цепочки из проекта"]="Anime mix created: 20 tracks, routing and chains from the project",
+["Дубляж"]="Dubbing",
+["Дорожка дубляжа создана, цепочка из шаблона со всеми настройками"]="Dub track created, chain from template with all settings",
+["Дорожка создана, плагины не найдены: "]="Track created, plugins not found: ",
+["Цепочка добавлена, пресет «Dubbing» не найден у: "]="Chain added, \"Dubbing\" preset not found for: ",
+["Дорожка дубляжа создана, цепочка эффектов добавлена"]="Dub track created, effects chain added",
+["Dubbing System: убрать регионы и итемы субтитров"]="Dubbing System: remove subtitle regions and items",
+["авто"]="auto",
+["вручную"]="manual",
+["Сохранённых версий пока нет"]="No saved versions yet",
+["   — реплик "]="   — lines ",
+[", записано "]=", recorded ",
+["Не удалось открыть версию"]="Could not open version",
+["Версия пуста"]="Version is empty",
+["Вернуть версию "]="Restore version ",
+["?\n\nСейчас в сессии "]="?\n\nThe session currently has ",
+[" реплик. Текущее состояние можно вернуть через отмену (↶ или Ctrl+Z).\n"]=" lines. You can get the current state back with undo (↶ or Ctrl+Z).\n",
+["Dubbing Prompter — восстановить версию"]="Dubbing Prompter — restore version",
+["Восстановление отменено"]="Restore canceled",
+["Восстановлена версия "]="Version restored: ",
+["Полный сброс настроек к заводским?\n\nСбросится: ducking и пре/пост-ролл, фейды, пороги QC, глубина по ролям и по дорожкам, назначение дорожек (оригинал и дубляж), горячие клавиши, колонки, таймкод, настройки оверлея.\n\nРеплики, записи, отметки и версии НЕ трогаются. Назначить дорожки заново придётся вручную."]="Reset all settings to factory defaults?\n\nWill reset: ducking and pre/post-roll, fades, QC thresholds, per-role and per-track depth, track assignments (original and dub), hotkeys, columns, timecode, overlay settings.\n\nLines, recordings, marks and versions are NOT affected. You will have to reassign the tracks manually.",
+["Dubbing Prompter — полный сброс настроек"]="Dubbing Prompter — reset all settings",
+["Сброс настроек отменён"]="Settings reset canceled",
+["Все настройки сброшены к заводским (реплики сохранены)"]="All settings reset to factory defaults (lines kept)",
+["Сессия уже пустая"]="Session is already empty",
+["Очистить сессию?\n\nБудут удалены все реплики ("]="Clear the session?\n\nAll lines (",
+["), отметки «записано», оценки и заметки. Настройки не меняются.\n\nСохранённые версии остаются на диске и восстанавливаются через «Восстановить версию»."]="), \"recorded\" marks, verdicts and notes will be deleted. Settings are unchanged.\n\nSaved versions stay on disk and can be restored via \"Restore version\".",
+["Dubbing Prompter — очистка сессии"]="Dubbing Prompter — clear session",
+["Очистка отменена"]="Clear canceled",
+["Сессия очищена. Настройки и версии сохранены"]="Session cleared. Settings and versions kept",
+["В файле нет дорожек субтитров (или ffprobe не запустился)"]="No subtitle tracks in the file (or ffprobe failed to run)",
+["В файле нет дорожек субтитров"]="No subtitle tracks in the file",
+["Видео со вшитыми субтитрами (MKV / MP4)"]="Video with embedded subtitles (MKV / MP4)",
+[" (картинки, не извлечь)"]=" (images, cannot extract)",
+["В файле только графические субтитры (картинки), текст не извлечь"]="The file has only graphic subtitles (images), text cannot be extracted",
+["Дорожка не выбрана"]="No track selected",
+["Дорожка «"]="Track \"",
+["» — это картинки, текст из неё не извлечь"]="\" is images, text cannot be extracted from it",
+["ffmpeg не смог извлечь дорожку (проверь, что ffmpeg.exe на месте)"]="ffmpeg could not extract the track (check that ffmpeg.exe is present)",
+["ffmpeg создал пустой файл: дорожка не извлечена"]="ffmpeg created an empty file: track not extracted",
+["Из видео, дорожка "]="From video, track ",
+["Импорт: видео (MKV/MP4) или субтитры (SRT/ASS/SSA/TXT)"]="Import: video (MKV/MP4) or subtitles (SRT/ASS/SSA/TXT)",
+["Готово: реплик "]="Done: lines ",
+[", регионы и текстовые итемы созданы"]=", regions and text items created",
+["в шаблоне нет метки реплик"]="no line marker in the template",
+["не могу писать в "]="cannot write to ",
+["не могу записать "]="cannot write ",
+["Видео для телефона"]="Video for phone",
+["В проекте не найден видео-элемент."]="No video item found in the project.",
+["Подготовка уже идёт, прогресс показан в строке состояния."]="Preparation is already running, progress is shown in the status bar.",
+["Создать лёгкую копию видео для телефона?\n\n"]="Create a lightweight copy of the video for the phone?\n\n",
+["\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)"]="\n\n(The project has several video files: a copy is made only for the main, longest one. Other clips will show \"no copy\" on the phone.)",
+["\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\Dubbing System или в PATH."]="\n\nmp4 480p with audio. ffmpeg runs in the background (a few minutes, you can keep using REAPER). The copy is placed in reaper_www_root and served to the phone from the PC. Requires ffmpeg.exe in Scripts\\Dubbing System or in PATH.",
+["Не могу записать "]="Cannot write ",
+["Не удалось запустить ffmpeg автоматически. Запустите вручную двойным щелчком:\n"]="Could not start ffmpeg automatically. Run it manually by double-clicking:\n",
+["Видео для телефона: подготовка…"]="Video for phone: preparing…",
+["Видео для телефона готово: страница сама подхватит его"]="Video for phone ready: the page will pick it up automatically",
+["Видео для телефона: ffmpeg не справился (лог: "]="Video for phone: ffmpeg failed (log: ",
+["Видео для телефона: %d%%"]="Video for phone: %d%%",
+["Сервер видео"]="Video server",
+["Не найден start_server.bat:\n"]="start_server.bat not found:\n",
+["\n\nПереустановите Dubbing System или скопируйте папку MobileServer рядом со скриптом."]="\n\nReinstall Dubbing System or copy the MobileServer folder next to the script.",
+["Сервер видео запускается в отдельном окне.\n\n"]="The video server starts in a separate window.\n\n",
+["ВНИМАНИЕ: в проекте не найден видео-элемент — сервер нечего отдавать.\n\n"]="WARNING: no video item found in the project — the server has nothing to serve.\n\n",
+["Видео: "]="Video: ",
+["Проверка в браузере ПК: "]="Check in the PC browser: ",
+["http://IP-ПК:"]="http://PC-IP:",
+["Телефон подхватит видео сам (страница суфлёра ищет сервер на этом же ПК, порт "]="The phone will pick up the video automatically (the prompter page looks for the server on this same PC, port ",
+["Нужен Python 3 (python.org, галочка Add to PATH). При первом запуске разрешите python.exe в брандмауэре Windows (частная сеть).\n"]="Python 3 is required (python.org, tick Add to PATH). On first launch allow python.exe in Windows Firewall (private network).\n",
+["Если окно сервера сразу закрылось или показало ошибку, прочитайте её: там указана причина."]="If the server window closes immediately or shows an error, read it: it states the cause.",
+["\n\nОкно сервера открыть не удалось. Запустите вручную двойным щелчком:\n"]="\n\nCould not open the server window. Run it manually by double-clicking:\n",
+["Сервер видео: "]="Video server: ",
+["порт "]="port ",
+["Суфлёр на телефон: "]="Prompter on phone: ",
+["Суфлёр на телефон: сначала импортируйте субтитры"]="Prompter on phone: import subtitles first",
+["Не удалось создать страницу суфлёра:\n"]="Could not create the prompter page:\n",
+["Суфлёр на телефон"]="Prompter on phone",
+["/prompter.html   (IP смотрите командой ipconfig)"]="/prompter.html   (find the IP with the ipconfig command)",
+["Страница суфлёра создана:\n"]="Prompter page created:\n",
+["\n\nАдрес для телефона / планшета (одна Wi-Fi сеть с ПК):\n"]="\n\nAddress for phone / tablet (same Wi-Fi network as the PC):\n",
+["Веб-интерфейс REAPER найден в настройках, порт "]="REAPER web interface found in settings, port ",
+["ВНИМАНИЕ: веб-интерфейс REAPER не найден в reaper.ini. Включите его один раз:\nPreferences → Control/OSC/web → Add → «Web browser interface», порт 8080, нажмите OK.\n(Если вы только что включили его — адрес выше всё равно верный.)\n"]="WARNING: REAPER web interface not found in reaper.ini. Enable it once:\nPreferences → Control/OSC/web → Add → \"Web browser interface\", port 8080, click OK.\n(If you just enabled it, the address above is still correct.)\n",
+["\nЕсли телефон не подключается: разрешите reaper.exe в брандмауэре Windows для частной сети.\nСтраница обновляется сама при изменении реплик."]="\nIf the phone cannot connect: allow reaper.exe in Windows Firewall for the private network.\nThe page refreshes automatically when lines change.",
+["Суфлёр на телефон: имена ролей "]="Prompter on phone: role names ",
+["включены"]="on",
+["выключены"]="off",
+["Окна приглушения берутся из записей на дорожке дубляжа"]="Ducking windows are taken from recordings on the dub track",
+["Окна приглушения берутся из субтитров"]="Ducking windows are taken from subtitles",
+["Версия сохранена в "]="Version saved to ",
+["Не удалось сохранить версию"]="Could not save version",
+["превью приглушения оригинала"]="original ducking preview",
+["Текст"]="Text",
+["Время"]="Time",
+["Разбить"]="Split",
+["Склеить"]="Merge",
+["Удалить"]="Delete",
+["Следить"]="Follow",
+["Играть"]="Play",
+["Цикл"]="Loop",
+["Заметка"]="Note",
+["Закладка"]="Bookmark",
+["Подогнать"]="Fit",
+["Заметка к реплике №"]="Note for line #",
+["Правка реплики №"]="Editing line #",
+["Enter — сохранить · Ctrl+Enter — перенос строки · Esc — отмена"]="Enter — save · Ctrl+Enter — new line · Esc — cancel",
+["Сохранить"]="Save",
+["Отмена"]="Cancel",
+["Поиск по тексту…"]="Search text…",
+["Все роли"]="All roles",
+["▶ Играть"]="▶ Play",
+["✓ Записано"]="✓ Recorded",
+["⚑ Заметка"]="⚑ Note",
+["★ Лучший"]="★ Best",
+["✎ Текст"]="✎ Text",
+["%.0f зн/с"]="%.0f cps",
+["%.1f с"]="%.1f s",
+["✓ ок"]="✓ ok",
+["↺ переписать"]="↺ rewrite",
+["? спорно"]="? disputed",
+["+%.1f с"]="+%.1f s",
+["★ лучший"]="★ best",
+["Импортируй субтитры"]="Import subtitles",
+["Ничего не найдено"]="Nothing found",
+["Только под дубляжом: "]="Only under dub: ",
+["ВКЛ"]="ON",
+["ВЫКЛ"]="OFF",
+["Перед "]="Before ",
+[" ms · После "]=" ms · After ",
+[" ms · Плавно "]=" ms · Fade ",
+[" ms · Возврат "]=" ms · Return ",
+["АВТОМАТИЗАЦИЯ ГРОМКОСТИ"]="VOLUME AUTOMATION",
+["Приглушить оригинал"]="Duck original",
+["Перед репликой"]="Before line",
+["После реплики"]="After line",
+["Плавное снижение"]="Fade down",
+["Возврат громкости"]="Volume return",
+["Оверлей на видео: вкл / выкл"]="Overlay on video: on / off",
+["Экспорт SRT"]="Export SRT",
+["В регионы"]="To regions",
+["В текстовые итемы"]="To text items",
+["Восстановить оверлей"]="Reset overlay",
+["СУБТИТРЫ"]="SUBTITLES",
+["Импорт оригинала"]="Import original",
+["Загрузить второй файл субтитров для сравнения с переводом."]="Load a second subtitle file to compare with the translation.",
+["Подогнать под дубли"]="Fit to takes",
+["Подогнать тайминг всех реплик под записи дубляжа на дорожке (по takes)."]="Fit the timing of all lines to the dub recordings on the track (by takes).",
+["Сдвинуть время"]="Shift time",
+["Сдвинуть все реплики (или выбранные) на заданное время."]="Shift all lines (or selected ones) by a set time.",
+["Замена текста"]="Replace text",
+["Глобальная замена слова или фразы в тексте всех реплик."]="Globally replace a word or phrase in the text of all lines.",
+["Поменять имя роли во всех репликах."]="Change a role's name in all lines.",
+["Приглушение по ролям"]="Ducking by role",
+["Глубина приглушения оригинала (дБ) отдельно для каждой роли."]="Original ducking depth (dB) for each role separately.",
+["Приглушение по дорожкам"]="Ducking by track",
+["Глубина приглушения по дорожкам оригинала."]="Ducking depth per original track.",
+["Окна приглушения"]="Ducking windows",
+["Переключить: брать окна приглушения из записей дубляжа или из субтитров."]="Toggle: take ducking windows from dub recordings or from subtitles.",
+["Сколько секунд звучит перед репликой при воспроизведении (задаётся числом)."]="How many seconds play before the line during playback (set as a number).",
+["Сбросить «записано»"]="Reset \"recorded\"",
+["Снять отметку «записано» со всех реплик."]="Clear the \"recorded\" mark from all lines.",
+["SRT по ролям"]="SRT by role",
+["Экспорт субтитров SRT отдельным файлом на каждую роль."]="Export SRT subtitles as a separate file for each role.",
+["Экспорт проекта"]="Export project",
+["Сохранить всю сессию (реплики, роли, настройки) в файл .dubproj."]="Save the whole session (lines, roles, settings) to a .dubproj file.",
+["Импорт проекта"]="Import project",
+["Загрузить сессию из файла .dubproj."]="Load a session from a .dubproj file.",
+["Сохранить версию"]="Save version",
+["Записать текущее состояние сессии как версию сейчас."]="Save the current session state as a version now.",
+["Восстановить версию"]="Restore version",
+["Выбрать сохранённую версию и вернуть сессию к ней."]="Pick a saved version and roll the session back to it.",
+["Проверка QC"]="QC check",
+["Отчёт: скорость речи, паузы, дубли, выход дубля за окно реплики."]="Report: speech rate, gaps, takes, takes overrunning the line window.",
+["Сценарии (текст)"]="Scripts (text)",
+["Текстовые сценарии для каждого актёра, по одному файлу на роль."]="Text scripts for each actor, one file per role.",
+["Дубли на N кадров"]="Takes by N frames",
+["Сдвинуть дубли выбранной реплики на заданное число кадров."]="Shift the takes of the selected line by a set number of frames.",
+["Лучший дубль"]="Best take",
+["Выбрать лучший дубль выбранной реплики, остальные приглушить."]="Pick the best take of the selected line and mute the others.",
+["Справка (F6)"]="Help (F6)",
+["Открыть окно с горячими клавишами и описанием."]="Open the window with hotkeys and descriptions.",
+["Записано по дорожке"]="Recorded from track",
+["Отметить как записанные реплики, по которым на дорожке дубляжа уже есть запись."]="Mark as recorded the lines that already have a recording on the dub track.",
+["Громкость дублей"]="Take levels",
+["Проверить клиппинг и тишину в дублях, записать отчёт."]="Check takes for clipping and silence, save a report.",
+["Сценарии (HTML)"]="Scripts (HTML)",
+["HTML-сценарии по ролям, открываются для печати в PDF."]="HTML scripts by role, opened for printing to PDF.",
+["Таймкод: кадры"]="Timecode: frames",
+["Переключить таймкод между секундами и кадрами."]="Toggle timecode between seconds and frames.",
+["Изменить пороги скорости, паузы и короткой реплики для проверки QC."]="Change the speed, gap and short-line thresholds for the QC check.",
+["Сводка по актёрам"]="Summary by actor",
+["Сколько реплик записано и осталось у каждого актёра."]="How many lines each actor has recorded and has left.",
+["Лист сессии (CSV)"]="Session sheet (CSV)",
+["Таблица сессии для Excel (разделитель «;», запятая в числах)."]="Session table for Excel (\";\" separator, comma in numbers).",
+["Экспорт VTT"]="Export VTT",
+["Субтитры в формате WebVTT."]="Subtitles in WebVTT format.",
+["Фильтр по статусу"]="Filter by status",
+["Показать только реплики с выбранным статусом: все, переписать, спорно, ок, не записано."]="Show only lines with the chosen status: all, rewrite, disputed, ok, not recorded.",
+["Вызывной лист"]="Call sheet",
+["HTML-лист для актёра с ещё не записанными репликами."]="HTML sheet for the actor with lines not yet recorded.",
+["Сводка за день"]="Daily summary",
+["Сколько записано, листов и оценок сделано в сессии."]="How much was recorded, and how many sheets and verdicts were made in the session.",
+["Выровнять громкость"]="Match levels",
+["Привести громкость дублей к медиане, не больше ±6 дБ от неё."]="Bring take levels to the median, at most ±6 dB from it.",
+["Сдвинуть выбранные"]="Shift selected",
+["Сдвинуть все отмеченные (Ctrl+клик) реплики на N секунд."]="Shift all marked (Ctrl+click) lines by N seconds.",
+["Назначить роль"]="Assign role",
+["Назначить одну роль всем отмеченным репликам."]="Assign one role to all marked lines.",
+["Отметить записано"]="Mark recorded",
+["Отметить все отмеченные реплики как записанные."]="Mark all marked lines as recorded.",
+["Снять «записано»"]="Clear \"recorded\"",
+["Снять отметку «записано» с отмеченных реплик."]="Clear the \"recorded\" mark from marked lines.",
+["Снять выбор"]="Clear selection",
+["Убрать все отмеченные реплики (Ctrl+клик)."]="Unmark all marked lines (Ctrl+click).",
+["Проверка окружения"]="Environment check",
+["Проверить ReaImGui, js_ReaScriptAPI, аудио и файл оверлея."]="Check ReaImGui, js_ReaScriptAPI, audio and the overlay file.",
+["Горячие клавиши"]="Hotkeys",
+["Задать свои латинские буквы для действий (1–4 оценки не меняются)."]="Set your own Latin letters for actions (1–4 for verdicts unchanged).",
+["Колонки в списке"]="List columns",
+["Включить или выключить колонки статистики в строках."]="Turn the statistics columns in rows on or off.",
+["Сохранить профиль"]="Save profile",
+["Сохранить настройки ducking, пре/пост-ролла, фейдов и порогов в файл."]="Save ducking, pre/post-roll, fade and threshold settings to a file.",
+["Загрузить профиль"]="Load profile",
+["Загрузить сохранённый профиль настроек."]="Load a saved settings profile.",
+["Проблемы проверки"]="QC issues",
+["Список реплик, требующих проверки, с переходом к выбранной."]="List of lines needing review, with jump to the selected one.",
+["Сравнение takes"]="Compare takes",
+["Громкость каждого дубля внутри элемента относительно медианы."]="Level of each take within an item relative to the median.",
+["LUFS по дубляжу"]="LUFS by dub",
+["Интегральная и пиковая громкость каждого дубля по BS.1770."]="Integrated and peak level of each take per BS.1770.",
+["Полный сброс настроек"]="Reset all settings",
+["Все настройки к заводским, включая оверлей и назначение дорожек. Реплики не трогаются."]="All settings to factory defaults, including overlay and track assignments. Lines are not affected.",
+["Очистить сессию"]="Clear session",
+["Удалить все реплики, отметки и оценки. Настройки и версии остаются."]="Delete all lines, marks and verdicts. Settings and versions are kept.",
+["Новая дорожка дубляжа"]="New dub track",
+["Создать НОВУЮ дорожку «Дубляж» с цепочкой эффектов из DUB_CHAIN (не назначает существующую). Эффекты выключаются на время записи и включаются после неё."]="Create a NEW \"Dub\" track with the effects chain from DUB_CHAIN (does not assign an existing one). Effects are off during recording and on after it.",
+["Сведение аниме"]="Anime mix",
+["Создать структуру сведения из проекта anime_mix: Master, Raw, Voice (ALL), Effects (All), Effects (Voice 1–8), Voice 1–8. Роутинг и цепочки эффектов из проекта. Если структура уже есть, дубль не создаётся."]="Create the mix structure from the anime_mix project: Master, Raw, Voice (ALL), Effects (All), Effects (Voice 1–8), Voice 1–8. Routing and effect chains from the project. If the structure already exists, it is not duplicated.",
+["Суфлёр на телефон / планшет"]="Prompter for phone / tablet",
+["Создать страницу суфлёра с репликами проекта и показать адрес для телефона. Нужен включённый веб-интерфейс REAPER (Preferences → Control/OSC/web → Web browser interface, порт 8080). Страница сама следит за курсором REAPER; кнопки «Назад / Следующая» переставляют курсор."]="Create a prompter page with the project's lines and show the address for the phone. Requires the REAPER web interface enabled (Preferences → Control/OSC/web → Web browser interface, port 8080). The page follows the REAPER cursor on its own; the \"Back / Next\" buttons move the cursor.",
+["Суфлёр: сервер видео"]="Prompter: video server",
+["Запустить Python-сервер, который отдаёт на телефон ОРИГИНАЛЬНОЕ видео проекта (без копий и ffmpeg). Нужен Python 3. Страница суфлёра на телефоне находит сервер сама."]="Start a Python server that serves the project's ORIGINAL video to the phone (no copies or ffmpeg). Requires Python 3. The prompter page on the phone finds the server on its own.",
+["Суфлёр: видео для телефона"]="Prompter: video for phone",
+["Сделать лёгкую копию видео проекта (mp4 480p со звуком, ffmpeg в фоне) в reaper_www_root. Телефон сам заберёт её с ПК, копировать файл на телефон не нужно. Прогресс в строке состояния."]="Make a lightweight copy of the project video (mp4 480p with audio, ffmpeg in the background) in reaper_www_root. The phone fetches it from the PC itself, no need to copy the file to the phone. Progress is in the status bar.",
+["Субтитры из видео"]="Subtitles from video",
+["Выбрать дорожку субтитров, вшитую в MKV/MP4, и импортировать её. Нужны ffmpeg и ffprobe."]="Pick a subtitle track embedded in MKV/MP4 and import it. Requires ffmpeg and ffprobe.",
+["Импорт и тайминг"]="Import and timing",
+["Профили"]="Profiles",
+["Записи и громкость"]="Recordings and levels",
+["Пакетные действия"]="Batch actions",
+["Проверка качества"]="Quality check",
+["Сессия и сводки"]="Session and summaries",
+["Экспорт"]="Export",
+["Настройки"]="Settings",
+["Телефон / планшет"]="Phone / tablet",
+["Слежение за воспроизведением: вкл"]="Playback follow: on",
+["Слежение за воспроизведением: выкл"]="Playback follow: off",
+["Приглушение только там, где на дорожке дубляжа есть звук"]="Ducking only where the dub track has audio",
+["Приглушение по всем репликам"]="Ducking for all lines",
+["РЕПЛИКА %03d / %d"]="LINE %03d / %d",
+["Ещё ▾"]="More ▾",
+["Кнопки заблокированы — замок справа сверху снимает блокировку"]="Buttons locked — the lock at top right unlocks them",
+["Кнопки разблокированы"]="Buttons unlocked",
+["Текст крупнее"]="Larger text",
+["Текст мельче"]="Smaller text",
+["Таймкод в кадрах"]="Timecode in frames",
+["Реплики (список)"]="Lines (list)",
+["Громкость"]="Levels",
+["Инструменты"]="Tools",
+["Экспорт…"]="Export…",
+["Субтитры из видео (выбор дорожки)"]="Subtitles from video (choose track)",
+["Верхняя строка"]="Top row",
+["+ Импорт субтитров"]="+ Import subtitles",
+["Суфлёр"]="Prompter",
+["Реплики"]="Lines",
+["Импорт…"]="Import…",
+["Создать автоматизацию"]="Create automation",
+["Dubbing System: добавить видео"]="Dubbing System: add video",
+["Видео добавлено: "]="Video added: ",
+["СПРАВКА — горячие клавиши"]="HELP — hotkeys",
+["F1  суфлёр          F2  список реплик     F3  громкость"]="F1  prompter          F2  line list     F3  levels",
+["F4  инструменты     F5  суфлёр с верхней строкой     F6  эта справка"]="F4  tools     F5  prompter with top row     F6  this help",
+["Пробел — play / stop        P — играть реплику        L — цикл"]="Space — play / stop        P — play line        L — loop",
+["D — записано        B — закладка        N — следующая закладка"]="D — recorded        B — bookmark        N — next bookmark",
+["Стрелки вверх / вниз — предыдущая / следующая реплика"]="Up / Down arrows — previous / next line",
+["Enter — править текст реплики        Ctrl+Z — отмена"]="Enter — edit line text        Ctrl+Z — undo",
+["Esc, Enter, F6 или клик — закрыть справку"]="Esc, Enter, F6 or click — close help",
+["вызывной"]="callsheet",
+["Вызывной"]="Callsheet",
+["Язык изменён. Закрой окно суфлёра и запусти скрипт снова."]="Language changed. Close the prompter window and run the script again.",
+["Нужен ffprobe: положи ffmpeg.exe и ffprobe.exe в папку Scripts\\Dubbing System"]="ffprobe needed: put ffmpeg.exe and ffprobe.exe into the Scripts\\Dubbing System folder",
+}
+I18N.ja={
+["Пробел — play/stop · P — реплика · L — цикл · D — записано · B — закладка · N — след. закладка"]="Space — 再生/停止 · P — セリフ · L — ループ · D — 録音済み · B — ブックマーク · N — 次のブックマーク",
+["ок"]="OK",
+["переписать"]="書き直し",
+["спорно"]="要確認",
+["губы не совпадают"]="リップ不一致",
+["bytes %d, строк со временем: %d"]="bytes %d、タイム付き行: %d",
+[", первая: "]="、最初: ",
+["Нечего отменять"]="取り消す操作がありません",
+["Отменено"]="取り消しました",
+["Не удалось открыть файл"]="ファイルを開けませんでした",
+["Субтитры не найдены ("]="字幕が見つかりません (",
+["Импортировано реплик"]="インポートしたセリフ数",
+[", ролей: "]="、役名数: ",
+["Сначала импортируй субтитры (перевод)"]="先に字幕（翻訳）をインポートしてください",
+["Оригинальные субтитры (SRT / ASS / SSA / TXT)"]="オリジナル字幕 (SRT / ASS / SSA / TXT)",
+["Оригинал не прочитан"]="オリジナルを読み込めませんでした",
+["Оригинал привязан к "]="オリジナルを紐付け: ",
+[" репликам"]="件のセリフ",
+["Сначала выдели аудиодорожку"]="先にオーディオトラックを選択してください",
+["Оригинал: дорожек "]="オリジナル: トラック数 ",
+["Дубляж: "]="吹き替え: ",
+["Сначала импортируй субтитры"]="先に字幕をインポートしてください",
+["Выдели оригинальные дорожки и нажми «Назначить оригинал»"]="オリジナルのトラックを選択して「オリジナルに指定」を押してください",
+["Нет окон приглушения: на дорожке дубляжа нет звука под репликами"]="ダッキング区間なし: 吹き替えトラックのセリフ位置に音声がありません",
+["Создать огибающую приглушения на дорожках: "]="ダッキングのエンベロープを作成するトラック: ",
+[", окон: "]="、区間数: ",
+["?\n\nВНИМАНИЕ: текущие точки Volume будут заменены."]="?\n\n注意: 現在のVolumeポイントは置き換えられます。",
+["Автоматизация создана: дорожек "]="オートメーションを作成しました: トラック数 ",
+[", окон "]="、区間数 ",
+["Настройки ducking"]="ダッキング設定",
+["Приглушение (дБ),Перед репликой (мс),После реплики (мс),Плавное снижение (мс),Возврат громкости (мс)"]="ダッキング量 (dB),セリフ前 (ms),セリフ後 (ms),下げ時間 (ms),戻し時間 (ms)",
+["Настройки сохранены"]="設定を保存しました",
+["Неверные значения настроек"]="設定値が正しくありません",
+["В субтитрах нет ролей"]="字幕に役名がありません",
+["Приглушение по ролям, дБ (пусто = общее "]="役名別ダッキング dB (空欄 = 共通 ",
+["Глубина по ролям сохранена"]="役名別の深さを保存しました",
+["Сначала назначь оригинальные дорожки"]="先にオリジナルのトラックを指定してください",
+["Приглушение по дорожкам, дБ (пусто = по окну)"]="トラック別ダッキング dB (空欄 = 区間ごと)",
+["Глубина по дорожкам сохранена"]="トラック別の深さを保存しました",
+["Оверлей: запуск / выключение (если REAPER спросит — выбери Terminate)"]="オーバーレイ: 起動 / 停止中 (REAPERが確認してきたら Terminate を選択)",
+["Не удалось зарегистрировать оверлей как действие"]="オーバーレイをアクションとして登録できませんでした",
+["Помести Dubbing_SubOverlay.lua рядом с Prompter или в Scripts/Dubbing System/Various"]="Dubbing_SubOverlay.lua を Prompter の隣か Scripts/Dubbing System/Various に置いてください",
+["Оверлей перезапускается с настройками по умолчанию…"]="オーバーレイを初期設定で再起動しています…",
+["Оверлей восстановлен с настройками по умолчанию"]="オーバーレイを初期設定に戻しました",
+["Выбери реплику"]="セリフを選択してください",
+["Время и роль"]="時間と役名",
+["Начало (ЧЧ:ММ:СС.ммм),Конец (ЧЧ:ММ:СС.ммм),Роль"]="開始 (HH:MM:SS.mmm),終了 (HH:MM:SS.mmm),役名",
+["Неверный формат"]="形式が正しくありません",
+["Неверное время (конец должен быть позже начала)"]="時間が正しくありません (終了は開始より後にしてください)",
+["Время и роль изменены"]="時間と役名を変更しました",
+["Заметка удалена"]="メモを削除しました",
+["Заметка сохранена"]="メモを保存しました",
+["Текст изменён"]="テキストを変更しました",
+["Пустой текст не сохранён"]="空のテキストは保存されません",
+["Правка отменена"]="編集を取り消しました",
+["В реплике нет пробелов — разбивать нечего"]="セリフにスペースがありません — 分割できません",
+["Не получилось разбить реплику"]="セリフを分割できませんでした",
+["Реплика разбита"]="セリフを分割しました",
+["Нет следующей реплики"]="次のセリフがありません",
+["Реплики склеены"]="セリフを結合しました",
+["Реплика удалена (Ctrl+Z — вернуть)"]="セリフを削除しました (Ctrl+Z で元に戻す)",
+["записано"]="録音済み",
+["отметка снята"]="チェック解除",
+["Записано"]="録音済み",
+["Отметка снята"]="マークを解除しました",
+["Закладка поставлена"]="ブックマークを設定しました",
+["Закладка снята"]="ブックマークを解除しました",
+["Закладка: реплика №"]="ブックマーク: セリフ №",
+["Закладок нет"]="ブックマークがありません",
+["Цикл реплики выключен"]="セリフのループをオフにしました",
+["Цикл реплики включён (L — выключить)"]="セリフのループをオンにしました (L でオフ)",
+["Воспроизведение реплики с пре-роллом "]="プリロール付きでセリフを再生: ",
+[" с"]=" 秒",
+["На дорожке дубляжа нет итемов (назначь дубляж)"]="吹き替えトラックにアイテムがありません (吹き替えを指定してください)",
+["Подогнать тайминг ВСЕХ реплик под записи на дорожке дубляжа?\n(по итему с наибольшим пересечением; Ctrl+Z вернёт)"]="すべてのセリフのタイミングを吹き替えトラックの録音に合わせますか?\n(重なりが最大のアイテム基準。Ctrl+Z で元に戻せます)",
+["Записей под репликами не найдено"]="セリフの位置に録音が見つかりません",
+["Подогнано реплик: "]="調整したセリフ数: ",
+["Все реплики"]="すべてのセリフ",
+["Только роль выбранной реплики"]="選択中のセリフの役名のみ",
+["Выбранная и все после неё"]="選択中のセリフとそれ以降すべて",
+["Сдвиг времени"]="時間シフト",
+["Секунд (например 0.5 или -1)"]="秒 (例: 0.5 または -1)",
+["Неверное значение сдвига"]="シフト値が正しくありません",
+["Сдвинуто реплик: "]="シフトしたセリフ数: ",
+[" на "]=" 移動量: ",
+["Глобальная замена"]="一括置換",
+["Найти (с учётом регистра)"]="検索 (大文字小文字を区別)",
+["Заменить на ("]="置換後 (",
+["Не найдено: "]="見つかりません: ",
+["Замен: "]="置換数: ",
+["Переименовать роль"]="役名を変更",
+["Новое имя для «"]="新しい名前: 「",
+["Роль переименована: "]="役名を変更しました: ",
+["Снять отметки «записано» со всех реплик?"]="すべてのセリフの「録音済み」マークを解除しますか?",
+["Отметки сняты"]="マークを解除しました",
+["Пре-ролл"]="プリロール",
+["Секунд до реплики"]="セリフの何秒前から",
+["Неверное значение пре-ролла"]="プリロールの値が正しくありません",
+["Пре-ролл: "]="プリロール: ",
+["Нечего экспортировать"]="書き出す内容がありません",
+["SRT сохранён: "]="SRTを保存しました: ",
+["Не удалось записать: "]="書き込めませんでした: ",
+["SRT по ролям: файлов "]="役名別SRT: ファイル数 ",
+[" (в папке "]=" (フォルダ: ",
+["У реплики нет дублей на дорожке дубляжа"]="このセリフには吹き替えトラックにテイクがありません",
+["Лучший дубль не выбран (все дубли звучат)"]="ベストテイクが選択されていません (全テイクが再生状態)",
+["Лучший дубль: "]="ベストテイク: ",
+[" из "]=" / ",
+[" (остальные заглушены)"]=" (他はミュート)",
+[" лучший дубль: "]="　ベストテイク: ",
+["нет"]="なし",
+["Нечего проверять"]="チェックする内容がありません",
+["№%03d  скорость %.0f зн/с  %s"]="№%03d  速度 %.0f 文字/秒  %s",
+["№%03d  короткая реплика %.2f с"]="№%03d  短いセリフ %.2f 秒",
+["№%03d-%03d  пауза %.2f с%s"]="№%03d-%03d  間隔 %.2f 秒%s",
+[" (перекрытие)"]=" (重なり)",
+["№%03d  дубль длиннее реплики на %.1f с"]="№%03d  テイクがセリフより %.1f 秒長い",
+["ПРОВЕРКА (QC) — "]="チェック (QC) — ",
+["Реплик: "]="セリフ数: ",
+["  скорость ≥"]="   速度 ≥",
+[" зн/с: "]=" 文字/秒: ",
+["  короткие: "]="   短いセリフ: ",
+["  пауза <"]="   間隔 <",
+[" с: "]=" 秒: ",
+["  дубль длиннее: "]="   テイクが長い: ",
+["  без дубля (не записано): "]="   テイクなし (未録音): ",
+["Роль "]="役名 ",
+[": записано "]=": 録音済み ",
+["\n\nПолный отчёт: "]="\n\n詳細レポート: ",
+["QC: скорость "]="QC: 速度 ",
+[", пауза "]="、間 ",
+[", без дубля "]="、テイクなし ",
+["Отчёт QC сохранён: "]="QCレポートを保存しました: ",
+["СЦЕНАРИЙ — "]="台本 — ",
+["№%03d  %s – %s  (%.1f с)%s"]="№%03d  %s – %s  (%.1f 秒)%s",
+["  [записано]"]="   [録音済み]",
+["  оригинал: "]="   オリジナル: ",
+["  заметка: "]="   メモ: ",
+["_сценарий.txt"]="_台本.txt",
+["Сценарии по ролям: "]="役別台本: ",
+["Сценарии по ролям: файлов "]="役名別台本: ファイル数 ",
+["Сдвиг дублей"]="テイクのシフト",
+["Кадров (например 2 или -3)"]="フレーム数 (例: 2 または -3)",
+["Неверное число кадров"]="フレーム数が正しくありません",
+[" дубли сдвинуты на "]=" テイクのずらし量 ",
+[" кадр."]=" フレーム。",
+["Дубли сдвинуты на "]="テイクをシフトしました: ",
+[" кадр. ("]=" フレーム (",
+[" с)"]=" 秒)",
+["Нет реплик"]="セリフがありません",
+["Новых записей на дорожке дубляжа не найдено"]="吹き替えトラックに新しい録音が見つかりません",
+["Авто-отметка записанных по дорожке дубляжа: "]="ダビングトラックから録音済みを自動チェック: ",
+["Отмечено как записанные: "]="録音済みにしました: ",
+[" (Ctrl+Z отменит)"]=" (Ctrl+Z で取り消し)",
+["Проверка громкости нужна REAPER 6.x или новее"]="音量チェックには REAPER 6.x 以降が必要です",
+["Назначь дорожку дубляжа"]="吹き替えトラックを指定してください",
+["  КЛИППИНГ"]="   クリッピング",
+["  очень тихо"]="   音が小さすぎ",
+["  ШУМ В ПАУЗЕ"]="   間のノイズ",
+["%s  %s  пик %.1f dBFS  RMS %.1f dBFS  шум %.1f dBFS  %.1f с%s"]="%s  %s  ピーク %.1f dBFS  RMS %.1f dBFS  ノイズ %.1f dBFS  %.1f 秒%s",
+["ПРОВЕРКА ГРОМКОСТИ ДУБЛЕЙ — "]="テイク音量チェック — ",
+["Дублей: "]="テイク数: ",
+["  клиппинг: "]="   クリッピング: ",
+["  очень тихо (<-30 dBFS): "]="   音が小さすぎ (<-30 dBFS): ",
+["  шум в паузе (>-50 dBFS): "]="   間のノイズ (>-50 dBFS): ",
+["Громкость: дублей "]="音量: テイク数 ",
+[", клиппинг "]="、クリッピング ",
+[", тихо "]="、小音量 ",
+["Dubbing Prompter — громкость"]="Dubbing Prompter — 音量",
+["Громкость проверена: клиппинг "]="音量チェック完了: クリッピング ",
+["Выравнивание нужна REAPER 6.x или новее"]="レベル調整には REAPER 6.x 以降が必要です",
+["Выровнять громкость всех дублей под медиану (±6 дБ)?\nCtrl+Z в REAPER вернёт."]="すべてのテイクの音量を中央値に揃えますか (±6 dB)?\nREAPERの Ctrl+Z で元に戻せます。",
+["Для выравнивания нужно хотя бы два дубля"]="レベル調整には2つ以上のテイクが必要です",
+["Выравнивание громкости дублей: "]="テイク音量の均一化: ",
+["Громкость выровнена у дублей: "]="音量を揃えたテイク数: ",
+[" (±6 дБ, Ctrl+Z в REAPER вернёт)"]=" (±6 dB、REAPERの Ctrl+Z で取り消し)",
+["<h1>Сценарий: "]="<h1>台本: ",
+["<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Записано</th></tr>"]="<table><tr><th>№</th><th>タイミング</th><th>テキスト</th><th>録音済み</th></tr>",
+["<div class='n'>оригинал: "]="<div class='n'>オリジナル: ",
+["_сценарий.html"]="_台本.html",
+["HTML-сценарии по ролям: "]="役別HTML台本: ",
+["HTML-сценарии: файлов "]="HTML台本: ファイル数 ",
+[" (открой в браузере и «Печать → Сохранить в PDF»)"]=" (ブラウザで開き「印刷 → PDFとして保存」)",
+["\239\187\191№;Роль;Начало;Конец;Длительность, с;Зн/с;Текст;Записано;Дублей;Превышение, с;Заметка"]="\239\187\191№;役;開始;終了;長さ(秒);文字/秒;テキスト;録音済み;テイク数;超過(秒);メモ",
+["да"]="はい",
+["_лист_сессии.csv"]="_セッションシート.csv",
+["Лист сессии (CSV): реплик "]="セッションシート(CSV): セリフ数 ",
+["Лист сессии сохранён: "]="セッションシートを保存しました: ",
+["VTT сохранён: "]="VTTを保存しました: ",
+["СВОДКА ЗА "]="サマリー: ",
+["Сегодня отмечено записанным: "]="本日録音済みにした数: ",
+["Вызывных листов сделано сегодня: "]="本日作成したコールシート数: ",
+["Всего реплик: "]="セリフ総数: ",
+["  записано: "]="   録音済み: ",
+["Оценки: ок "]="評価: OK ",
+["  переписать "]="   書き直し ",
+["  спорно "]="   要確認 ",
+["Dubbing Prompter — сводка за день"]="Dubbing Prompter — 本日のサマリー",
+["Сводка за день показана"]="本日のサマリーを表示しました",
+["%s: записано %d из %d, осталось %d · реплик %.0f с · дублей %d"]="%s: 録音済み %d / %d、残り %d · セリフ %.0f 秒 · テイク %d",
+["Dubbing Prompter — сводка по актёрам"]="Dubbing Prompter — 役者別サマリー",
+["Сводка по актёрам показана"]="役者別サマリーを表示しました",
+["Пороги проверки"]="チェックのしきい値",
+["Скорость, зн/с,Минимальная пауза, с,Короткая реплика, с"]="速度 (文字/秒),最小間隔 (秒),短いセリフ (秒)",
+["Пороги сохранены: "]="しきい値を保存しました: ",
+[" зн/с, пауза "]=" 文字/秒、間隔 ",
+[" с, короткая <"]=" 秒、短いセリフ <",
+["Неверные значения порогов"]="しきい値が正しくありません",
+["Оценка: "]="評価: ",
+["Оценка снята"]="評価を解除しました",
+[" оценка: "]=" 評価: ",
+["снята"]="解除",
+["все"]="すべて",
+["губы"]="リップ",
+["не записано"]="未録音",
+["Фильтр: "]="フィルター: ",
+["<!doctype html><html lang='ru'><head><meta charset='utf-8'><title>Вызывной лист</title><style>"]="<!doctype html><html lang='ja'><head><meta charset='utf-8'><title>コールシート</title><style>",
+["<h1>Вызывной лист: "]="<h1>コールシート: ",
+[" · дата: "]=" · 日付: ",
+["<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Заметка</th></tr>"]="<table><tr><th>№</th><th>タイミング</th><th>テキスト</th><th>メモ</th></tr>",
+["</table><p>Реплик к записи: "]="</table><p>録音予定のセリフ数: ",
+["_вызывной_"]="_コールシート_",
+["Не удалось записать файл"]="ファイルを書き込めませんでした",
+["Вызывной лист "]="コールシート ",
+["Вызывной лист: "]="コールシート: ",
+[" реплик (HTML в папке "]=" セリフ (HTMLの保存先フォルダ: ",
+["Выбрано реплик: "]="選択したセリフ数: ",
+["Выбор снят, выбрано: "]="選択を解除しました、選択数: ",
+["Пакетный сдвиг"]="一括シフト",
+["Секунд для "]="秒 (対象: ",
+[" реплик (например 0.5 или -1)"]=" セリフ、例: 0.5 または -1)",
+["Пакетный сдвиг "]="一括シフト ",
+[" реплик на "]=" 件のセリフを ",
+[" с (Ctrl+Z отменит)"]=" 秒 (Ctrl+Z で取り消し)",
+["Пакетная роль"]="一括役名",
+["Роль для "]="役名 (対象: ",
+[" реплик (пусто = без роли)"]=" セリフ、空欄 = 役名なし)",
+["Пакетная роль «"]="一括で役「",
+["» для "]="」を適用: ",
+[" реплик"]=" 件のセリフ",
+["Роль назначена: "]="役名を割り当てました: ",
+[" реплик (Ctrl+Z отменит)"]=" セリフ (Ctrl+Z で取り消し)",
+["Пакетно записано: "]="一括で録音済みに: ",
+["Пакетно снято: "]="一括でチェック解除: ",
+["Отмечено записанными: "]="録音済みにしました: ",
+["Снята отметка у: "]="マークを解除しました: ",
+["Выбор реплик снят"]="セリフの選択を解除しました",
+["Актёр: "]="役者: ",
+["ОКРУЖЕНИЕ DUBBING"]="DUBBING 環境",
+["ReaImGui (оверлей): "]="ReaImGui (オーバーレイ): ",
+["есть"]="あり",
+["НЕТ — установи через ReaPack"]="なし — ReaPack からインストールしてください",
+["js_ReaScriptAPI (привязка оверлея к видео): "]="js_ReaScriptAPI (オーバーレイを動画に連携): ",
+["нет (оверлей будет без привязки)"]="なし (オーバーレイは連携されません)",
+["Аудио-доступ (громкость, шум): "]="オーディオアクセス (音量、ノイズ): ",
+["НЕТ — нужен REAPER 6.x+"]="なし — REAPER 6.x 以降が必要です",
+["Частота кадров проекта: "]="プロジェクトのフレームレート: ",
+["нет функции"]="関数なし",
+["Дорожка дубляжа: "]="吹き替えトラック: ",
+["назначена"]="指定済み",
+["НЕ назначена"]="未指定",
+["Файл оверлея рядом с Prompter: "]="Prompter の隣のオーバーレイファイル: ",
+["найден"]="あり",
+["не найден (положи рядом с Prompter)"]="見つかりません (Prompter の隣に置いてください)",
+["Dubbing — проверка окружения"]="Dubbing — 環境チェック",
+["Проверка окружения показана"]="環境チェックを表示しました",
+["Нужен REAPER 6.x+"]="REAPER 6.x 以降が必要です",
+["%s  %s  интегральная %s LUFS  макс. момент. %s  макс. кратк. %s"]="%s  %s  統合 %s LUFS  最大モメンタリー %s  最大ショートターム %s",
+["ГРОМКОСТЬ LUFS — "]="LUFS ラウドネス — ",
+["Дублей измерено: "]="測定したテイク数: ",
+["  средняя интегральная: "]="   平均統合: ",
+["LUFS измерены: "]="LUFSを測定しました: ",
+[" дублей (файл "]=" テイク (ファイル ",
+["  ⚠ отличается больше 3 дБ"]="   ⚠ 3 dB 以上の差があります",
+["элемент %d (%s), дубль %d: %s LUFS, %+.1f дБ к медиане%s"]="アイテム %d (%s)、テイク %d: %s LUFS、中央値比 %+.1f dB%s",
+["ТАКИ ВНУТРИ ЭЛЕМЕНТОВ — "]="アイテム内のテイク — ",
+["Элементов с несколькими takes: "]="複数テイクのアイテム数: ",
+["  отличаются больше 3 дБ: "]="   3 dB 以上の差: ",
+["Takes сравнены: элементов "]="テイクを比較しました: アイテム数 ",
+["; отличаются: "]="、差あり: ",
+["скорость %.0f зн/с"]="速度 %.0f 文字/秒",
+["короткая"]="短い",
+["пауза / перекрытие"]="間隔 / 重なり",
+["нет дубля"]="テイクなし",
+["дубль длиннее на %.1f с"]="テイクが %.1f 秒長い",
+["Проблемных реплик нет"]="問題のあるセリフはありません",
+["Перешли к реплике №"]="セリフへ移動: №",
+["Воспроизвести реплику,Цикл реплики,Записано,Закладка,След. закладка,Лучший дубль,Следующий актёр"]="セリフを再生,セリフのループ,録音済み,ブックマーク,次のブックマーク,ベストテイク,次の役者",
+["Горячие клавиши (одна латинская буква)"]="ホットキー (アルファベット1文字)",
+["Клавиши не сохранены: нужны разные латинские буквы"]="キーを保存できません: 異なるアルファベットを指定してください",
+["Горячие клавиши сохранены (1–4 для оценок не меняются)"]="ホットキーを保存しました (評価の 1–4 は変更されません)",
+["дубли (×N)"]="テイク (×N)",
+["зн/с"]="文字/秒",
+["длительность"]="長さ",
+["превышение"]="超過",
+["заметка"]="メモ",
+["оценка"]="評価",
+["Колонка «"]="列「",
+["показана"]="表示",
+["скрыта"]="非表示",
+["Профиль настроек"]="設定プロファイル",
+["Имя профиля"]="プロファイル名",
+["Профиль 1"]="プロファイル 1",
+["Пустое имя профиля"]="プロファイル名が空です",
+["Не удалось записать профиль"]="プロファイルを書き込めませんでした",
+["Профиль сохранён: "]="プロファイルを保存しました: ",
+["Сохранённых профилей нет"]="保存済みのプロファイルがありません",
+["Профиль не открылся"]="プロファイルを開けませんでした",
+["Профиль загружен: "]="プロファイルを読み込みました: ",
+["Таймкод в кадрах ("]="フレーム表示のタイムコード (",
+["Таймкод в секундах"]="秒表示のタイムコード",
+["Проект сохранён: "]="プロジェクトを保存しました: ",
+["Проект Dubbing (.dubproj)"]="Dubbing プロジェクト (.dubproj)",
+["Это не файл проекта Dubbing"]="Dubbing のプロジェクトファイルではありません",
+["Файл проекта повреждён"]="プロジェクトファイルが壊れています",
+["Проект загружен: реплик "]="プロジェクトを読み込みました: セリフ数 ",
+["Нет субтитров"]="字幕がありません",
+["Создать "]="字幕から ",
+[" регионов из субтитров?\n(существующие регионы не удаляются)"]=" 個のリージョンを作成しますか?\n(既存のリージョンは削除されません)",
+["Создано регионов: "]="作成したリージョン数: ",
+["Создать новую дорожку с "]="新しいトラックを作成し、 ",
+[" текстовыми итемами?"]=" 個のテキストアイテムを置きますか?",
+["Создана дорожка с итемами: "]="アイテム付きトラックを作成しました: ",
+["Структура сведения аниме уже есть в проекте, дубль не создан"]="アニメミックスの構成はすでにプロジェクトにあるため、重複作成しませんでした",
+["Сведение аниме создано, цепочка не записана у: "]="アニメミックスを作成しました、チェーン未保存: ",
+["Сведение аниме создано: 20 дорожек, роутинг и цепочки из проекта"]="アニメミックスを作成しました: 20トラック、ルーティングとチェーンはプロジェクトのものです",
+["Дубляж"]="ダビング",
+["Дорожка дубляжа создана, цепочка из шаблона со всеми настройками"]="吹き替えトラックを作成しました。チェーンはテンプレートの全設定付きです",
+["Дорожка создана, плагины не найдены: "]="トラックを作成しました、プラグインが見つかりません: ",
+["Цепочка добавлена, пресет «Dubbing» не найден у: "]="チェーンを追加しました、プリセット「Dubbing」が見つかりません: ",
+["Дорожка дубляжа создана, цепочка эффектов добавлена"]="吹き替えトラックを作成し、エフェクトチェーンを追加しました",
+["Dubbing System: убрать регионы и итемы субтитров"]="Dubbing System: 字幕リージョンとアイテムを削除",
+["авто"]="自動",
+["вручную"]="手動",
+["Сохранённых версий пока нет"]="保存済みバージョンはまだありません",
+["   — реплик "]="    — セリフ数 ",
+[", записано "]="、録音済み ",
+["Не удалось открыть версию"]="バージョンを開けませんでした",
+["Версия пуста"]="バージョンが空です",
+["Вернуть версию "]="バージョンを復元: ",
+["?\n\nСейчас в сессии "]="?\n\n現在のセッションのセリフ数: ",
+[" реплик. Текущее состояние можно вернуть через отмену (↶ или Ctrl+Z).\n"]="。現在の状態は取り消し (↶ または Ctrl+Z) で戻せます。\n",
+["Dubbing Prompter — восстановить версию"]="Dubbing Prompter — バージョンを復元",
+["Восстановление отменено"]="復元を取り消しました",
+["Восстановлена версия "]="バージョンを復元しました: ",
+["Полный сброс настроек к заводским?\n\nСбросится: ducking и пре/пост-ролл, фейды, пороги QC, глубина по ролям и по дорожкам, назначение дорожек (оригинал и дубляж), горячие клавиши, колонки, таймкод, настройки оверлея.\n\nРеплики, записи, отметки и версии НЕ трогаются. Назначить дорожки заново придётся вручную."]="設定をすべて工場出荷時の状態に戻しますか?\n\nリセット対象: ducking とプリ/ポストロール、フェード、QCしきい値、役名別・トラック別の深さ、トラック指定 (オリジナルと吹き替え)、ホットキー、列、タイムコード、オーバーレイ設定。\n\nセリフ、録音、マーク、バージョンは変更されません。トラックは手動で指定し直す必要があります。",
+["Dubbing Prompter — полный сброс настроек"]="Dubbing Prompter — 設定を完全リセット",
+["Сброс настроек отменён"]="設定のリセットを取り消しました",
+["Все настройки сброшены к заводским (реплики сохранены)"]="すべての設定を工場出荷時に戻しました (セリフは保持)",
+["Сессия уже пустая"]="セッションはすでに空です",
+["Очистить сессию?\n\nБудут удалены все реплики ("]="セッションをクリアしますか?\n\nすべてのセリフ (",
+["), отметки «записано», оценки и заметки. Настройки не меняются.\n\nСохранённые версии остаются на диске и восстанавливаются через «Восстановить версию»."]=" 件)、「録音済み」マーク、評価、メモが削除されます。設定は変更されません。\n\n保存済みバージョンはディスクに残り、「バージョンを復元」から戻せます。",
+["Dubbing Prompter — очистка сессии"]="Dubbing Prompter — セッションをクリア",
+["Очистка отменена"]="クリアを取り消しました",
+["Сессия очищена. Настройки и версии сохранены"]="セッションをクリアしました。設定とバージョンは保持されています",
+["В файле нет дорожек субтитров (или ffprobe не запустился)"]="ファイルに字幕トラックがありません (または ffprobe が起動しませんでした)",
+["В файле нет дорожек субтитров"]="ファイルに字幕トラックがありません",
+["Видео со вшитыми субтитрами (MKV / MP4)"]="字幕入り動画 (MKV / MP4)",
+[" (картинки, не извлечь)"]=" (画像のため抽出不可)",
+["В файле только графические субтитры (картинки), текст не извлечь"]="ファイルにはグラフィック字幕 (画像) しかなく、テキストを抽出できません",
+["Дорожка не выбрана"]="トラックが選択されていません",
+["Дорожка «"]="トラック「",
+["» — это картинки, текст из неё не извлечь"]="」は画像のため、テキストを抽出できません",
+["ffmpeg не смог извлечь дорожку (проверь, что ffmpeg.exe на месте)"]="ffmpeg がトラックを抽出できませんでした (ffmpeg.exe があるか確認してください)",
+["ffmpeg создал пустой файл: дорожка не извлечена"]="ffmpeg が空のファイルを作成しました: トラックを抽出できていません",
+["Из видео, дорожка "]="動画から、トラック ",
+["Импорт: видео (MKV/MP4) или субтитры (SRT/ASS/SSA/TXT)"]="インポート: 動画 (MKV/MP4) または字幕 (SRT/ASS/SSA/TXT)",
+["Готово: реплик "]="完了: セリフ数 ",
+[", регионы и текстовые итемы созданы"]="、リージョンとテキストアイテムを作成しました",
+["в шаблоне нет метки реплик"]="テンプレートにセリフのマーカーがありません",
+["не могу писать в "]="書き込めません: ",
+["не могу записать "]="書き込めません: ",
+["Видео для телефона"]="スマホ用動画",
+["В проекте не найден видео-элемент."]="プロジェクトに動画アイテムが見つかりません。",
+["Подготовка уже идёт, прогресс показан в строке состояния."]="すでに準備中です。進捗はステータスバーに表示されます。",
+["Создать лёгкую копию видео для телефона?\n\n"]="スマホ用の軽量な動画コピーを作成しますか?\n\n",
+["\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)"]="\n\n(プロジェクトに複数の動画ファイルがあります: コピーは最も長いメイン動画のみ作成されます。他のクリップはスマホで「コピーなし」と表示されます。)",
+["\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\Dubbing System или в PATH."]="\n\nmp4 480p、音声付き。ffmpeg はバックグラウンドで動作します (数分かかりますが、REAPERは使い続けられます)。コピーは reaper_www_root に置かれ、PCからスマホに配信されます。ffmpeg.exe が Scripts\\Dubbing System か PATH にある必要があります。",
+["Не могу записать "]="書き込めません: ",
+["Не удалось запустить ffmpeg автоматически. Запустите вручную двойным щелчком:\n"]="ffmpeg を自動で起動できませんでした。ダブルクリックで手動実行してください:\n",
+["Видео для телефона: подготовка…"]="スマホ用動画: 準備中…",
+["Видео для телефона готово: страница сама подхватит его"]="スマホ用動画の準備ができました: ページが自動的に読み込みます",
+["Видео для телефона: ffmpeg не справился (лог: "]="スマホ用動画: ffmpeg が失敗しました (ログ: ",
+["Видео для телефона: %d%%"]="スマホ用動画: %d%%",
+["Сервер видео"]="動画サーバー",
+["Не найден start_server.bat:\n"]="start_server.bat が見つかりません:\n",
+["\n\nПереустановите Dubbing System или скопируйте папку MobileServer рядом со скриптом."]="\n\nDubbing System を再インストールするか、MobileServer フォルダをスクリプトの隣にコピーしてください。",
+["Сервер видео запускается в отдельном окне.\n\n"]="動画サーバーを別ウィンドウで起動します。\n\n",
+["ВНИМАНИЕ: в проекте не найден видео-элемент — сервер нечего отдавать.\n\n"]="注意: プロジェクトに動画アイテムが見つかりません — サーバーが配信するものがありません。\n\n",
+["Видео: "]="動画: ",
+["Проверка в браузере ПК: "]="PCのブラウザで確認: ",
+["http://IP-ПК:"]="http://PCのIP:",
+["Телефон подхватит видео сам (страница суфлёра ищет сервер на этом же ПК, порт "]="スマホが動画を自動で取得します (プロンプターのページは同じPC上のサーバーを探します、ポート ",
+["Нужен Python 3 (python.org, галочка Add to PATH). При первом запуске разрешите python.exe в брандмауэре Windows (частная сеть).\n"]="Python 3 が必要です (python.org、Add to PATH にチェック)。初回起動時に Windows ファイアウォールで python.exe を許可してください (プライベートネットワーク)。\n",
+["Если окно сервера сразу закрылось или показало ошибку, прочитайте её: там указана причина."]="サーバーのウィンドウがすぐ閉じる、またはエラーが表示される場合は、その内容を確認してください。原因が書かれています。",
+["\n\nОкно сервера открыть не удалось. Запустите вручную двойным щелчком:\n"]="\n\nサーバーのウィンドウを開けませんでした。ダブルクリックで手動実行してください:\n",
+["Сервер видео: "]="動画サーバー: ",
+["порт "]="ポート ",
+["Суфлёр на телефон: "]="スマホ用プロンプター: ",
+["Суфлёр на телефон: сначала импортируйте субтитры"]="スマホ用プロンプター: 先に字幕をインポートしてください",
+["Не удалось создать страницу суфлёра:\n"]="プロンプターのページを作成できませんでした:\n",
+["Суфлёр на телефон"]="スマホ用プロンプター",
+["/prompter.html   (IP смотрите командой ipconfig)"]="/prompter.html   (IPは ipconfig コマンドで確認)",
+["Страница суфлёра создана:\n"]="プロンプターのページを作成しました:\n",
+["\n\nАдрес для телефона / планшета (одна Wi-Fi сеть с ПК):\n"]="\n\nスマホ / タブレット用アドレス (PCと同じWi-Fiネットワーク):\n",
+["Веб-интерфейс REAPER найден в настройках, порт "]="REAPERのWebインターフェースが設定で見つかりました、ポート ",
+["ВНИМАНИЕ: веб-интерфейс REAPER не найден в reaper.ini. Включите его один раз:\nPreferences → Control/OSC/web → Add → «Web browser interface», порт 8080, нажмите OK.\n(Если вы только что включили его — адрес выше всё равно верный.)\n"]="注意: reaper.ini にREAPERのWebインターフェースが見つかりません。一度だけ有効にしてください:\nPreferences → Control/OSC/web → Add → 「Web browser interface」、ポート 8080、OK を押す。\n(有効にしたばかりでも、上のアドレスは正しいです。)\n",
+["\nЕсли телефон не подключается: разрешите reaper.exe в брандмауэре Windows для частной сети.\nСтраница обновляется сама при изменении реплик."]="\nスマホが接続できない場合: Windows ファイアウォールで reaper.exe をプライベートネットワークで許可してください。\nページはセリフが変わると自動的に更新されます。",
+["Суфлёр на телефон: имена ролей "]="スマホ用プロンプター: 役名表示 ",
+["включены"]="オン",
+["выключены"]="オフ",
+["Окна приглушения берутся из записей на дорожке дубляжа"]="ダッキング区間は吹き替えトラックの録音から取得されます",
+["Окна приглушения берутся из субтитров"]="ダッキング区間は字幕から取得されます",
+["Версия сохранена в "]="バージョンを保存しました: ",
+["Не удалось сохранить версию"]="バージョンを保存できませんでした",
+["превью приглушения оригинала"]="オリジナルのダッキングプレビュー",
+["Текст"]="テキスト",
+["Время"]="時間",
+["Разбить"]="分割",
+["Склеить"]="結合",
+["Удалить"]="削除",
+["Следить"]="追従",
+["Играть"]="再生",
+["Цикл"]="ループ",
+["Заметка"]="メモ",
+["Закладка"]="ブックマーク",
+["Подогнать"]="合わせる",
+["Заметка к реплике №"]="セリフ №",
+["Правка реплики №"]="セリフを編集 №",
+["Enter — сохранить · Ctrl+Enter — перенос строки · Esc — отмена"]="Enter — 保存 · Ctrl+Enter — 改行 · Esc — キャンセル",
+["Сохранить"]="保存",
+["Отмена"]="キャンセル",
+["Поиск по тексту…"]="テキスト検索…",
+["Все роли"]="全役名",
+["▶ Играть"]="▶ 再生",
+["✓ Записано"]="✓ 録音済み",
+["⚑ Заметка"]="⚑ メモ",
+["★ Лучший"]="★ ベスト",
+["✎ Текст"]="✎ テキスト",
+["%.0f зн/с"]="%.0f 文字/秒",
+["%.1f с"]="%.1f 秒",
+["✓ ок"]="✓ OK",
+["↺ переписать"]="↺ 書き直し",
+["? спорно"]="? 要確認",
+["+%.1f с"]="+%.1f 秒",
+["★ лучший"]="★ ベスト",
+["Импортируй субтитры"]="字幕をインポートしてください",
+["Ничего не найдено"]="見つかりません",
+["Только под дубляжом: "]="吹き替え下のみ: ",
+["ВКЛ"]="オン",
+["ВЫКЛ"]="オフ",
+["Перед "]="前 ",
+[" ms · После "]=" ms · 後 ",
+[" ms · Плавно "]=" ms · フェード ",
+[" ms · Возврат "]=" ms · 戻し ",
+["АВТОМАТИЗАЦИЯ ГРОМКОСТИ"]="音量オートメーション",
+["Приглушить оригинал"]="オリジナルをダッキング",
+["Перед репликой"]="セリフ前",
+["После реплики"]="セリフ後",
+["Плавное снижение"]="下げ時間",
+["Возврат громкости"]="戻し時間",
+["Оверлей на видео: вкл / выкл"]="動画上のオーバーレイ: オン / オフ",
+["Экспорт SRT"]="SRT書き出し",
+["В регионы"]="リージョンへ",
+["В текстовые итемы"]="テキストアイテムへ",
+["Восстановить оверлей"]="オーバーレイをリセット",
+["СУБТИТРЫ"]="字幕",
+["Импорт оригинала"]="オリジナルをインポート",
+["Загрузить второй файл субтитров для сравнения с переводом."]="翻訳と比較するため、2つ目の字幕ファイルを読み込みます。",
+["Подогнать под дубли"]="テイクに合わせる",
+["Подогнать тайминг всех реплик под записи дубляжа на дорожке (по takes)."]="すべてのセリフのタイミングを、トラック上の吹き替え録音 (テイク単位) に合わせます。",
+["Сдвинуть время"]="時間をずらす",
+["Сдвинуть все реплики (или выбранные) на заданное время."]="すべてのセリフ (または選択分) を指定した時間だけずらします。",
+["Замена текста"]="テキスト置換",
+["Глобальная замена слова или фразы в тексте всех реплик."]="全セリフのテキスト内の単語やフレーズを一括置換します。",
+["Поменять имя роли во всех репликах."]="全セリフの役名を変更します。",
+["Приглушение по ролям"]="役名別ダッキング",
+["Глубина приглушения оригинала (дБ) отдельно для каждой роли."]="オリジナルのダッキング量 (dB) を役名ごとに設定します。",
+["Приглушение по дорожкам"]="トラック別ダッキング",
+["Глубина приглушения по дорожкам оригинала."]="オリジナルのトラックごとのダッキング量です。",
+["Окна приглушения"]="ダッキング区間",
+["Переключить: брать окна приглушения из записей дубляжа или из субтитров."]="切り替え: ダッキング区間を吹き替え録音から取得するか、字幕から取得するか。",
+["Сколько секунд звучит перед репликой при воспроизведении (задаётся числом)."]="再生時にセリフの何秒前から流すか (数値で指定)。",
+["Сбросить «записано»"]="「録音済み」をリセット",
+["Снять отметку «записано» со всех реплик."]="すべてのセリフの「録音済み」マークを解除します。",
+["SRT по ролям"]="役名別SRT",
+["Экспорт субтитров SRT отдельным файлом на каждую роль."]="役名ごとに別ファイルでSRT字幕を書き出します。",
+["Экспорт проекта"]="プロジェクトを書き出し",
+["Сохранить всю сессию (реплики, роли, настройки) в файл .dubproj."]="セッション全体 (セリフ、役名、設定) を .dubproj ファイルに保存します。",
+["Импорт проекта"]="プロジェクトを読み込み",
+["Загрузить сессию из файла .dubproj."]=".dubproj ファイルからセッションを読み込みます。",
+["Сохранить версию"]="バージョンを保存",
+["Записать текущее состояние сессии как версию сейчас."]="現在のセッションの状態を今すぐバージョンとして保存します。",
+["Восстановить версию"]="バージョンを復元",
+["Выбрать сохранённую версию и вернуть сессию к ней."]="保存済みバージョンを選んでセッションを戻します。",
+["Проверка QC"]="QCチェック",
+["Отчёт: скорость речи, паузы, дубли, выход дубля за окно реплики."]="レポート: 話速、間隔、テイク、セリフ枠からはみ出したテイク。",
+["Сценарии (текст)"]="台本 (テキスト)",
+["Текстовые сценарии для каждого актёра, по одному файлу на роль."]="役者ごとのテキスト台本を、役名ごとに1ファイルで出力します。",
+["Дубли на N кадров"]="テイクをNフレームずらす",
+["Сдвинуть дубли выбранной реплики на заданное число кадров."]="選択中のセリフのテイクを指定フレーム数だけずらします。",
+["Лучший дубль"]="ベストテイク",
+["Выбрать лучший дубль выбранной реплики, остальные приглушить."]="選択中のセリフのベストテイクを選び、残りをミュートします。",
+["Справка (F6)"]="ヘルプ (F6)",
+["Открыть окно с горячими клавишами и описанием."]="ホットキーと説明のウィンドウを開きます。",
+["Записано по дорожке"]="トラックから録音済みに",
+["Отметить как записанные реплики, по которым на дорожке дубляжа уже есть запись."]="吹き替えトラックにすでに録音があるセリフを録音済みにします。",
+["Громкость дублей"]="テイクの音量",
+["Проверить клиппинг и тишину в дублях, записать отчёт."]="テイクのクリッピングと無音をチェックし、レポートを保存します。",
+["Сценарии (HTML)"]="台本 (HTML)",
+["HTML-сценарии по ролям, открываются для печати в PDF."]="役名別のHTML台本。開いてPDFに印刷できます。",
+["Таймкод: кадры"]="タイムコード: フレーム",
+["Переключить таймкод между секундами и кадрами."]="タイムコードの表示を秒とフレームで切り替えます。",
+["Изменить пороги скорости, паузы и короткой реплики для проверки QC."]="QCチェックの速度、間隔、短いセリフのしきい値を変更します。",
+["Сводка по актёрам"]="役者別サマリー",
+["Сколько реплик записано и осталось у каждого актёра."]="役者ごとの録音済みセリフ数と残り数を表示します。",
+["Лист сессии (CSV)"]="セッションシート (CSV)",
+["Таблица сессии для Excel (разделитель «;», запятая в числах)."]="Excel用のセッション表 (区切りは「;」、数値の小数点はカンマ)。",
+["Экспорт VTT"]="VTT書き出し",
+["Субтитры в формате WebVTT."]="WebVTT形式の字幕です。",
+["Фильтр по статусу"]="ステータスで絞り込み",
+["Показать только реплики с выбранным статусом: все, переписать, спорно, ок, не записано."]="選択したステータスのセリフのみ表示: すべて、書き直し、要確認、OK、未録音。",
+["Вызывной лист"]="コールシート",
+["HTML-лист для актёра с ещё не записанными репликами."]="未録音のセリフをまとめた役者用HTMLシートです。",
+["Сводка за день"]="本日のサマリー",
+["Сколько записано, листов и оценок сделано в сессии."]="このセッションでの録音数、シート数、評価数を表示します。",
+["Выровнять громкость"]="音量を揃える",
+["Привести громкость дублей к медиане, не больше ±6 дБ от неё."]="テイクの音量を中央値に合わせます (中央値から最大 ±6 dB)。",
+["Сдвинуть выбранные"]="選択分をずらす",
+["Сдвинуть все отмеченные (Ctrl+клик) реплики на N секунд."]="マーク済み (Ctrl+クリック) のセリフをすべてN秒ずらします。",
+["Назначить роль"]="役名を割り当て",
+["Назначить одну роль всем отмеченным репликам."]="マーク済みのセリフすべてに同じ役名を割り当てます。",
+["Отметить записано"]="録音済みにする",
+["Отметить все отмеченные реплики как записанные."]="マーク済みのセリフをすべて録音済みにします。",
+["Снять «записано»"]="「録音済み」を解除",
+["Снять отметку «записано» с отмеченных реплик."]="マーク済みのセリフの「録音済み」マークを解除します。",
+["Снять выбор"]="選択を解除",
+["Убрать все отмеченные реплики (Ctrl+клик)."]="マーク済みのセリフ (Ctrl+クリック) をすべて解除します。",
+["Проверка окружения"]="環境チェック",
+["Проверить ReaImGui, js_ReaScriptAPI, аудио и файл оверлея."]="ReaImGui、js_ReaScriptAPI、オーディオ、オーバーレイファイルを確認します。",
+["Горячие клавиши"]="ホットキー",
+["Задать свои латинские буквы для действий (1–4 оценки не меняются)."]="各操作に好きなアルファベットを割り当てます (評価の 1–4 は変更されません)。",
+["Колонки в списке"]="リストの列",
+["Включить или выключить колонки статистики в строках."]="各行の統計列の表示/非表示を切り替えます。",
+["Сохранить профиль"]="プロファイルを保存",
+["Сохранить настройки ducking, пре/пост-ролла, фейдов и порогов в файл."]="ducking、プリ/ポストロール、フェード、しきい値の設定をファイルに保存します。",
+["Загрузить профиль"]="プロファイルを読み込み",
+["Загрузить сохранённый профиль настроек."]="保存済みの設定プロファイルを読み込みます。",
+["Проблемы проверки"]="チェックの問題点",
+["Список реплик, требующих проверки, с переходом к выбранной."]="確認が必要なセリフの一覧です。選択したセリフへ移動できます。",
+["Сравнение takes"]="テイク比較",
+["Громкость каждого дубля внутри элемента относительно медианы."]="アイテム内の各テイクの音量を中央値と比較します。",
+["LUFS по дубляжу"]="吹き替えのLUFS",
+["Интегральная и пиковая громкость каждого дубля по BS.1770."]="BS.1770に基づく各テイクの統合ラウドネスとピークを表示します。",
+["Полный сброс настроек"]="設定を完全リセット",
+["Все настройки к заводским, включая оверлей и назначение дорожек. Реплики не трогаются."]="オーバーレイとトラック指定を含むすべての設定を初期値に戻します。セリフは変更されません。",
+["Очистить сессию"]="セッションをクリア",
+["Удалить все реплики, отметки и оценки. Настройки и версии остаются."]="すべてのセリフ、マーク、評価を削除します。設定とバージョンは残ります。",
+["Новая дорожка дубляжа"]="新規吹き替えトラック",
+["Создать НОВУЮ дорожку «Дубляж» с цепочкой эффектов из DUB_CHAIN (не назначает существующую). Эффекты выключаются на время записи и включаются после неё."]="DUB_CHAIN のエフェクトチェーン付きで新しい「吹き替え」トラックを作成します (既存トラックの指定ではありません)。エフェクトは録音中オフ、録音後オンになります。",
+["Сведение аниме"]="アニメミックス",
+["Создать структуру сведения из проекта anime_mix: Master, Raw, Voice (ALL), Effects (All), Effects (Voice 1–8), Voice 1–8. Роутинг и цепочки эффектов из проекта. Если структура уже есть, дубль не создаётся."]="anime_mix プロジェクトのミックス構成を作成します: Master、Raw、Voice (ALL)、Effects (All)、Effects (Voice 1–8)、Voice 1–8。ルーティングとエフェクトチェーンはプロジェクトのものです。構成が既にある場合は重複作成しません。",
+["Суфлёр на телефон / планшет"]="スマホ / タブレット用プロンプター",
+["Создать страницу суфлёра с репликами проекта и показать адрес для телефона. Нужен включённый веб-интерфейс REAPER (Preferences → Control/OSC/web → Web browser interface, порт 8080). Страница сама следит за курсором REAPER; кнопки «Назад / Следующая» переставляют курсор."]="プロジェクトのセリフを載せたプロンプターページを作成し、スマホ用アドレスを表示します。REAPERのWebインターフェース (Preferences → Control/OSC/web → Web browser interface、ポート 8080) を有効にしておく必要があります。ページはREAPERのカーソルに自動で追従し、「戻る / 次へ」ボタンでカーソルを動かせます。",
+["Суфлёр: сервер видео"]="プロンプター: 動画サーバー",
+["Запустить Python-сервер, который отдаёт на телефон ОРИГИНАЛЬНОЕ видео проекта (без копий и ffmpeg). Нужен Python 3. Страница суфлёра на телефоне находит сервер сама."]="プロジェクトのオリジナル動画をスマホに配信するPythonサーバーを起動します (コピーも ffmpeg も不要)。Python 3 が必要です。スマホのプロンプターページが自動でサーバーを見つけます。",
+["Суфлёр: видео для телефона"]="プロンプター: スマホ用動画",
+["Сделать лёгкую копию видео проекта (mp4 480p со звуком, ffmpeg в фоне) в reaper_www_root. Телефон сам заберёт её с ПК, копировать файл на телефон не нужно. Прогресс в строке состояния."]="プロジェクト動画の軽量コピー (mp4 480p、音声付き、ffmpegをバックグラウンドで実行) を reaper_www_root に作成します。スマホがPCから自動で取得するので、スマホへファイルをコピーする必要はありません。進捗はステータスバーに表示されます。",
+["Субтитры из видео"]="動画から字幕を抽出",
+["Выбрать дорожку субтитров, вшитую в MKV/MP4, и импортировать её. Нужны ffmpeg и ffprobe."]="MKV/MP4に埋め込まれた字幕トラックを選んでインポートします。ffmpeg と ffprobe が必要です。",
+["Импорт и тайминг"]="インポートとタイミング",
+["Профили"]="プロファイル",
+["Записи и громкость"]="録音と音量",
+["Пакетные действия"]="一括操作",
+["Проверка качества"]="品質チェック",
+["Сессия и сводки"]="セッションとサマリー",
+["Экспорт"]="書き出し",
+["Настройки"]="設定",
+["Телефон / планшет"]="スマホ / タブレット",
+["Слежение за воспроизведением: вкл"]="再生追従: オン",
+["Слежение за воспроизведением: выкл"]="再生追従: オフ",
+["Приглушение только там, где на дорожке дубляжа есть звук"]="吹き替えトラックに音がある箇所のみダッキング",
+["Приглушение по всем репликам"]="全セリフをダッキング",
+["РЕПЛИКА %03d / %d"]="セリフ %03d / %d",
+["Ещё ▾"]="その他 ▾",
+["Кнопки заблокированы — замок справа сверху снимает блокировку"]="ボタンはロック中です — 右上の鍵でロックを解除できます",
+["Кнопки разблокированы"]="ボタンのロックを解除しました",
+["Текст крупнее"]="文字を大きく",
+["Текст мельче"]="文字を小さく",
+["Таймкод в кадрах"]="フレーム表示のタイムコード",
+["Реплики (список)"]="セリフ (一覧)",
+["Громкость"]="音量",
+["Инструменты"]="ツール",
+["Экспорт…"]="書き出し…",
+["Субтитры из видео (выбор дорожки)"]="動画から字幕を抽出 (トラック選択)",
+["Верхняя строка"]="上段",
+["+ Импорт субтитров"]="+ 字幕をインポート",
+["Суфлёр"]="プロンプター",
+["Реплики"]="セリフ",
+["Импорт…"]="インポート…",
+["Создать автоматизацию"]="オートメーションを作成",
+["Dubbing System: добавить видео"]="Dubbing System: 動画を追加",
+["Видео добавлено: "]="動画を追加しました: ",
+["СПРАВКА — горячие клавиши"]="ヘルプ — ホットキー",
+["F1  суфлёр          F2  список реплик     F3  громкость"]="F1  プロンプター          F2  セリフ一覧     F3  音量",
+["F4  инструменты     F5  суфлёр с верхней строкой     F6  эта справка"]="F4  ツール     F5  上段付きプロンプター     F6  このヘルプ",
+["Пробел — play / stop        P — играть реплику        L — цикл"]="Space — 再生 / 停止        P — セリフを再生        L — ループ",
+["D — записано        B — закладка        N — следующая закладка"]="D — 録音済み        B — ブックマーク        N — 次のブックマーク",
+["Стрелки вверх / вниз — предыдущая / следующая реплика"]="上 / 下矢印 — 前 / 次のセリフ",
+["Enter — править текст реплики        Ctrl+Z — отмена"]="Enter — セリフのテキストを編集        Ctrl+Z — 取り消し",
+["Esc, Enter, F6 или клик — закрыть справку"]="Esc、Enter、F6 またはクリック — ヘルプを閉じる",
+["вызывной"]="コールシート",
+["Вызывной"]="コールシート",
+["Язык изменён. Закрой окно суфлёра и запусти скрипт снова."]="言語を変更しました。プロンプターのウィンドウを閉じて、スクリプトをもう一度実行してください。",
+["Нужен ffprobe: положи ffmpeg.exe и ffprobe.exe в папку Scripts\\Dubbing System"]="ffprobe が必要です: ffmpeg.exe と ffprobe.exe を Scripts\\Dubbing System フォルダに置いてください",
+}
+I18N.zh={
+["Пробел — play/stop · P — реплика · L — цикл · D — записано · B — закладка · N — след. закладка"]="空格 — 播放/停止 · P — 台词 · L — 循环 · D — 已录 · B — 书签 · N — 下一书签",
+["ок"]="通过",
+["переписать"]="重写",
+["спорно"]="存疑",
+["губы не совпадают"]="口型不符",
+["bytes %d, строк со временем: %d"]="字节 %d，含时间的行数：%d",
+[", первая: "]="，首行：",
+["Нечего отменять"]="没有可撤销的操作",
+["Отменено"]="已撤销",
+["Не удалось открыть файл"]="无法打开文件",
+["Субтитры не найдены ("]="未找到字幕（",
+["Импортировано реплик"]="已导入台词",
+[", ролей: "]="，角色：",
+["Сначала импортируй субтитры (перевод)"]="请先导入字幕（译文）",
+["Оригинальные субтитры (SRT / ASS / SSA / TXT)"]="原始字幕 (SRT / ASS / SSA / TXT)",
+["Оригинал не прочитан"]="未读取原声",
+["Оригинал привязан к "]="原声已绑定到 ",
+[" репликам"]=" 条台词",
+["Сначала выдели аудиодорожку"]="请先选择音频轨道",
+["Оригинал: дорожек "]="原声：轨道数 ",
+["Дубляж: "]="配音：",
+["Сначала импортируй субтитры"]="请先导入字幕",
+["Выдели оригинальные дорожки и нажми «Назначить оригинал»"]="请选择原声轨道，然后点击“指定原声”",
+["Нет окон приглушения: на дорожке дубляжа нет звука под репликами"]="没有压低窗口：配音轨道上台词下方没有声音",
+["Создать огибающую приглушения на дорожках: "]="在以下轨道创建压低包络：",
+[", окон: "]="，窗口：",
+["?\n\nВНИМАНИЕ: текущие точки Volume будут заменены."]="？\n\n注意：当前的 Volume 点将被替换。",
+["Автоматизация создана: дорожек "]="自动化已创建：轨道数 ",
+[", окон "]="，窗口 ",
+["Настройки ducking"]="Ducking 设置",
+["Приглушение (дБ),Перед репликой (мс),После реплики (мс),Плавное снижение (мс),Возврат громкости (мс)"]="压低 (dB),台词前 (ms),台词后 (ms),渐降 (ms),音量恢复 (ms)",
+["Настройки сохранены"]="设置已保存",
+["Неверные значения настроек"]="设置值无效",
+["В субтитрах нет ролей"]="字幕中没有角色",
+["Приглушение по ролям, дБ (пусто = общее "]="按角色压低，dB（留空 = 通用 ",
+["Глубина по ролям сохранена"]="按角色的深度已保存",
+["Сначала назначь оригинальные дорожки"]="请先指定原声轨道",
+["Приглушение по дорожкам, дБ (пусто = по окну)"]="按轨道压低，dB（留空 = 按窗口）",
+["Глубина по дорожкам сохранена"]="按轨道的深度已保存",
+["Оверлей: запуск / выключение (если REAPER спросит — выбери Terminate)"]="悬浮层：启动 / 关闭（如 REAPER 询问，请选择 Terminate）",
+["Не удалось зарегистрировать оверлей как действие"]="无法将悬浮层注册为动作",
+["Помести Dubbing_SubOverlay.lua рядом с Prompter или в Scripts/Dubbing System/Various"]="请将 Dubbing_SubOverlay.lua 放在 Prompter 旁边或 Scripts/Dubbing System/Various 中",
+["Оверлей перезапускается с настройками по умолчанию…"]="悬浮层正以默认设置重启…",
+["Оверлей восстановлен с настройками по умолчанию"]="悬浮层已恢复默认设置",
+["Выбери реплику"]="请选择台词",
+["Время и роль"]="时间与角色",
+["Начало (ЧЧ:ММ:СС.ммм),Конец (ЧЧ:ММ:СС.ммм),Роль"]="开始 (时:分:秒.毫秒),结束 (时:分:秒.毫秒),角色",
+["Неверный формат"]="格式无效",
+["Неверное время (конец должен быть позже начала)"]="时间无效（结束必须晚于开始）",
+["Время и роль изменены"]="时间与角色已修改",
+["Заметка удалена"]="备注已删除",
+["Заметка сохранена"]="备注已保存",
+["Текст изменён"]="文本已修改",
+["Пустой текст не сохранён"]="空文本未保存",
+["Правка отменена"]="编辑已取消",
+["В реплике нет пробелов — разбивать нечего"]="台词中没有空格，无法拆分",
+["Не получилось разбить реплику"]="无法拆分台词",
+["Реплика разбита"]="台词已拆分",
+["Нет следующей реплики"]="没有下一条台词",
+["Реплики склеены"]="台词已合并",
+["Реплика удалена (Ctrl+Z — вернуть)"]="台词已删除（Ctrl+Z 恢复）",
+["записано"]="已录",
+["отметка снята"]="已取消标记",
+["Записано"]="已录",
+["Отметка снята"]="标记已取消",
+["Закладка поставлена"]="书签已添加",
+["Закладка снята"]="书签已移除",
+["Закладка: реплика №"]="书签：台词 №",
+["Закладок нет"]="没有书签",
+["Цикл реплики выключен"]="台词循环已关闭",
+["Цикл реплики включён (L — выключить)"]="台词循环已开启（L — 关闭）",
+["Воспроизведение реплики с пре-роллом "]="带预卷播放台词 ",
+[" с"]=" 秒",
+["На дорожке дубляжа нет итемов (назначь дубляж)"]="配音轨道上没有 item（请先指定配音）",
+["Подогнать тайминг ВСЕХ реплик под записи на дорожке дубляжа?\n(по итему с наибольшим пересечением; Ctrl+Z вернёт)"]="按配音轨道上的录音调整所有台词的时间？\n（按重叠最多的 item；Ctrl+Z 可恢复）",
+["Записей под репликами не найдено"]="台词下方未找到录音",
+["Подогнано реплик: "]="已调整台词：",
+["Все реплики"]="所有台词",
+["Только роль выбранной реплики"]="仅所选台词的角色",
+["Выбранная и все после неё"]="所选台词及其后所有台词",
+["Сдвиг времени"]="时间偏移",
+["Секунд (например 0.5 или -1)"]="秒（例如 0.5 或 -1）",
+["Неверное значение сдвига"]="偏移值无效",
+["Сдвинуто реплик: "]="已偏移台词：",
+[" на "]=" 偏移 ",
+["Глобальная замена"]="全局替换",
+["Найти (с учётом регистра)"]="查找（区分大小写）",
+["Заменить на ("]="替换为（",
+["Не найдено: "]="未找到：",
+["Замен: "]="替换数：",
+["Переименовать роль"]="重命名角色",
+["Новое имя для «"]="新名称：“",
+["Роль переименована: "]="角色已重命名：",
+["Снять отметки «записано» со всех реплик?"]="清除所有台词的“已录”标记？",
+["Отметки сняты"]="标记已清除",
+["Пре-ролл"]="预卷",
+["Секунд до реплики"]="台词前秒数",
+["Неверное значение пре-ролла"]="预卷值无效",
+["Пре-ролл: "]="预卷：",
+["Нечего экспортировать"]="没有可导出的内容",
+["SRT сохранён: "]="SRT 已保存：",
+["Не удалось записать: "]="无法写入：",
+["SRT по ролям: файлов "]="按角色 SRT：文件数 ",
+[" (в папке "]=" （在文件夹 ",
+["У реплики нет дублей на дорожке дубляжа"]="该台词在配音轨道上没有 Take",
+["Лучший дубль не выбран (все дубли звучат)"]="未选择最佳 Take（所有 Take 均有声）",
+["Лучший дубль: "]="最佳 Take：",
+[" из "]=" / ",
+[" (остальные заглушены)"]=" （其余已静音）",
+[" лучший дубль: "]=" 最佳录音：",
+["нет"]="无",
+["Нечего проверять"]="没有可检查的内容",
+["№%03d  скорость %.0f зн/с  %s"]="№%03d  语速 %.0f 字/秒  %s",
+["№%03d  короткая реплика %.2f с"]="№%03d  短台词 %.2f 秒",
+["№%03d-%03d  пауза %.2f с%s"]="№%03d-%03d  间隔 %.2f 秒%s",
+[" (перекрытие)"]=" （重叠）",
+["№%03d  дубль длиннее реплики на %.1f с"]="№%03d  Take 比台词长 %.1f 秒",
+["ПРОВЕРКА (QC) — "]="检查 (QC) — ",
+["Реплик: "]="台词：",
+["  скорость ≥"]="  语速 ≥",
+[" зн/с: "]=" 字/秒：",
+["  короткие: "]="  过短：",
+["  пауза <"]="  间隔 <",
+[" с: "]=" 秒：",
+["  дубль длиннее: "]="  Take 过长：",
+["  без дубля (не записано): "]="  无 Take（未录）：",
+["Роль "]="角色 ",
+[": записано "]="：已录 ",
+["\n\nПолный отчёт: "]="\n\n完整报告：",
+["QC: скорость "]="QC：语速 ",
+[", пауза "]="，停顿 ",
+[", без дубля "]="，无录音 ",
+["Отчёт QC сохранён: "]="QC 报告已保存：",
+["СЦЕНАРИЙ — "]="剧本 — ",
+["№%03d  %s – %s  (%.1f с)%s"]="№%03d  %s – %s  (%.1f 秒)%s",
+["  [записано]"]="  [已录]",
+["  оригинал: "]="  原声：",
+["  заметка: "]="  备注：",
+["_сценарий.txt"]="_剧本.txt",
+["Сценарии по ролям: "]="按角色剧本：",
+["Сценарии по ролям: файлов "]="按角色剧本：文件数 ",
+["Сдвиг дублей"]="Take 偏移",
+["Кадров (например 2 или -3)"]="帧数（例如 2 或 -3）",
+["Неверное число кадров"]="帧数无效",
+[" дубли сдвинуты на "]=" 录音已平移 ",
+[" кадр."]=" 帧。",
+["Дубли сдвинуты на "]="Take 已偏移 ",
+[" кадр. ("]=" 帧。（",
+[" с)"]=" 秒）",
+["Нет реплик"]="没有台词",
+["Новых записей на дорожке дубляжа не найдено"]="配音轨道上未找到新录音",
+["Авто-отметка записанных по дорожке дубляжа: "]="按配音轨道自动标记已录：",
+["Отмечено как записанные: "]="已标记为已录：",
+[" (Ctrl+Z отменит)"]=" （Ctrl+Z 可撤销）",
+["Проверка громкости нужна REAPER 6.x или новее"]="音量检查需要 REAPER 6.x 或更高版本",
+["Назначь дорожку дубляжа"]="请指定配音轨道",
+["  КЛИППИНГ"]="  削波",
+["  очень тихо"]="  声音过小",
+["  ШУМ В ПАУЗЕ"]="  间隙噪声",
+["%s  %s  пик %.1f dBFS  RMS %.1f dBFS  шум %.1f dBFS  %.1f с%s"]="%s  %s  峰值 %.1f dBFS  RMS %.1f dBFS  噪声 %.1f dBFS  %.1f 秒%s",
+["ПРОВЕРКА ГРОМКОСТИ ДУБЛЕЙ — "]="Take 音量检查 — ",
+["Дублей: "]="Take 数：",
+["  клиппинг: "]="  削波：",
+["  очень тихо (<-30 dBFS): "]="  声音过小 (<-30 dBFS)：",
+["  шум в паузе (>-50 dBFS): "]="  间隙噪声 (>-50 dBFS)：",
+["Громкость: дублей "]="响度：录音数 ",
+[", клиппинг "]="，削波 ",
+[", тихо "]="，过小 ",
+["Dubbing Prompter — громкость"]="Dubbing Prompter — 音量",
+["Громкость проверена: клиппинг "]="音量已检查：削波 ",
+["Выравнивание нужна REAPER 6.x или новее"]="音量匹配需要 REAPER 6.x 或更高版本",
+["Выровнять громкость всех дублей под медиану (±6 дБ)?\nCtrl+Z в REAPER вернёт."]="将所有 Take 的音量匹配到中位数 (±6 dB)？\n可在 REAPER 中用 Ctrl+Z 恢复。",
+["Для выравнивания нужно хотя бы два дубля"]="音量匹配至少需要两个 Take",
+["Выравнивание громкости дублей: "]="录音响度匹配：",
+["Громкость выровнена у дублей: "]="已匹配音量的 Take：",
+[" (±6 дБ, Ctrl+Z в REAPER вернёт)"]=" (±6 dB，可在 REAPER 中用 Ctrl+Z 恢复)",
+["<h1>Сценарий: "]="<h1>剧本：",
+["<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Записано</th></tr>"]="<table><tr><th>№</th><th>时间</th><th>文本</th><th>已录</th></tr>",
+["<div class='n'>оригинал: "]="<div class='n'>原声：",
+["_сценарий.html"]="_剧本.html",
+["HTML-сценарии по ролям: "]="按角色HTML剧本：",
+["HTML-сценарии: файлов "]="HTML 剧本：文件数 ",
+[" (открой в браузере и «Печать → Сохранить в PDF»)"]=" （在浏览器中打开，选择“打印 → 另存为 PDF”）",
+["\239\187\191№;Роль;Начало;Конец;Длительность, с;Зн/с;Текст;Записано;Дублей;Превышение, с;Заметка"]="\239\187\191№;角色;开始;结束;时长(秒);字/秒;文本;已录;录音数;超出(秒);备注",
+["да"]="是",
+["_лист_сессии.csv"]="_场次表.csv",
+["Лист сессии (CSV): реплик "]="场次表(CSV)：台词数 ",
+["Лист сессии сохранён: "]="场次表已保存：",
+["VTT сохранён: "]="VTT 已保存：",
+["СВОДКА ЗА "]="汇总 ",
+["Сегодня отмечено записанным: "]="今日已标记为已录：",
+["Вызывных листов сделано сегодня: "]="今日已生成通告单：",
+["Всего реплик: "]="台词总数：",
+["  записано: "]="  已录：",
+["Оценки: ок "]="评分：通过 ",
+["  переписать "]="  重写 ",
+["  спорно "]="  存疑 ",
+["Dubbing Prompter — сводка за день"]="Dubbing Prompter — 每日汇总",
+["Сводка за день показана"]="已显示每日汇总",
+["%s: записано %d из %d, осталось %d · реплик %.0f с · дублей %d"]="%s：已录 %d / %d，剩余 %d · 台词 %.0f 秒 · Take %d",
+["Dubbing Prompter — сводка по актёрам"]="Dubbing Prompter — 演员汇总",
+["Сводка по актёрам показана"]="已显示演员汇总",
+["Пороги проверки"]="检查阈值",
+["Скорость, зн/с,Минимальная пауза, с,Короткая реплика, с"]="语速，字/秒,最小间隔，秒,短台词，秒",
+["Пороги сохранены: "]="阈值已保存：",
+[" зн/с, пауза "]=" 字/秒，间隔 ",
+[" с, короткая <"]=" 秒，短台词 <",
+["Неверные значения порогов"]="阈值无效",
+["Оценка: "]="评分：",
+["Оценка снята"]="评分已清除",
+[" оценка: "]=" 评价：",
+["снята"]="已取消",
+["все"]="全部",
+["губы"]="口型",
+["не записано"]="未录",
+["Фильтр: "]="筛选：",
+["<!doctype html><html lang='ru'><head><meta charset='utf-8'><title>Вызывной лист</title><style>"]="<!doctype html><html lang='zh'><head><meta charset='utf-8'><title>通告单</title><style>",
+["<h1>Вызывной лист: "]="<h1>通告单：",
+[" · дата: "]=" · 日期：",
+["<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Заметка</th></tr>"]="<table><tr><th>№</th><th>时间</th><th>文本</th><th>备注</th></tr>",
+["</table><p>Реплик к записи: "]="</table><p>待录台词：",
+["_вызывной_"]="_通告单_",
+["Не удалось записать файл"]="无法写入文件",
+["Вызывной лист "]="通告单 ",
+["Вызывной лист: "]="通告单：",
+[" реплик (HTML в папке "]=" 条台词（HTML 位于文件夹 ",
+["Выбрано реплик: "]="已选台词：",
+["Выбор снят, выбрано: "]="已取消选择，已选：",
+["Пакетный сдвиг"]="批量偏移",
+["Секунд для "]="秒数，用于 ",
+[" реплик (например 0.5 или -1)"]=" 条台词（例如 0.5 或 -1）",
+["Пакетный сдвиг "]="批量平移 ",
+[" реплик на "]=" 条台词，偏移 ",
+[" с (Ctrl+Z отменит)"]=" 秒（Ctrl+Z 可撤销）",
+["Пакетная роль"]="批量设置角色",
+["Роль для "]="角色，用于 ",
+[" реплик (пусто = без роли)"]=" 条台词（留空 = 无角色）",
+["Пакетная роль «"]="批量角色「",
+["» для "]="」应用于 ",
+[" реплик"]=" 条台词",
+["Роль назначена: "]="角色已指定：",
+[" реплик (Ctrl+Z отменит)"]=" 条台词（Ctrl+Z 可撤销）",
+["Пакетно записано: "]="批量标记已录：",
+["Пакетно снято: "]="批量取消标记：",
+["Отмечено записанными: "]="已标记为已录：",
+["Снята отметка у: "]="已取消标记：",
+["Выбор реплик снят"]="已取消台词选择",
+["Актёр: "]="演员：",
+["ОКРУЖЕНИЕ DUBBING"]="DUBBING 环境",
+["ReaImGui (оверлей): "]="ReaImGui（悬浮层）：",
+["есть"]="有",
+["НЕТ — установи через ReaPack"]="无 — 请通过 ReaPack 安装",
+["js_ReaScriptAPI (привязка оверлея к видео): "]="js_ReaScriptAPI（悬浮层绑定视频）：",
+["нет (оверлей будет без привязки)"]="无（悬浮层将不绑定）",
+["Аудио-доступ (громкость, шум): "]="音频访问（音量、噪声）：",
+["НЕТ — нужен REAPER 6.x+"]="无 — 需要 REAPER 6.x+",
+["Частота кадров проекта: "]="工程帧率：",
+["нет функции"]="无此功能",
+["Дорожка дубляжа: "]="配音轨道：",
+["назначена"]="已指定",
+["НЕ назначена"]="未指定",
+["Файл оверлея рядом с Prompter: "]="Prompter 旁的悬浮层文件：",
+["найден"]="已找到",
+["не найден (положи рядом с Prompter)"]="未找到（请放在 Prompter 旁边）",
+["Dubbing — проверка окружения"]="Dubbing — 环境检查",
+["Проверка окружения показана"]="已显示环境检查",
+["Нужен REAPER 6.x+"]="需要 REAPER 6.x+",
+["%s  %s  интегральная %s LUFS  макс. момент. %s  макс. кратк. %s"]="%s  %s  综合 %s LUFS  最大瞬时 %s  最大短时 %s",
+["ГРОМКОСТЬ LUFS — "]="响度 LUFS — ",
+["Дублей измерено: "]="已测 Take 数：",
+["  средняя интегральная: "]="  平均综合响度：",
+["LUFS измерены: "]="已测 LUFS：",
+[" дублей (файл "]=" 个 Take（文件 ",
+["  ⚠ отличается больше 3 дБ"]="  ⚠ 相差超过 3 dB",
+["элемент %d (%s), дубль %d: %s LUFS, %+.1f дБ к медиане%s"]="item %d (%s)，Take %d：%s LUFS，较中位数 %+.1f dB%s",
+["ТАКИ ВНУТРИ ЭЛЕМЕНТОВ — "]="ITEM 内的 TAKE — ",
+["Элементов с несколькими takes: "]="含多个 Take 的 item 数：",
+["  отличаются больше 3 дБ: "]="  相差超过 3 dB：",
+["Takes сравнены: элементов "]="Take 已比较：item 数 ",
+["; отличаются: "]="；相差：",
+["скорость %.0f зн/с"]="语速 %.0f 字/秒",
+["короткая"]="过短",
+["пауза / перекрытие"]="间隔 / 重叠",
+["нет дубля"]="无 Take",
+["дубль длиннее на %.1f с"]="Take 超出 %.1f 秒",
+["Проблемных реплик нет"]="没有问题台词",
+["Перешли к реплике №"]="已跳转到台词 №",
+["Воспроизвести реплику,Цикл реплики,Записано,Закладка,След. закладка,Лучший дубль,Следующий актёр"]="播放台词,台词循环,已录,书签,下一书签,最佳 Take,下一位演员",
+["Горячие клавиши (одна латинская буква)"]="快捷键（单个拉丁字母）",
+["Клавиши не сохранены: нужны разные латинские буквы"]="快捷键未保存：必须使用不同的拉丁字母",
+["Горячие клавиши сохранены (1–4 для оценок не меняются)"]="快捷键已保存（评分键 1–4 不变）",
+["дубли (×N)"]="Take (×N)",
+["зн/с"]="字/秒",
+["длительность"]="时长",
+["превышение"]="超出",
+["заметка"]="备注",
+["оценка"]="评分",
+["Колонка «"]="列“",
+["показана"]="已显示",
+["скрыта"]="已隐藏",
+["Профиль настроек"]="设置配置文件",
+["Имя профиля"]="配置文件名",
+["Профиль 1"]="配置 1",
+["Пустое имя профиля"]="配置文件名为空",
+["Не удалось записать профиль"]="无法写入配置文件",
+["Профиль сохранён: "]="配置文件已保存：",
+["Сохранённых профилей нет"]="没有已保存的配置文件",
+["Профиль не открылся"]="配置文件无法打开",
+["Профиль загружен: "]="配置文件已加载：",
+["Таймкод в кадрах ("]="时间码（帧）(",
+["Таймкод в секундах"]="时间码（秒）",
+["Проект сохранён: "]="工程已保存：",
+["Проект Dubbing (.dubproj)"]="Dubbing 工程 (.dubproj)",
+["Это не файл проекта Dubbing"]="这不是 Dubbing 工程文件",
+["Файл проекта повреждён"]="工程文件已损坏",
+["Проект загружен: реплик "]="工程已加载：台词数 ",
+["Нет субтитров"]="没有字幕",
+["Создать "]="创建 ",
+[" регионов из субтитров?\n(существующие регионы не удаляются)"]=" 个字幕区域？\n（不会删除现有区域）",
+["Создано регионов: "]="已创建区域：",
+["Создать новую дорожку с "]="创建新轨道，包含 ",
+[" текстовыми итемами?"]=" 个文本 item？",
+["Создана дорожка с итемами: "]="已创建带 item 的轨道：",
+["Структура сведения аниме уже есть в проекте, дубль не создан"]="工程中已有动漫混音结构，未创建副本",
+["Сведение аниме создано, цепочка не записана у: "]="动漫混音已创建，未写入效果链：",
+["Сведение аниме создано: 20 дорожек, роутинг и цепочки из проекта"]="动漫混音已创建：20 条轨道，路由和效果链来自工程",
+["Дубляж"]="配音",
+["Дорожка дубляжа создана, цепочка из шаблона со всеми настройками"]="配音轨道已创建，效果链及全部设置来自模板",
+["Дорожка создана, плагины не найдены: "]="轨道已创建，未找到插件：",
+["Цепочка добавлена, пресет «Dubbing» не найден у: "]="效果链已添加，未找到预设“Dubbing”：",
+["Дорожка дубляжа создана, цепочка эффектов добавлена"]="配音轨道已创建，效果链已添加",
+["Dubbing System: убрать регионы и итемы субтитров"]="Dubbing System: 移除字幕区域和素材",
+["авто"]="自动",
+["вручную"]="手动",
+["Сохранённых версий пока нет"]="暂无已保存的版本",
+["   — реплик "]="   — 台词数 ",
+[", записано "]="，已录 ",
+["Не удалось открыть версию"]="无法打开版本",
+["Версия пуста"]="版本为空",
+["Вернуть версию "]="恢复版本 ",
+["?\n\nСейчас в сессии "]="？\n\n当前会话有 ",
+[" реплик. Текущее состояние можно вернуть через отмену (↶ или Ctrl+Z).\n"]=" 条台词。可通过撤销（↶ 或 Ctrl+Z）恢复当前状态。\n",
+["Dubbing Prompter — восстановить версию"]="Dubbing Prompter — 恢复版本",
+["Восстановление отменено"]="恢复已取消",
+["Восстановлена версия "]="已恢复版本 ",
+["Полный сброс настроек к заводским?\n\nСбросится: ducking и пре/пост-ролл, фейды, пороги QC, глубина по ролям и по дорожкам, назначение дорожек (оригинал и дубляж), горячие клавиши, колонки, таймкод, настройки оверлея.\n\nРеплики, записи, отметки и версии НЕ трогаются. Назначить дорожки заново придётся вручную."]="将所有设置完全重置为出厂默认？\n\n将重置：ducking 与预卷/后卷、淡入淡出、QC 阈值、按角色和按轨道的深度、轨道指定（原声和配音）、快捷键、列、时间码、悬浮层设置。\n\n台词、录音、标记和版本不受影响。轨道需要手动重新指定。",
+["Dubbing Prompter — полный сброс настроек"]="Dubbing Prompter — 完全重置设置",
+["Сброс настроек отменён"]="设置重置已取消",
+["Все настройки сброшены к заводским (реплики сохранены)"]="所有设置已重置为出厂默认（台词已保留）",
+["Сессия уже пустая"]="会话已经为空",
+["Очистить сессию?\n\nБудут удалены все реплики ("]="清空会话？\n\n将删除所有台词（",
+["), отметки «записано», оценки и заметки. Настройки не меняются.\n\nСохранённые версии остаются на диске и восстанавливаются через «Восстановить версию»."]="）、“已录”标记、评分和备注。设置不变。\n\n已保存的版本保留在磁盘上，可通过“恢复版本”还原。",
+["Dubbing Prompter — очистка сессии"]="Dubbing Prompter — 清空会话",
+["Очистка отменена"]="清空已取消",
+["Сессия очищена. Настройки и версии сохранены"]="会话已清空。设置和版本已保留",
+["В файле нет дорожек субтитров (или ffprobe не запустился)"]="文件中没有字幕轨道（或 ffprobe 未能启动）",
+["В файле нет дорожек субтитров"]="文件中没有字幕轨道",
+["Видео со вшитыми субтитрами (MKV / MP4)"]="内嵌字幕的视频 (MKV / MP4)",
+[" (картинки, не извлечь)"]=" （图片，无法提取）",
+["В файле только графические субтитры (картинки), текст не извлечь"]="文件中只有图形字幕（图片），无法提取文本",
+["Дорожка не выбрана"]="未选择轨道",
+["Дорожка «"]="轨道“",
+["» — это картинки, текст из неё не извлечь"]="”是图片，无法提取文本",
+["ffmpeg не смог извлечь дорожку (проверь, что ffmpeg.exe на месте)"]="ffmpeg 无法提取该轨道（请检查 ffmpeg.exe 是否在位）",
+["ffmpeg создал пустой файл: дорожка не извлечена"]="ffmpeg 生成了空文件：轨道未提取",
+["Из видео, дорожка "]="来自视频，轨道 ",
+["Импорт: видео (MKV/MP4) или субтитры (SRT/ASS/SSA/TXT)"]="导入：视频 (MKV/MP4) 或字幕 (SRT/ASS/SSA/TXT)",
+["Готово: реплик "]="完成：台词数 ",
+[", регионы и текстовые итемы созданы"]="，已创建区域和文本 item",
+["в шаблоне нет метки реплик"]="模板中没有台词标记",
+["не могу писать в "]="无法写入 ",
+["не могу записать "]="无法写入 ",
+["Видео для телефона"]="手机视频",
+["В проекте не найден видео-элемент."]="工程中未找到视频 item。",
+["Подготовка уже идёт, прогресс показан в строке состояния."]="正在准备中，进度显示在状态栏。",
+["Создать лёгкую копию видео для телефона?\n\n"]="为手机创建轻量视频副本？\n\n",
+["\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)"]="\n\n（工程中有多个视频文件：只为主文件（最长的）制作副本。其他片段在手机上将标注“无副本”。）",
+["\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\Dubbing System или в PATH."]="\n\nmp4 480p，带声音。ffmpeg 在后台运行（几分钟，期间可正常使用 REAPER）。副本存放在 reaper_www_root，由电脑提供给手机。需要 ffmpeg.exe 位于 Scripts\\Dubbing System 或 PATH 中。",
+["Не могу записать "]="无法写入 ",
+["Не удалось запустить ffmpeg автоматически. Запустите вручную двойным щелчком:\n"]="无法自动启动 ffmpeg。请双击手动运行：\n",
+["Видео для телефона: подготовка…"]="手机视频：准备中…",
+["Видео для телефона готово: страница сама подхватит его"]="手机视频已就绪：页面会自动获取",
+["Видео для телефона: ffmpeg не справился (лог: "]="手机视频：ffmpeg 处理失败（日志：",
+["Видео для телефона: %d%%"]="手机视频：%d%%",
+["Сервер видео"]="视频服务器",
+["Не найден start_server.bat:\n"]="未找到 start_server.bat：\n",
+["\n\nПереустановите Dubbing System или скопируйте папку MobileServer рядом со скриптом."]="\n\n请重新安装 Dubbing System，或将 MobileServer 文件夹复制到脚本旁边。",
+["Сервер видео запускается в отдельном окне.\n\n"]="视频服务器正在单独窗口中启动。\n\n",
+["ВНИМАНИЕ: в проекте не найден видео-элемент — сервер нечего отдавать.\n\n"]="注意：工程中未找到视频 item，服务器没有可提供的内容。\n\n",
+["Видео: "]="视频：",
+["Проверка в браузере ПК: "]="在电脑浏览器中检查：",
+["http://IP-ПК:"]="http://电脑IP:",
+["Телефон подхватит видео сам (страница суфлёра ищет сервер на этом же ПК, порт "]="手机会自动获取视频（提词器页面会在这台电脑上查找服务器，端口 ",
+["Нужен Python 3 (python.org, галочка Add to PATH). При первом запуске разрешите python.exe в брандмауэре Windows (частная сеть).\n"]="需要 Python 3（python.org，勾选 Add to PATH）。首次运行时，请在 Windows 防火墙中允许 python.exe（专用网络）。\n",
+["Если окно сервера сразу закрылось или показало ошибку, прочитайте её: там указана причина."]="如果服务器窗口立即关闭或显示错误，请阅读错误信息：其中说明了原因。",
+["\n\nОкно сервера открыть не удалось. Запустите вручную двойным щелчком:\n"]="\n\n无法打开服务器窗口。请双击手动运行：\n",
+["Сервер видео: "]="视频服务器：",
+["порт "]="端口 ",
+["Суфлёр на телефон: "]="手机提词器：",
+["Суфлёр на телефон: сначала импортируйте субтитры"]="手机提词器：请先导入字幕",
+["Не удалось создать страницу суфлёра:\n"]="无法创建提词器页面：\n",
+["Суфлёр на телефон"]="手机提词器",
+["/prompter.html   (IP смотрите командой ipconfig)"]="/prompter.html   (IP 请用 ipconfig 命令查看)",
+["Страница суфлёра создана:\n"]="提词器页面已创建：\n",
+["\n\nАдрес для телефона / планшета (одна Wi-Fi сеть с ПК):\n"]="\n\n手机 / 平板访问地址（需与电脑在同一 Wi-Fi 网络）：\n",
+["Веб-интерфейс REAPER найден в настройках, порт "]="已在设置中找到 REAPER 网页界面，端口 ",
+["ВНИМАНИЕ: веб-интерфейс REAPER не найден в reaper.ini. Включите его один раз:\nPreferences → Control/OSC/web → Add → «Web browser interface», порт 8080, нажмите OK.\n(Если вы только что включили его — адрес выше всё равно верный.)\n"]="注意：reaper.ini 中未找到 REAPER 网页界面。请启用一次：\nPreferences → Control/OSC/web → Add → “Web browser interface”，端口 8080，点击 OK。\n（如果刚刚已启用，上面的地址仍然有效。）\n",
+["\nЕсли телефон не подключается: разрешите reaper.exe в брандмауэре Windows для частной сети.\nСтраница обновляется сама при изменении реплик."]="\n如果手机无法连接：请在 Windows 防火墙中允许 reaper.exe（专用网络）。\n台词变化时页面会自动刷新。",
+["Суфлёр на телефон: имена ролей "]="手机提词器：角色名 ",
+["включены"]="已开启",
+["выключены"]="已关闭",
+["Окна приглушения берутся из записей на дорожке дубляжа"]="压低窗口取自配音轨道上的录音",
+["Окна приглушения берутся из субтитров"]="压低窗口取自字幕",
+["Версия сохранена в "]="版本已保存到 ",
+["Не удалось сохранить версию"]="无法保存版本",
+["превью приглушения оригинала"]="原声压低预览",
+["Текст"]="文本",
+["Время"]="时间",
+["Разбить"]="拆分",
+["Склеить"]="合并",
+["Удалить"]="删除",
+["Следить"]="跟随",
+["Играть"]="播放",
+["Цикл"]="循环",
+["Заметка"]="备注",
+["Закладка"]="书签",
+["Подогнать"]="对齐",
+["Заметка к реплике №"]="台词备注 №",
+["Правка реплики №"]="编辑台词 №",
+["Enter — сохранить · Ctrl+Enter — перенос строки · Esc — отмена"]="Enter — 保存 · Ctrl+Enter — 换行 · Esc — 取消",
+["Сохранить"]="保存",
+["Отмена"]="取消",
+["Поиск по тексту…"]="搜索文本…",
+["Все роли"]="所有角色",
+["▶ Играть"]="▶ 播放",
+["✓ Записано"]="✓ 已录",
+["⚑ Заметка"]="⚑ 备注",
+["★ Лучший"]="★ 最佳",
+["✎ Текст"]="✎ 文本",
+["%.0f зн/с"]="%.0f 字/秒",
+["%.1f с"]="%.1f 秒",
+["✓ ок"]="✓ 通过",
+["↺ переписать"]="↺ 重写",
+["? спорно"]="? 存疑",
+["+%.1f с"]="+%.1f 秒",
+["★ лучший"]="★ 最佳",
+["Импортируй субтитры"]="请导入字幕",
+["Ничего не найдено"]="未找到任何内容",
+["Только под дубляжом: "]="仅配音下方：",
+["ВКЛ"]="开",
+["ВЫКЛ"]="关",
+["Перед "]="前 ",
+[" ms · После "]=" ms · 后 ",
+[" ms · Плавно "]=" ms · 渐降 ",
+[" ms · Возврат "]=" ms · 恢复 ",
+["АВТОМАТИЗАЦИЯ ГРОМКОСТИ"]="音量自动化",
+["Приглушить оригинал"]="压低原声",
+["Перед репликой"]="台词前",
+["После реплики"]="台词后",
+["Плавное снижение"]="渐降",
+["Возврат громкости"]="音量恢复",
+["Оверлей на видео: вкл / выкл"]="视频悬浮层：开 / 关",
+["Экспорт SRT"]="导出 SRT",
+["В регионы"]="转为区域",
+["В текстовые итемы"]="转为文本 item",
+["Восстановить оверлей"]="恢复悬浮层",
+["СУБТИТРЫ"]="字幕",
+["Импорт оригинала"]="导入原文",
+["Загрузить второй файл субтитров для сравнения с переводом."]="加载第二个字幕文件，与译文对比。",
+["Подогнать под дубли"]="对齐 Take",
+["Подогнать тайминг всех реплик под записи дубляжа на дорожке (по takes)."]="按轨道上的配音录音（按 Take）调整所有台词的时间。",
+["Сдвинуть время"]="偏移时间",
+["Сдвинуть все реплики (или выбранные) на заданное время."]="将所有台词（或所选台词）偏移指定时间。",
+["Замена текста"]="文本替换",
+["Глобальная замена слова или фразы в тексте всех реплик."]="在所有台词文本中全局替换词或短语。",
+["Поменять имя роли во всех репликах."]="在所有台词中更改角色名称。",
+["Приглушение по ролям"]="按角色压低",
+["Глубина приглушения оригинала (дБ) отдельно для каждой роли."]="为每个角色单独设置原声压低深度 (dB)。",
+["Приглушение по дорожкам"]="按轨道压低",
+["Глубина приглушения по дорожкам оригинала."]="按原声轨道设置压低深度。",
+["Окна приглушения"]="压低窗口",
+["Переключить: брать окна приглушения из записей дубляжа или из субтитров."]="切换：压低窗口取自配音录音或字幕。",
+["Сколько секунд звучит перед репликой при воспроизведении (задаётся числом)."]="播放时台词前预先播放的秒数（输入数值）。",
+["Сбросить «записано»"]="清除“已录”",
+["Снять отметку «записано» со всех реплик."]="清除所有台词的“已录”标记。",
+["SRT по ролям"]="按角色 SRT",
+["Экспорт субтитров SRT отдельным файлом на каждую роль."]="按角色分别导出 SRT 字幕文件。",
+["Экспорт проекта"]="导出工程",
+["Сохранить всю сессию (реплики, роли, настройки) в файл .dubproj."]="将整个会话（台词、角色、设置）保存为 .dubproj 文件。",
+["Импорт проекта"]="导入工程",
+["Загрузить сессию из файла .dubproj."]="从 .dubproj 文件加载会话。",
+["Сохранить версию"]="保存版本",
+["Записать текущее состояние сессии как версию сейчас."]="立即将当前会话状态保存为一个版本。",
+["Восстановить версию"]="恢复版本",
+["Выбрать сохранённую версию и вернуть сессию к ней."]="选择已保存的版本，并将会话还原到该版本。",
+["Проверка QC"]="QC 检查",
+["Отчёт: скорость речи, паузы, дубли, выход дубля за окно реплики."]="报告：语速、间隔、Take、Take 超出台词窗口。",
+["Сценарии (текст)"]="剧本（文本）",
+["Текстовые сценарии для каждого актёра, по одному файлу на роль."]="为每位演员生成文本剧本，每个角色一个文件。",
+["Дубли на N кадров"]="Take 偏移 N 帧",
+["Сдвинуть дубли выбранной реплики на заданное число кадров."]="将所选台词的 Take 偏移指定帧数。",
+["Лучший дубль"]="最佳 Take",
+["Выбрать лучший дубль выбранной реплики, остальные приглушить."]="选择所选台词的最佳 Take，其余压低。",
+["Справка (F6)"]="帮助 (F6)",
+["Открыть окно с горячими клавишами и описанием."]="打开快捷键和说明窗口。",
+["Записано по дорожке"]="按轨道标记已录",
+["Отметить как записанные реплики, по которым на дорожке дубляжа уже есть запись."]="将配音轨道上已有录音的台词标记为已录。",
+["Громкость дублей"]="Take 音量",
+["Проверить клиппинг и тишину в дублях, записать отчёт."]="检查 Take 中的削波和静音，并生成报告。",
+["Сценарии (HTML)"]="剧本 (HTML)",
+["HTML-сценарии по ролям, открываются для печати в PDF."]="按角色生成 HTML 剧本，可打开并打印为 PDF。",
+["Таймкод: кадры"]="时间码：帧",
+["Переключить таймкод между секундами и кадрами."]="在秒和帧之间切换时间码。",
+["Изменить пороги скорости, паузы и короткой реплики для проверки QC."]="更改 QC 检查的语速、间隔和短台词阈值。",
+["Сводка по актёрам"]="演员汇总",
+["Сколько реплик записано и осталось у каждого актёра."]="每位演员已录和剩余的台词数。",
+["Лист сессии (CSV)"]="场次表 (CSV)",
+["Таблица сессии для Excel (разделитель «;», запятая в числах)."]="供 Excel 使用的会话表格（分隔符“;”，数字用逗号）。",
+["Экспорт VTT"]="导出 VTT",
+["Субтитры в формате WebVTT."]="WebVTT 格式字幕。",
+["Фильтр по статусу"]="按状态筛选",
+["Показать только реплики с выбранным статусом: все, переписать, спорно, ок, не записано."]="仅显示所选状态的台词：全部、重写、存疑、通过、未录。",
+["Вызывной лист"]="通告单",
+["HTML-лист для актёра с ещё не записанными репликами."]="为演员生成包含未录台词的 HTML 通告单。",
+["Сводка за день"]="每日汇总",
+["Сколько записано, листов и оценок сделано в сессии."]="本次会话已录台词、通告单和评分的数量。",
+["Выровнять громкость"]="匹配音量",
+["Привести громкость дублей к медиане, не больше ±6 дБ от неё."]="将 Take 音量调整到中位数，偏差不超过 ±6 dB。",
+["Сдвинуть выбранные"]="偏移所选",
+["Сдвинуть все отмеченные (Ctrl+клик) реплики на N секунд."]="将所有已标记（Ctrl+点击）的台词偏移 N 秒。",
+["Назначить роль"]="指定角色",
+["Назначить одну роль всем отмеченным репликам."]="为所有已标记的台词指定同一角色。",
+["Отметить записано"]="标记已录",
+["Отметить все отмеченные реплики как записанные."]="将所有已标记的台词标记为已录。",
+["Снять «записано»"]="清除“已录”",
+["Снять отметку «записано» с отмеченных реплик."]="清除已标记台词的“已录”标记。",
+["Снять выбор"]="取消选择",
+["Убрать все отмеченные реплики (Ctrl+клик)."]="取消所有已标记的台词（Ctrl+点击）。",
+["Проверка окружения"]="环境检查",
+["Проверить ReaImGui, js_ReaScriptAPI, аудио и файл оверлея."]="检查 ReaImGui、js_ReaScriptAPI、音频和悬浮层文件。",
+["Горячие клавиши"]="快捷键",
+["Задать свои латинские буквы для действий (1–4 оценки не меняются)."]="为各操作自定义拉丁字母（评分键 1–4 不变）。",
+["Колонки в списке"]="列表列",
+["Включить или выключить колонки статистики в строках."]="开启或关闭行内的统计列。",
+["Сохранить профиль"]="保存配置",
+["Сохранить настройки ducking, пре/пост-ролла, фейдов и порогов в файл."]="将 ducking、预卷/后卷、淡入淡出和阈值设置保存到文件。",
+["Загрузить профиль"]="加载配置",
+["Загрузить сохранённый профиль настроек."]="加载已保存的设置配置。",
+["Проблемы проверки"]="检查问题",
+["Список реплик, требующих проверки, с переходом к выбранной."]="列出需要检查的台词，可跳转到所选台词。",
+["Сравнение takes"]="Take 对比",
+["Громкость каждого дубля внутри элемента относительно медианы."]="item 内每个 Take 相对中位数的音量。",
+["LUFS по дубляжу"]="配音 LUFS",
+["Интегральная и пиковая громкость каждого дубля по BS.1770."]="按 BS.1770 测量每个 Take 的综合与峰值响度。",
+["Полный сброс настроек"]="完全重置设置",
+["Все настройки к заводским, включая оверлей и назначение дорожек. Реплики не трогаются."]="所有设置恢复出厂默认，包括悬浮层和轨道指定。台词不受影响。",
+["Очистить сессию"]="清空会话",
+["Удалить все реплики, отметки и оценки. Настройки и версии остаются."]="删除所有台词、标记和评分。设置和版本保留。",
+["Новая дорожка дубляжа"]="新建配音轨道",
+["Создать НОВУЮ дорожку «Дубляж» с цепочкой эффектов из DUB_CHAIN (не назначает существующую). Эффекты выключаются на время записи и включаются после неё."]="新建“配音”轨道，效果链取自 DUB_CHAIN（不会指定现有轨道）。录音期间效果关闭，录音后开启。",
+["Сведение аниме"]="动漫混音",
+["Создать структуру сведения из проекта anime_mix: Master, Raw, Voice (ALL), Effects (All), Effects (Voice 1–8), Voice 1–8. Роутинг и цепочки эффектов из проекта. Если структура уже есть, дубль не создаётся."]="按 anime_mix 工程创建混音结构：Master、Raw、Voice (ALL)、Effects (All)、Effects (Voice 1–8)、Voice 1–8。路由和效果链来自工程。若结构已存在，则不会创建副本。",
+["Суфлёр на телефон / планшет"]="手机 / 平板提词器",
+["Создать страницу суфлёра с репликами проекта и показать адрес для телефона. Нужен включённый веб-интерфейс REAPER (Preferences → Control/OSC/web → Web browser interface, порт 8080). Страница сама следит за курсором REAPER; кнопки «Назад / Следующая» переставляют курсор."]="创建包含工程台词的提词器页面，并显示手机访问地址。需要启用 REAPER 网页界面（Preferences → Control/OSC/web → Web browser interface，端口 8080）。页面会自动跟随 REAPER 光标；“上一条 / 下一条”按钮可移动光标。",
+["Суфлёр: сервер видео"]="提词器：视频服务器",
+["Запустить Python-сервер, который отдаёт на телефон ОРИГИНАЛЬНОЕ видео проекта (без копий и ffmpeg). Нужен Python 3. Страница суфлёра на телефоне находит сервер сама."]="启动 Python 服务器，向手机提供工程的原始视频（无需副本和 ffmpeg）。需要 Python 3。手机上的提词器页面会自动找到服务器。",
+["Суфлёр: видео для телефона"]="提词器：手机视频",
+["Сделать лёгкую копию видео проекта (mp4 480p со звуком, ffmpeg в фоне) в reaper_www_root. Телефон сам заберёт её с ПК, копировать файл на телефон не нужно. Прогресс в строке состояния."]="为工程视频制作轻量副本（mp4 480p，带声音，ffmpeg 后台运行）到 reaper_www_root。手机会自动从电脑获取，无需复制文件到手机。进度显示在状态栏。",
+["Субтитры из видео"]="视频字幕",
+["Выбрать дорожку субтитров, вшитую в MKV/MP4, и импортировать её. Нужны ffmpeg и ffprobe."]="选择 MKV/MP4 中内嵌的字幕轨道并导入。需要 ffmpeg 和 ffprobe。",
+["Импорт и тайминг"]="导入与时间",
+["Профили"]="配置",
+["Записи и громкость"]="录音与音量",
+["Пакетные действия"]="批量操作",
+["Проверка качества"]="质量检查",
+["Сессия и сводки"]="会话与汇总",
+["Экспорт"]="导出",
+["Настройки"]="设置",
+["Телефон / планшет"]="手机 / 平板",
+["Слежение за воспроизведением: вкл"]="播放跟随：开",
+["Слежение за воспроизведением: выкл"]="播放跟随：关",
+["Приглушение только там, где на дорожке дубляжа есть звук"]="仅在配音轨道有声音处压低",
+["Приглушение по всем репликам"]="对所有台词压低",
+["РЕПЛИКА %03d / %d"]="台词 %03d / %d",
+["Ещё ▾"]="更多 ▾",
+["Кнопки заблокированы — замок справа сверху снимает блокировку"]="按钮已锁定 — 点击右上角的锁可解锁",
+["Кнопки разблокированы"]="按钮已解锁",
+["Текст крупнее"]="文字放大",
+["Текст мельче"]="文字缩小",
+["Таймкод в кадрах"]="帧时间码",
+["Реплики (список)"]="台词（列表）",
+["Громкость"]="音量",
+["Инструменты"]="工具",
+["Экспорт…"]="导出…",
+["Субтитры из видео (выбор дорожки)"]="视频字幕（选择轨道）",
+["Верхняя строка"]="顶部栏",
+["+ Импорт субтитров"]="+ 导入字幕",
+["Суфлёр"]="提词器",
+["Реплики"]="台词",
+["Импорт…"]="导入…",
+["Создать автоматизацию"]="创建自动化",
+["Dubbing System: добавить видео"]="Dubbing System: 添加视频",
+["Видео добавлено: "]="视频已添加：",
+["СПРАВКА — горячие клавиши"]="帮助 — 快捷键",
+["F1  суфлёр          F2  список реплик     F3  громкость"]="F1  提词器          F2  台词列表     F3  音量",
+["F4  инструменты     F5  суфлёр с верхней строкой     F6  эта справка"]="F4  工具     F5  带顶部栏提词器     F6  本帮助",
+["Пробел — play / stop        P — играть реплику        L — цикл"]="空格 — play / stop        P — 播放台词        L — 循环",
+["D — записано        B — закладка        N — следующая закладка"]="D — 已录        B — 书签        N — 下一书签",
+["Стрелки вверх / вниз — предыдущая / следующая реплика"]="上 / 下方向键 — 上一条 / 下一条台词",
+["Enter — править текст реплики        Ctrl+Z — отмена"]="Enter — 编辑台词文本        Ctrl+Z — 撤销",
+["Esc, Enter, F6 или клик — закрыть справку"]="Esc、Enter、F6 或点击 — 关闭帮助",
+["вызывной"]="通告单",
+["Вызывной"]="通告单",
+["Язык изменён. Закрой окно суфлёра и запусти скрипт снова."]="语言已更改。请关闭提词器窗口并重新运行脚本。",
+["Нужен ffprobe: положи ffmpeg.exe и ffprobe.exe в папку Scripts\\Dubbing System"]="需要 ffprobe：请把 ffmpeg.exe 和 ffprobe.exe 放到 Scripts\\Dubbing System 文件夹",
+}
+
+-- ---------- interface language (ru / en / ja / zh) ----------
+LANG="en"
+do
+ local l=reaper.GetExtState("DubbingPrompter","lang")
+ if l=="" then
+  local ini=reaper.get_ini_file and reaper.get_ini_file() or ""
+  local f=io.open(ini,"r"); local lp=""
+  if f then lp=(f:read("*a") or ""):match("langpack=([^\r\n]*)") or ""; f:close() end
+  lp=lp:lower()
+  if lp:find("ru",1,true) or lp:find("русск",1,true) then l="ru" elseif lp:find("ja",1,true) or lp:find("jp",1,true) or lp:find("日本",1,true) then l="ja" elseif lp:find("zh",1,true) or lp:find("chs",1,true) or lp:find("cht",1,true) or lp:find("cn",1,true) or lp:find("chin",1,true) or lp:find("中文",1,true) or lp:find("简",1,true) or lp:find("繁",1,true) then l="zh" else l="en" end
+ end
+ if l=="ru" or l=="en" or l=="ja" or l=="zh" then LANG=l end
+end
+FONT=(LANG=="ja") and "Yu Gothic UI" or (LANG=="zh") and "Microsoft YaHei" or "Arial"
+function T(s) if LANG=="ru" then return s end local t=I18N[LANG]; return (t and t[s]) or s end
+function has(line,ru)
+ if line:find(ru,1,true) then return true end
+ for _,l in ipairs({"en","ja","zh"}) do local t=I18N[l][ru]; if t and line:find(t,1,true) then return true end end
+ return false
+end
+function set_lang(code)
+ reaper.SetExtState("DubbingPrompter","lang",code,true)
+ local t=I18N[code]; local m="Язык изменён. Закрой окно суфлёра и запусти скрипт снова."
+ status=(t and t[m]) or m
+end
 local SEC="DubbingSystem"
 local K={subs="subtitle_data_v1",orig="original_track_guid",dub="dubbing_track_guid",duck="duck_db",pre="pre_roll_ms",post="post_roll_ms",fi="fade_in_ms",fo="fade_out_ms",source="subtitle_source"}
 
@@ -34,7 +1912,7 @@ DUB_CHAIN={
 }
 dub_rec_off=false   -- true, пока эффекты дорожки дубляжа выключены на время записи
 local W,H=1080,740
-local rows, selected, scroll, status = {},1,0,"Пробел — play/stop · P — реплика · L — цикл · D — записано · B — закладка · N — след. закладка"
+local rows, selected, scroll, status = {},1,0,T("Пробел — play/stop · P — реплика · L — цикл · D — записано · B — закладка · N — след. закладка")
 local duck,pre,post,fi,fo=25,100,150,120,220
 local only_dub,follow,win_from_dub=false,true,false
 local preroll=3
@@ -47,7 +1925,7 @@ local ov_restore_at=nil -- time when a restored overlay should be started (after
 local ui_locked=false
 local search,search_focus,role_filter="",false,""
 local status_filter=""   -- "", "redo", "check", "ok", "none" (not recorded)
-local VERDICTS={ok="ок",redo="переписать",check="спорно",lip="губы не совпадают"}
+local VERDICTS={ok=T("ок"),redo=T("переписать"),check=T("спорно"),lip=T("губы не совпадают")}
 local edit_mode,edit_buf,edit_target=false,"","text"
 local undo_stack={}
 local vis,roles,role_idx={}, {}, {}
@@ -233,7 +2111,7 @@ local function read_subs_file(path)
  for ln in (data.."\n"):gmatch("([^\n]*)\n") do
   if ln:find("-->",1,true) then tcl=tcl+1; if first=="" then first=ln:sub(1,60) end end
  end
- last_sub_hint=string.format("bytes %d, строк со временем: %d",#data,tcl)..(first~="" and (", первая: "..first) or "")
+ last_sub_hint=string.format(T("bytes %d, строк со временем: %d"),#data,tcl)..(first~="" and (T(", первая: ")..first) or "")
  -- UTF-16 (Windows Notepad "Unicode"): convert to UTF-8 so the parsers can read it
  local b1,b2=data:byte(1,2)
  if (b1==0xFF and b2==0xFE) or (b1==0xFE and b2==0xFF) or data:find("\0",1,true) then
@@ -379,30 +2257,30 @@ end
 
 local function undo()
  local u=table.remove(undo_stack)
- if not u then status="Нечего отменять"; return end
+ if not u then status=T("Нечего отменять"); return end
  rows=u.rows; selected=math.max(1,math.min(u.selected,#rows))
- save(); mark_dirty(); status="Отменено"
+ save(); mark_dirty(); status=T("Отменено")
 end
 
 -- ---------- import ----------
 -- loads a subtitle file as the translation (used by the file dialog and by "Из видео")
 local function load_subs_path(path,from_note)
  local list=read_subs_file(path)
- if not list then status="Не удалось открыть файл"; return end
+ if not list then status=T("Не удалось открыть файл"); return end
  push_undo()
  rows=list; selected=1; scroll=0
  search=""; role_filter=""; search_focus=false
  reaper.SetProjExtState(0,SEC,K.source,path); save(); mark_dirty()
- if #rows==0 then status="Субтитры не найдены ("..(last_sub_hint or "")..")"
- else status=(from_note or "Импортировано реплик")..": "..#rows..(#roles>0 and (", ролей: "..#roles) or "") end
+ if #rows==0 then status=T("Субтитры не найдены (")..(last_sub_hint or "")..")"
+ else status=(from_note or T("Импортировано реплик"))..": "..#rows..(#roles>0 and (T(", ролей: ")..#roles) or "") end
 end
 
 local function import_orig()
- if #rows==0 then status="Сначала импортируй субтитры (перевод)"; return end
- local ok,path=pick_file("Оригинальные субтитры (SRT / ASS / SSA / TXT)")
+ if #rows==0 then status=T("Сначала импортируй субтитры (перевод)"); return end
+ local ok,path=pick_file(T("Оригинальные субтитры (SRT / ASS / SSA / TXT)"))
  if not ok then return end
  local list=read_subs_file(path)
- if not list or #list==0 then status="Оригинал не прочитан"; return end
+ if not list or #list==0 then status=T("Оригинал не прочитан"); return end
  push_undo()
  local n=0
  for _,s in ipairs(rows) do
@@ -414,7 +2292,7 @@ local function import_orig()
   end
   if best then s.orig=(best.text:gsub("\n"," ")); n=n+1 end
  end
- save(); mark_dirty(); status="Оригинал привязан к "..n.." репликам"
+ save(); mark_dirty(); status=T("Оригинал привязан к ")..n..T(" репликам")
 end
 
 -- ---------- tracks / dub items ----------
@@ -433,16 +2311,16 @@ end
 
 local function set_track(which)
  local n=reaper.CountSelectedTracks(0)
- if n==0 then status="Сначала выдели аудиодорожку"; return end
+ if n==0 then status=T("Сначала выдели аудиодорожку"); return end
  if which=="orig" then
   local g={}
   for i=0,n-1 do g[#g+1]=track_guid(reaper.GetSelectedTrack(0,i)) end
   reaper.SetProjExtState(0,SEC,K.orig,table.concat(g,","))
-  status="Оригинал: дорожек "..n
+  status=T("Оригинал: дорожек ")..n
  else
   local tr=reaper.GetSelectedTrack(0,0)
   reaper.SetProjExtState(0,SEC,K.dub,track_guid(tr))
-  status="Дубляж: "..track_name(tr)
+  status=T("Дубляж: ")..track_name(tr)
  end
  wins_dirty=true; dub_time=-10
 end
@@ -514,19 +2392,19 @@ local function get_wins()
 end
 
 local function generate_duck()
- if #rows==0 and not win_from_dub then status="Сначала импортируй субтитры"; return end
+ if #rows==0 and not win_from_dub then status=T("Сначала импортируй субтитры"); return end
  local ot=orig_tracks()
  if #ot==0 then
   local n=reaper.CountSelectedTracks(0)
-  if n==0 then status="Выдели оригинальные дорожки и нажми «Назначить оригинал»"; return end
+  if n==0 then status=T("Выдели оригинальные дорожки и нажми «Назначить оригинал»"); return end
   local g={}
   for i=0,n-1 do g[#g+1]=track_guid(reaper.GetSelectedTrack(0,i)) end
   reaper.SetProjExtState(0,SEC,K.orig,table.concat(g,","))
   ot=orig_tracks()
  end
  local wins=compute_wins()
- if #wins==0 then status="Нет окон приглушения: на дорожке дубляжа нет звука под репликами"; return end
- local yes=reaper.ShowMessageBox("Создать огибающую приглушения на дорожках: "..#ot..", окон: "..#wins.."?\n\nВНИМАНИЕ: текущие точки Volume будут заменены.","Dubbing Prompter",1)
+ if #wins==0 then status=T("Нет окон приглушения: на дорожке дубляжа нет звука под репликами"); return end
+ local yes=reaper.ShowMessageBox(T("Создать огибающую приглушения на дорожках: ")..#ot..T(", окон: ")..#wins..T("?\n\nВНИМАНИЕ: текущие точки Volume будут заменены."),"Dubbing Prompter",1)
  if yes~=1 then return end
  reaper.Undo_BeginBlock()
  local done=0
@@ -554,18 +2432,18 @@ local function generate_duck()
   end
  end
  reaper.UpdateArrange(); reaper.Undo_EndBlock("Dubbing System: generate ducking automation",-1)
- status="Автоматизация создана: дорожек "..done..", окон "..#wins
+ status=T("Автоматизация создана: дорожек ")..done..T(", окон ")..#wins
 end
 
 local function edit_settings()
  local def=string.format("%s,%s,%s,%s,%s",duck,pre,post,fi,fo)
- local ok,res=reaper.GetUserInputs("Настройки ducking",5,"Приглушение (дБ),Перед репликой (мс),После реплики (мс),Плавное снижение (мс),Возврат громкости (мс)",def)
+ local ok,res=reaper.GetUserInputs(T("Настройки ducking"),5,T("Приглушение (дБ),Перед репликой (мс),После реплики (мс),Плавное снижение (мс),Возврат громкости (мс)"),def)
  if not ok then return end
  local v={}; for n in res:gmatch("[^,]+") do v[#v+1]=tonumber((n:gsub(",","."))) end
  if #v==5 and v[1] and v[2] and v[3] and v[4] and v[5] then
   duck=math.max(0,v[1]); pre=math.max(0,v[2]); post=math.max(0,v[3]); fi=math.max(0,v[4]); fo=math.max(0,v[5])
-  save(); status="Настройки сохранены"
- else status="Неверные значения настроек" end
+  save(); status=T("Настройки сохранены")
+ else status=T("Неверные значения настроек") end
 end
 
 local function split_csv(s)
@@ -575,34 +2453,34 @@ local function split_csv(s)
 end
 
 local function edit_role_duck()
- if #roles==0 then status="В субтитрах нет ролей"; return end
+ if #roles==0 then status=T("В субтитрах нет ролей"); return end
  local n=math.min(#roles,16)
  local caps,defs={}, {}
  for i=1,n do caps[i]=roles[i]; defs[i]=role_duck[roles[i]] and tostring(role_duck[roles[i]]) or "" end
- local ok,res=reaper.GetUserInputs("Приглушение по ролям, дБ (пусто = общее "..duck..")",n,table.concat(caps,","),table.concat(defs,","))
+ local ok,res=reaper.GetUserInputs(T("Приглушение по ролям, дБ (пусто = общее ")..duck..")",n,table.concat(caps,","),table.concat(defs,","))
  if not ok then return end
  local f=split_csv(res)
  for i=1,n do
   local v=tonumber(((f[i] or ""):gsub(",",".")))
   role_duck[roles[i]]=(v and v>=0) and v or nil
  end
- save(); status="Глубина по ролям сохранена"
+ save(); status=T("Глубина по ролям сохранена")
 end
 
 local function edit_track_duck()
  local ot=orig_tracks()
- if #ot==0 then status="Сначала назначь оригинальные дорожки"; return end
+ if #ot==0 then status=T("Сначала назначь оригинальные дорожки"); return end
  local n=math.min(#ot,16)
  local caps,defs={}, {}
  for i=1,n do caps[i]=clean_name(track_name(ot[i].tr)); defs[i]=extget("odb_"..ot[i].guid,"") end
- local ok,res=reaper.GetUserInputs("Приглушение по дорожкам, дБ (пусто = по окну)",n,table.concat(caps,","),table.concat(defs,","))
+ local ok,res=reaper.GetUserInputs(T("Приглушение по дорожкам, дБ (пусто = по окну)"),n,table.concat(caps,","),table.concat(defs,","))
  if not ok then return end
  local f=split_csv(res)
  for i=1,n do
   local v=tonumber(((f[i] or ""):gsub(",",".")))
   reaper.SetProjExtState(0,SEC,"odb_"..ot[i].guid,v and tostring(v) or "")
  end
- status="Глубина по дорожкам сохранена"
+ status=T("Глубина по дорожкам сохранена")
 end
 
 -- ---------- overlay ----------
@@ -619,12 +2497,12 @@ local function launch_overlay()
    local cmd=reaper.AddRemoveReaScript(true,0,path,true)
    if cmd and cmd>0 then
     reaper.Main_OnCommand(cmd,0)
-    status="Оверлей: запуск / выключение (если REAPER спросит — выбери Terminate)"
-   else status="Не удалось зарегистрировать оверлей как действие" end
+    status=T("Оверлей: запуск / выключение (если REAPER спросит — выбери Terminate)")
+   else status=T("Не удалось зарегистрировать оверлей как действие") end
    return
   end
  end
- status="Помести Dubbing_SubOverlay.lua рядом с Prompter или в Scripts/Dubbing System/Various"
+ status=T("Помести Dubbing_SubOverlay.lua рядом с Prompter или в Scripts/Dubbing System/Various")
 end
 
 -- restore: close any running overlay, reset its saved settings to defaults and start it again
@@ -639,11 +2517,11 @@ local function restore_overlay()
  if running then
   -- wait for the old instance to notice the quit flag and exit, then launch a fresh one
   ov_restore_at=reaper.time_precise()+1.5
-  status="Оверлей перезапускается с настройками по умолчанию…"
+  status=T("Оверлей перезапускается с настройками по умолчанию…")
  else
   reaper.DeleteExtState(OV_CFG,"quit",false)
   launch_overlay()
-  status="Оверлей восстановлен с настройками по умолчанию"
+  status=T("Оверлей восстановлен с настройками по умолчанию")
  end
 end
 
@@ -691,12 +2569,12 @@ local function commit_sorted(s)
 end
 
 local function edit_time()
- local s=rows[selected]; if not s then status="Выбери реплику"; return end
+ local s=rows[selected]; if not s then status=T("Выбери реплику"); return end
  local role=clean_name(s.role)
- local ok,res=reaper.GetUserInputs("Время и роль",3,"Начало (ЧЧ:ММ:СС.ммм),Конец (ЧЧ:ММ:СС.ммм),Роль",ftime(s.start)..","..ftime(s.finish)..","..role)
+ local ok,res=reaper.GetUserInputs(T("Время и роль"),3,T("Начало (ЧЧ:ММ:СС.ммм),Конец (ЧЧ:ММ:СС.ммм),Роль"),ftime(s.start)..","..ftime(s.finish)..","..role)
  if not ok then return end
  local a,b,r=res:match("^([^,]*),([^,]*),?(.*)$")
- if not a then status="Неверный формат"; return end
+ if not a then status=T("Неверный формат"); return end
  local function pt(x)
   x=trim(x)
   local a,b,c,d=x:match("^(%d+):(%d%d):(%d%d):(%d%d)$")
@@ -704,13 +2582,13 @@ local function edit_time()
   return tc(x) or tonumber(x)
  end
  local st,en=pt(a),pt(b)
- if not st or not en or en<=st then status="Неверное время (конец должен быть позже начала)"; return end
+ if not st or not en or en<=st then status=T("Неверное время (конец должен быть позже начала)"); return end
  push_undo(); s.start,s.finish,s.role=st,en,clean_name(r)
- commit_sorted(s); status="Время и роль изменены"
+ commit_sorted(s); status=T("Время и роль изменены")
 end
 
 local function begin_edit(target)
- local s=rows[selected]; if not s then status="Выбери реплику"; return end
+ local s=rows[selected]; if not s then status=T("Выбери реплику"); return end
  edit_target=target or "text"
  edit_mode=true; edit_buf=(edit_target=="note") and (s.note or "") or s.text; search_focus=false
 end
@@ -718,46 +2596,46 @@ end
 local function end_edit(do_save)
  if do_save then
   local s=rows[selected]; local t=trim(edit_buf)
-  if s and edit_target=="note" then push_undo(); s.note=t; save(); mark_dirty(); status=(t=="") and "Заметка удалена" or "Заметка сохранена"
-  elseif s and t~="" then push_undo(); s.text=t; save(); mark_dirty(); status="Текст изменён"
-  else status="Пустой текст не сохранён" end
- else status="Правка отменена" end
+  if s and edit_target=="note" then push_undo(); s.note=t; save(); mark_dirty(); status=(t=="") and T("Заметка удалена") or T("Заметка сохранена")
+  elseif s and t~="" then push_undo(); s.text=t; save(); mark_dirty(); status=T("Текст изменён")
+  else status=T("Пустой текст не сохранён") end
+ else status=T("Правка отменена") end
  edit_mode=false
 end
 
 local function split_row()
- local s=rows[selected]; if not s then status="Выбери реплику"; return end
+ local s=rows[selected]; if not s then status=T("Выбери реплику"); return end
  local text=(s.text:gsub("\n"," "))
  local mid=#text/2
  local best,bd
  for p in text:gmatch("()%s") do local d=math.abs(p-mid); if not bd or d<bd then best,bd=p,d end end
- if not best then status="В реплике нет пробелов — разбивать нечего"; return end
+ if not best then status=T("В реплике нет пробелов — разбивать нечего"); return end
  local a,b=trim(text:sub(1,best-1)),trim(text:sub(best+1))
- if a=="" or b=="" then status="Не получилось разбить реплику"; return end
+ if a=="" or b=="" then status=T("Не получилось разбить реплику"); return end
  push_undo()
  local t=s.start+(s.finish-s.start)*(#a/(#a+#b))
  local new={start=t,finish=s.finish,text=b,role=s.role,done=false,note="",mark=false,orig=""}
  s.text=a; s.finish=t
  table.insert(rows,selected+1,new)
- save(); mark_dirty(); status="Реплика разбита"
+ save(); mark_dirty(); status=T("Реплика разбита")
 end
 
 local function merge_row()
  local s,n=rows[selected],rows[selected+1]
- if not s or not n then status="Нет следующей реплики"; return end
+ if not s or not n then status=T("Нет следующей реплики"); return end
  push_undo()
  s.text=s.text.." "..n.text; s.finish=math.max(s.finish,n.finish)
  if n.note~="" then s.note=(s.note~="" and (s.note.." / ") or "")..n.note end
  s.done=s.done and n.done
  table.remove(rows,selected+1)
- save(); mark_dirty(); status="Реплики склеены"
+ save(); mark_dirty(); status=T("Реплики склеены")
 end
 
 local function delete_row()
  if not rows[selected] then return end
  push_undo(); table.remove(rows,selected)
  selected=math.max(1,math.min(selected,#rows))
- save(); mark_dirty(); status="Реплика удалена (Ctrl+Z — вернуть)"
+ save(); mark_dirty(); status=T("Реплика удалена (Ctrl+Z — вернуть)")
 end
 
 -- session journal: plain text file next to REAPER resources, one line per action
@@ -770,40 +2648,40 @@ local function toggle_done(i)
  local idx=i or selected
  local s=rows[idx]; if not s then return end
  s.done=not s.done; save()
- log_event("№"..idx.." "..(s.role~="" and s.role or "-").." "..(s.done and "записано" or "отметка снята"))
- status=s.done and "Записано" or "Отметка снята"
+ log_event("№"..idx.." "..(s.role~="" and s.role or "-").." "..(s.done and T("записано") or T("отметка снята")))
+ status=s.done and T("Записано") or T("Отметка снята")
 end
 
 local function toggle_mark()
  local s=rows[selected]; if not s then return end
- s.mark=not s.mark; save(); status=s.mark and "Закладка поставлена" or "Закладка снята"
+ s.mark=not s.mark; save(); status=s.mark and T("Закладка поставлена") or T("Закладка снята")
 end
 
 local function next_mark()
  if #rows==0 then return end
  for k=1,#rows do
   local i=((selected-1+k)%#rows)+1
-  if rows[i].mark then goto_row(i); show_row(i); status="Закладка: реплика №"..i; return end
+  if rows[i].mark then goto_row(i); show_row(i); status=T("Закладка: реплика №")..i; return end
  end
- status="Закладок нет"
+ status=T("Закладок нет")
 end
 
 -- play the selected line with a pre-roll; loop = repeat [line-preroll .. line+post]
 local function play_line(do_loop)
- local s=rows[selected]; if not s then status="Выбери реплику"; return end
+ local s=rows[selected]; if not s then status=T("Выбери реплику"); return end
  local start=math.max(0,s.start-preroll)
  if do_loop then
   if loop_active then
    loop_active=false
    if reaper.GetToggleCommandState(1068)==1 then reaper.Main_OnCommand(1068,0) end
-   status="Цикл реплики выключен"; return
+   status=T("Цикл реплики выключен"); return
   end
   reaper.GetSet_LoopTimeRange(true,true,start,s.finish+post/1000,false)
   if reaper.GetToggleCommandState(1068)~=1 then reaper.Main_OnCommand(1068,0) end
   loop_active=true
-  status="Цикл реплики включён (L — выключить)"
+  status=T("Цикл реплики включён (L — выключить)")
  else
-  status="Воспроизведение реплики с пре-роллом "..preroll.." с"
+  status=T("Воспроизведение реплики с пре-роллом ")..preroll..T(" с")
  end
  reaper.SetEditCurPos(start,true,true)
  if (reaper.GetPlayState()&1)~=1 then reaper.OnPlayButton() end
@@ -811,7 +2689,7 @@ end
 
 local function fit_to_takes(all)
  local items=load_dub_items()
- if #items==0 then status="На дорожке дубляжа нет итемов (назначь дубляж)"; return end
+ if #items==0 then status=T("На дорожке дубляжа нет итемов (назначь дубляж)"); return end
  -- every take is claimed by the ONE line it overlaps most; a line then uses its longest claimed take
  local claimed={}
  for _,it in ipairs(items) do
@@ -829,10 +2707,10 @@ local function fit_to_takes(all)
  local function best(s) return claimed[s] end
  local targets={}
  if all then
-  if reaper.ShowMessageBox("Подогнать тайминг ВСЕХ реплик под записи на дорожке дубляжа?\n(по итему с наибольшим пересечением; Ctrl+Z вернёт)","Dubbing Prompter",1)~=1 then return end
+  if reaper.ShowMessageBox(T("Подогнать тайминг ВСЕХ реплик под записи на дорожке дубляжа?\n(по итему с наибольшим пересечением; Ctrl+Z вернёт)"),"Dubbing Prompter",1)~=1 then return end
   for _,s in ipairs(rows) do targets[#targets+1]=s end
  else
-  local s=rows[selected]; if not s then status="Выбери реплику"; return end
+  local s=rows[selected]; if not s then status=T("Выбери реплику"); return end
   targets[1]=s
  end
  push_undo()
@@ -841,9 +2719,9 @@ local function fit_to_takes(all)
   local it=best(s)
   if it and it[2]>it[1] then s.start,s.finish=it[1],it[2]; n=n+1 end
  end
- if n==0 then table.remove(undo_stack); status="Записей под репликами не найдено"; return end
+ if n==0 then table.remove(undo_stack); status=T("Записей под репликами не найдено"); return end
  local keep=rows[selected]
- commit_sorted(keep); status="Подогнано реплик: "..n
+ commit_sorted(keep); status=T("Подогнано реплик: ")..n
 end
 
 -- ---------- menus / dialogs ----------
@@ -856,12 +2734,12 @@ end
 
 local function shift_time()
  if #rows==0 then return end
- local scope=popup({"Все реплики","Только роль выбранной реплики","Выбранная и все после неё"})
+ local scope=popup({T("Все реплики"),T("Только роль выбранной реплики"),T("Выбранная и все после неё")})
  if scope==0 then return end
- local ok,res=reaper.GetUserInputs("Сдвиг времени",1,"Секунд (например 0.5 или -1)","0")
+ local ok,res=reaper.GetUserInputs(T("Сдвиг времени"),1,T("Секунд (например 0.5 или -1)"),"0")
  if not ok then return end
  local d=tonumber((res:gsub(",",".")))
- if not d or d==0 then status="Неверное значение сдвига"; return end
+ if not d or d==0 then status=T("Неверное значение сдвига"); return end
  local role=rows[selected] and rows[selected].role or ""
  push_undo()
  local n=0
@@ -869,7 +2747,7 @@ local function shift_time()
   local hit=(scope==1) or (scope==2 and (s.role or "")==role) or (scope==3 and i>=selected)
   if hit then s.start=math.max(0,s.start+d); s.finish=math.max(s.start+0.05,s.finish+d); n=n+1 end
  end
- commit_sorted(rows[selected]); status="Сдвинуто реплик: "..n.." на "..d.." с"
+ commit_sorted(rows[selected]); status=T("Сдвинуто реплик: ")..n..T(" на ")..d..T(" с")
 end
 
 local function plain_gsub(s,find,rep)
@@ -880,9 +2758,9 @@ end
 
 local function replace_text()
  if #rows==0 then return end
- local ok,find=reaper.GetUserInputs("Глобальная замена",1,"Найти (с учётом регистра)","")
+ local ok,find=reaper.GetUserInputs(T("Глобальная замена"),1,T("Найти (с учётом регистра)"),"")
  if not ok or find=="" then return end
- local ok2,rep=reaper.GetUserInputs("Глобальная замена",1,"Заменить на ("..short(find,20)..")","")
+ local ok2,rep=reaper.GetUserInputs(T("Глобальная замена"),1,T("Заменить на (")..short(find,20)..")","")
  if not ok2 then return end
  push_undo()
  local n=0
@@ -890,40 +2768,40 @@ local function replace_text()
   local new,c=plain_gsub(s.text,find,rep)
   if c>0 then s.text=new; n=n+c end
  end
- if n==0 then table.remove(undo_stack); status="Не найдено: "..find; return end
- save(); mark_dirty(); status="Замен: "..n
+ if n==0 then table.remove(undo_stack); status=T("Не найдено: ")..find; return end
+ save(); mark_dirty(); status=T("Замен: ")..n
 end
 
 local function rename_role()
- if #roles==0 then status="В субтитрах нет ролей"; return end
+ if #roles==0 then status=T("В субтитрах нет ролей"); return end
  local items={}
  for i,r in ipairs(roles) do items[i]=r end
  local idx=popup(items)
  if idx==0 or not roles[idx] then return end
  local old=roles[idx]
- local ok,new=reaper.GetUserInputs("Переименовать роль",1,"Новое имя для «"..old.."»",old)
+ local ok,new=reaper.GetUserInputs(T("Переименовать роль"),1,T("Новое имя для «")..old.."»",old)
  new=clean_name(new)
  if not ok or new=="" or new==old then return end
  push_undo()
  for _,s in ipairs(rows) do if s.role==old then s.role=new end end
  if role_duck[old] then role_duck[new]=role_duck[old]; role_duck[old]=nil end
  if role_filter==old then role_filter=new end
- save(); mark_dirty(); status="Роль переименована: "..old.." → "..new
+ save(); mark_dirty(); status=T("Роль переименована: ")..old.." → "..new
 end
 
 local function reset_done()
- if reaper.ShowMessageBox("Снять отметки «записано» со всех реплик?","Dubbing Prompter",1)~=1 then return end
+ if reaper.ShowMessageBox(T("Снять отметки «записано» со всех реплик?"),"Dubbing Prompter",1)~=1 then return end
  push_undo()
  for _,s in ipairs(rows) do s.done=false end
- save(); status="Отметки сняты"
+ save(); status=T("Отметки сняты")
 end
 
 local function set_preroll()
- local ok,res=reaper.GetUserInputs("Пре-ролл",1,"Секунд до реплики",tostring(preroll))
+ local ok,res=reaper.GetUserInputs(T("Пре-ролл"),1,T("Секунд до реплики"),tostring(preroll))
  if not ok then return end
  local v=tonumber((res:gsub(",",".")))
- if not v or v<0 or v>60 then status="Неверное значение пре-ролла"; return end
- preroll=v; save(); status="Пре-ролл: "..v.." с"
+ if not v or v<0 or v>60 then status=T("Неверное значение пре-ролла"); return end
+ preroll=v; save(); status=T("Пре-ролл: ")..v..T(" с")
 end
 
 -- ---------- export / conversion ----------
@@ -954,14 +2832,14 @@ local function write_srt(path,list)
 end
 
 local function export_srt()
- if #rows==0 then status="Нечего экспортировать"; return end
+ if #rows==0 then status=T("Нечего экспортировать"); return end
  local dir,base=out_dir_base()
  local path=dir..base.."_edited.srt"
- if write_srt(path,rows) then status="SRT сохранён: "..path else status="Не удалось записать: "..path end
+ if write_srt(path,rows) then status=T("SRT сохранён: ")..path else status=T("Не удалось записать: ")..path end
 end
 
 local function export_srt_roles()
- if #roles==0 then status="В субтитрах нет ролей"; return end
+ if #roles==0 then status=T("В субтитрах нет ролей"); return end
  local dir,base=out_dir_base()
  local n=0
  for _,r in ipairs(roles) do
@@ -970,7 +2848,7 @@ local function export_srt_roles()
   local fname=(r:gsub("[/\\:*?\"<>|]","_"))
   if write_srt(dir..base.."_"..fname..".srt",list) then n=n+1 end
  end
- status="SRT по ролям: файлов "..n.." (в папке "..dir..")"
+ status=T("SRT по ролям: файлов ")..n..T(" (в папке ")..dir..")"
 end
 
 -- ---------- takes: best take, QC report, script per role, dub shift ----------
@@ -992,9 +2870,9 @@ end
 -- cycle: no best take -> take 1 -> take 2 ... -> no best take.
 -- the chosen take stays audible, the others of this line are muted (cycling back to "none" unmutes all)
 local function cycle_best_take()
- local s=rows[selected]; if not s then status="Выбери реплику"; return end
+ local s=rows[selected]; if not s then status=T("Выбери реплику"); return end
  local tk=dub_takes_of_row(s)
- if #tk==0 then status="У реплики нет дублей на дорожке дубляжа"; return end
+ if #tk==0 then status=T("У реплики нет дублей на дорожке дубляжа"); return end
  local cur=0
  if s.take then for i,t in ipairs(tk) do if math.abs(t.pos-s.take)<0.0005 then cur=i end end end
  local nxt=cur+1
@@ -1003,15 +2881,15 @@ local function cycle_best_take()
   reaper.SetMediaItemInfo_Value(t.item,"B_MUTE",(i==nxt) and 0 or ((nxt==0) and 0 or 1))
  end
  reaper.UpdateArrange()
- if nxt==0 then s.take=nil; status="Лучший дубль не выбран (все дубли звучат)"
- else s.take=tk[nxt].pos; status="Лучший дубль: "..nxt.." из "..#tk.." (остальные заглушены)" end
+ if nxt==0 then s.take=nil; status=T("Лучший дубль не выбран (все дубли звучат)")
+ else s.take=tk[nxt].pos; status=T("Лучший дубль: ")..nxt..T(" из ")..#tk..T(" (остальные заглушены)") end
  save(); wins_dirty=true; dub_time=-10
- log_event("№"..selected.." лучший дубль: "..(nxt==0 and "нет" or (nxt.." из "..#tk)))
+ log_event("№"..selected..T(" лучший дубль: ")..(nxt==0 and T("нет") or (nxt..T(" из ")..#tk)))
 end
 
 -- QC report: speed, pauses, missing takes, overrun, per-role progress -> text file + summary box
 local function qc_report()
- if #rows==0 then status="Нечего проверять"; return end
+ if #rows==0 then status=T("Нечего проверять"); return end
  local items=load_dub_items()
  local L={}
  local nfast,nshort,ngap,nover,nno=0,0,0,0,0
@@ -1019,24 +2897,24 @@ local function qc_report()
   local dur=s.finish-s.start
   local n=ulen((s.text:gsub("\n","")))
   local cps=n/math.max(dur,0.05)
-  if cps>=qc_cps then nfast=nfast+1; L[#L+1]=string.format("№%03d  скорость %.0f зн/с  %s",i,cps,short(s.text,50)) end
-  if dur<qc_short then nshort=nshort+1; L[#L+1]=string.format("№%03d  короткая реплика %.2f с",i,dur) end
+  if cps>=qc_cps then nfast=nfast+1; L[#L+1]=string.format(T("№%03d  скорость %.0f зн/с  %s"),i,cps,short(s.text,50)) end
+  if dur<qc_short then nshort=nshort+1; L[#L+1]=string.format(T("№%03d  короткая реплика %.2f с"),i,dur) end
   local nx=rows[i+1]
   if nx then
    local gap=nx.start-s.finish
-   if gap<qc_gap then ngap=ngap+1; L[#L+1]=string.format("№%03d-%03d  пауза %.2f с%s",i,i+1,gap,gap<0 and " (перекрытие)" or "") end
+   if gap<qc_gap then ngap=ngap+1; L[#L+1]=string.format(T("№%03d-%03d  пауза %.2f с%s"),i,i+1,gap,gap<0 and T(" (перекрытие)") or "") end
   end
   local tk,over=row_takes(s,items)
   if tk==0 and not s.done then nno=nno+1 end
-  if tk>0 and over>0.25 then nover=nover+1; L[#L+1]=string.format("№%03d  дубль длиннее реплики на %.1f с",i,over) end
+  if tk>0 and over>0.25 then nover=nover+1; L[#L+1]=string.format(T("№%03d  дубль длиннее реплики на %.1f с"),i,over) end
  end
- local head={"ПРОВЕРКА (QC) — "..os.date("%Y-%m-%d %H:%M"),
-  "Реплик: "..#rows.."  скорость ≥"..qc_cps.." зн/с: "..nfast.."  короткие: "..nshort.."  пауза <"..qc_gap.." с: "..ngap..
-  "  дубль длиннее: "..nover.."  без дубля (не записано): "..nno,""}
+ local head={T("ПРОВЕРКА (QC) — ")..os.date("%Y-%m-%d %H:%M"),
+  T("Реплик: ")..#rows..T("  скорость ≥")..qc_cps..T(" зн/с: ")..nfast..T("  короткие: ")..nshort..T("  пауза <")..qc_gap..T(" с: ")..ngap..
+  T("  дубль длиннее: ")..nover..T("  без дубля (не записано): ")..nno,""}
  for _,r in ipairs(roles) do
   local d,t=0,0
   for _,s in ipairs(rows) do if s.role==r then t=t+1; if s.done then d=d+1 end end end
-  head[#head+1]="Роль "..r..": записано "..d.." из "..t
+  head[#head+1]=T("Роль ")..r..T(": записано ")..d..T(" из ")..t
  end
  head[#head+1]=""
  local text=table.concat(head,"\n").."\n"..table.concat(L,"\n").."\n"
@@ -1046,57 +2924,57 @@ local function qc_report()
  if f then f:write(text); f:close() end
  local shown={}
  for i=1,math.min(#head,8) do shown[#shown+1]=head[i] end
- reaper.ShowMessageBox(table.concat(shown,"\n").."\n\nПолный отчёт: "..path,"Dubbing Prompter — QC",0)
- log_event("QC: скорость "..nfast..", пауза "..ngap..", без дубля "..nno)
- status="Отчёт QC сохранён: "..path
+ reaper.ShowMessageBox(table.concat(shown,"\n")..T("\n\nПолный отчёт: ")..path,"Dubbing Prompter — QC",0)
+ log_event(T("QC: скорость ")..nfast..T(", пауза ")..ngap..T(", без дубля ")..nno)
+ status=T("Отчёт QC сохранён: ")..path
 end
 
 -- one text script per role: number, timing, text, note
 local function export_role_scripts()
- if #roles==0 then status="В субтитрах нет ролей"; return end
+ if #roles==0 then status=T("В субтитрах нет ролей"); return end
  local dir,base=out_dir_base()
  local n=0
  for _,r in ipairs(roles) do
-  local out={"СЦЕНАРИЙ — "..r.."  ("..base..")",""}
+  local out={T("СЦЕНАРИЙ — ")..r.."  ("..base..")",""}
   for i,s in ipairs(rows) do
    if s.role==r then
-    out[#out+1]=string.format("№%03d  %s – %s  (%.1f с)%s",i,fmt(s.start),fmt(s.finish),s.finish-s.start,s.done and "  [записано]" or "")
+    out[#out+1]=string.format(T("№%03d  %s – %s  (%.1f с)%s"),i,fmt(s.start),fmt(s.finish),s.finish-s.start,s.done and T("  [записано]") or "")
     out[#out+1]=s.text
-    if (s.orig or "")~="" then out[#out+1]="  оригинал: "..(s.orig:gsub("\n"," ")) end
-    if (s.note or "")~="" then out[#out+1]="  заметка: "..(s.note:gsub("\n"," ")) end
+    if (s.orig or "")~="" then out[#out+1]=T("  оригинал: ")..(s.orig:gsub("\n"," ")) end
+    if (s.note or "")~="" then out[#out+1]=T("  заметка: ")..(s.note:gsub("\n"," ")) end
     out[#out+1]=""
    end
   end
   local fname=(r:gsub("[/\\:*?\"<>|]","_"))
-  local f=io.open(dir..base.."_"..fname.."_сценарий.txt","wb")
+  local f=io.open(dir..base.."_"..fname..T("_сценарий.txt"),"wb")
   if f then f:write(table.concat(out,"\n")); f:close(); n=n+1 end
  end
- log_event("Сценарии по ролям: "..n)
- status="Сценарии по ролям: файлов "..n.." (в папке "..dir..")"
+ log_event(T("Сценарии по ролям: ")..n)
+ status=T("Сценарии по ролям: файлов ")..n..T(" (в папке ")..dir..")"
 end
 
 -- move the dub takes of the selected line by N frames (project frame rate)
 local function shift_dub_takes()
- local s=rows[selected]; if not s then status="Выбери реплику"; return end
+ local s=rows[selected]; if not s then status=T("Выбери реплику"); return end
  local tk=dub_takes_of_row(s)
- if #tk==0 then status="У реплики нет дублей на дорожке дубляжа"; return end
- local ok,res=reaper.GetUserInputs("Сдвиг дублей",1,"Кадров (например 2 или -3)","0")
+ if #tk==0 then status=T("У реплики нет дублей на дорожке дубляжа"); return end
+ local ok,res=reaper.GetUserInputs(T("Сдвиг дублей"),1,T("Кадров (например 2 или -3)"),"0")
  if not ok then return end
  local frames=tonumber((res:gsub(",",".")))
- if not frames or frames==0 then status="Неверное число кадров"; return end
+ if not frames or frames==0 then status=T("Неверное число кадров"); return end
  local okf,fps=pcall(function() return (reaper.TimeMap_curFrameRate(0)) end)
  if not okf or not fps or fps<=0 then fps=25 end
  local d=frames/fps
  for _,t in ipairs(tk) do reaper.SetMediaItemInfo_Value(t.item,"D_POSITION",math.max(0,t.pos+d)) end
  if s.take then s.take=s.take+d end
  reaper.UpdateArrange(); save(); wins_dirty=true; dub_time=-10
- log_event("№"..selected.." дубли сдвинуты на "..frames.." кадр.")
- status="Дубли сдвинуты на "..frames.." кадр. ("..string.format("%.3f",d).." с)"
+ log_event("№"..selected..T(" дубли сдвинуты на ")..frames..T(" кадр."))
+ status=T("Дубли сдвинуты на ")..frames..T(" кадр. (")..string.format("%.3f",d)..T(" с)")
 end
 
 -- mark lines as recorded when a take exists on the dub track (only sets, never clears)
 local function mark_recorded_from_dub()
- if #rows==0 then status="Нет реплик"; return end
+ if #rows==0 then status=T("Нет реплик"); return end
  local items=load_dub_items()
  push_undo()
  local n=0
@@ -1106,9 +2984,9 @@ local function mark_recorded_from_dub()
    if c>0 then s.done=true; n=n+1 end
   end
  end
- if n==0 then table.remove(undo_stack); status="Новых записей на дорожке дубляжа не найдено"; return end
- save(); mark_dirty(); log_event("Авто-отметка записанных по дорожке дубляжа: "..n)
- status="Отмечено как записанные: "..n.." (Ctrl+Z отменит)"
+ if n==0 then table.remove(undo_stack); status=T("Новых записей на дорожке дубляжа не найдено"); return end
+ save(); mark_dirty(); log_event(T("Авто-отметка записанных по дорожке дубляжа: ")..n)
+ status=T("Отмечено как записанные: ")..n..T(" (Ctrl+Z отменит)")
 end
 
 -- peak and RMS of one take via an audio accessor (16 kHz mono)
@@ -1167,10 +3045,10 @@ end
 -- check every take on the dub track: clipping, too quiet; report with the line number
 local function check_take_levels()
  if not reaper.new_array or not reaper.CreateTakeAudioAccessor then
-  status="Проверка громкости нужна REAPER 6.x или новее"; return
+  status=T("Проверка громкости нужна REAPER 6.x или новее"); return
  end
  local tr=find_track(extget(K.dub,""))
- if not tr then status="Назначь дорожку дубляжа"; return end
+ if not tr then status=T("Назначь дорожку дубляжа"); return end
  local L,nclip,nquiet,nok,nnoise={},0,0,0,0
  local cnt=reaper.CountTrackMediaItems(tr)
  for i=0,cnt-1 do
@@ -1188,36 +3066,36 @@ local function check_take_levels()
    local no="—"
    for j,s in ipairs(rows) do if mid>=s.start and mid<s.finish then no=string.format("№%03d",j); break end end
    local flag=""
-   if peak>=0.99 then nclip=nclip+1; flag="  КЛИППИНГ"
-   elseif pdb<-30 then nquiet=nquiet+1; flag="  очень тихо" else nok=nok+1 end
-   if ndb>-50 then flag=flag.."  ШУМ В ПАУЗЕ" end
-   L[#L+1]=string.format("%s  %s  пик %.1f dBFS  RMS %.1f dBFS  шум %.1f dBFS  %.1f с%s",no,fmt(p),pdb,rdb,ndb,len,flag)
+   if peak>=0.99 then nclip=nclip+1; flag=T("  КЛИППИНГ")
+   elseif pdb<-30 then nquiet=nquiet+1; flag=T("  очень тихо") else nok=nok+1 end
+   if ndb>-50 then flag=flag..T("  ШУМ В ПАУЗЕ") end
+   L[#L+1]=string.format(T("%s  %s  пик %.1f dBFS  RMS %.1f dBFS  шум %.1f dBFS  %.1f с%s"),no,fmt(p),pdb,rdb,ndb,len,flag)
   end
  end
- local head={"ПРОВЕРКА ГРОМКОСТИ ДУБЛЕЙ — "..os.date("%Y-%m-%d %H:%M"),
-  "Дублей: "..(nclip+nquiet+nok).."  клиппинг: "..nclip.."  очень тихо (<-30 dBFS): "..nquiet.."  шум в паузе (>-50 dBFS): "..nnoise,""}
+ local head={T("ПРОВЕРКА ГРОМКОСТИ ДУБЛЕЙ — ")..os.date("%Y-%m-%d %H:%M"),
+  T("Дублей: ")..(nclip+nquiet+nok)..T("  клиппинг: ")..nclip..T("  очень тихо (<-30 dBFS): ")..nquiet..T("  шум в паузе (>-50 dBFS): ")..nnoise,""}
  local text=table.concat(head,"\n").."\n"..table.concat(L,"\n").."\n"
  local dir,base=out_dir_base()
  local path=dir..base.."_Levels.txt"
  local f=io.open(path,"wb"); if f then f:write(text); f:close() end
- log_event("Громкость: дублей "..(nclip+nquiet+nok)..", клиппинг "..nclip..", тихо "..nquiet)
- reaper.ShowMessageBox(table.concat(head,"\n").."\n\nПолный отчёт: "..path,"Dubbing Prompter — громкость",0)
- status="Громкость проверена: клиппинг "..nclip..", тихо "..nquiet
+ log_event(T("Громкость: дублей ")..(nclip+nquiet+nok)..T(", клиппинг ")..nclip..T(", тихо ")..nquiet)
+ reaper.ShowMessageBox(table.concat(head,"\n")..T("\n\nПолный отчёт: ")..path,T("Dubbing Prompter — громкость"),0)
+ status=T("Громкость проверена: клиппинг ")..nclip..T(", тихо ")..nquiet
 end
 
 -- level all dub takes to the median RMS (clamped to +-6 dB), via take volume
 local function level_takes()
- if not reaper.new_array or not reaper.CreateTakeAudioAccessor then status="Выравнивание нужна REAPER 6.x или новее"; return end
+ if not reaper.new_array or not reaper.CreateTakeAudioAccessor then status=T("Выравнивание нужна REAPER 6.x или новее"); return end
  local tr=find_track(extget(K.dub,""))
- if not tr then status="Назначь дорожку дубляжа"; return end
- if reaper.ShowMessageBox("Выровнять громкость всех дублей под медиану (±6 дБ)?\nCtrl+Z в REAPER вернёт.","Dubbing Prompter",1)~=1 then return end
+ if not tr then status=T("Назначь дорожку дубляжа"); return end
+ if reaper.ShowMessageBox(T("Выровнять громкость всех дублей под медиану (±6 дБ)?\nCtrl+Z в REAPER вернёт."),"Dubbing Prompter",1)~=1 then return end
  local list={}
  for i=0,reaper.CountTrackMediaItems(tr)-1 do
   local it=reaper.GetTrackMediaItem(tr,i)
   local _,rms=take_levels(it)
   if rms and rms>0 then list[#list+1]={it=it,rms=rms} end
  end
- if #list<2 then status="Для выравнивания нужно хотя бы два дубля"; return end
+ if #list<2 then status=T("Для выравнивания нужно хотя бы два дубля"); return end
  local sorted={}
  for _,e in ipairs(list) do sorted[#sorted+1]=e.rms end
  table.sort(sorted)
@@ -1233,8 +3111,8 @@ local function level_takes()
   changed=changed+1
  end
  reaper.UpdateArrange(); wins_dirty=true
- log_event("Выравнивание громкости дублей: "..changed)
- status="Громкость выровнена у дублей: "..changed.." (±6 дБ, Ctrl+Z в REAPER вернёт)"
+ log_event(T("Выравнивание громкости дублей: ")..changed)
+ status=T("Громкость выровнена у дублей: ")..changed..T(" (±6 дБ, Ctrl+Z в REAPER вернёт)")
 end
 
 -- per-role script as an HTML page: open it in a browser and print to PDF
@@ -1244,7 +3122,7 @@ local function hesc(x)
  return x
 end
 local function export_role_html()
- if #roles==0 then status="В субтитрах нет ролей"; return end
+ if #roles==0 then status=T("В субтитрах нет ролей"); return end
  local dir,base=out_dir_base()
  local n=0
  for _,r in ipairs(roles) do
@@ -1253,51 +3131,51 @@ local function export_role_html()
    "table{border-collapse:collapse;width:100%}td,th{border:1px solid #bbb;padding:6px;vertical-align:top;font-size:14px}",
    "th{background:#eee;text-align:left}.t{white-space:nowrap;font-family:monospace}.n{color:#666;font-size:12px}",
    "@media print{body{margin:10mm}}</style></head><body>",
-   "<h1>Сценарий: "..hesc(r).."</h1><p class='n'>"..hesc(base).." · "..os.date("%Y-%m-%d").."</p>",
-   "<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Записано</th></tr>"}
+   T("<h1>Сценарий: ")..hesc(r).."</h1><p class='n'>"..hesc(base).." · "..os.date("%Y-%m-%d").."</p>",
+   T("<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Записано</th></tr>")}
   for i,s in ipairs(rows) do
    if s.role==r then
     local note=((s.note or "")~="") and ("<div class='n'>✎ "..hesc(s.note).."</div>") or ""
-    local orig=((s.orig or "")~="") and ("<div class='n'>оригинал: "..hesc(s.orig).."</div>") or ""
+    local orig=((s.orig or "")~="") and (T("<div class='n'>оригинал: ")..hesc(s.orig).."</div>") or ""
     h[#h+1]="<tr><td>"..string.format("%03d",i).."</td><td class='t'>"..ftime(s.start).."<br>"..ftime(s.finish).."</td><td>"..
      hesc(s.text):gsub("\n","<br>")..orig..note.."</td><td>"..(s.done and "✓" or "").."</td></tr>"
    end
   end
   h[#h+1]="</table></body></html>"
   local fname=(r:gsub("[/\\:*?\"<>|]","_"))
-  local f=io.open(dir..base.."_"..fname.."_сценарий.html","wb")
+  local f=io.open(dir..base.."_"..fname..T("_сценарий.html"),"wb")
   if f then f:write(table.concat(h,"\n")); f:close(); n=n+1 end
  end
- log_event("HTML-сценарии по ролям: "..n)
- status="HTML-сценарии: файлов "..n.." (открой в браузере и «Печать → Сохранить в PDF»)"
+ log_event(T("HTML-сценарии по ролям: ")..n)
+ status=T("HTML-сценарии: файлов ")..n..T(" (открой в браузере и «Печать → Сохранить в PDF»)")
 end
 
 -- Excel-friendly CSV (UTF-8 with BOM, ';' separator, decimal comma): session sheet for the studio
 local function export_session_csv()
- if #rows==0 then status="Нечего экспортировать"; return end
+ if #rows==0 then status=T("Нечего экспортировать"); return end
  local items=load_dub_items()
  local function num(x) return (string.format("%.2f",x):gsub("%.",",")) end
- local out={"\239\187\191№;Роль;Начало;Конец;Длительность, с;Зн/с;Текст;Записано;Дублей;Превышение, с;Заметка"}
+ local out={T("\239\187\191№;Роль;Начало;Конец;Длительность, с;Зн/с;Текст;Записано;Дублей;Превышение, с;Заметка")}
  for i,s in ipairs(rows) do
   local dur=s.finish-s.start
   local cps=ulen((s.text:gsub("\n","")))/math.max(dur,0.05)
   local n,over=row_takes(s,items)
   local q=function(v) v=tostring(v or ""):gsub("[;\r\n]"," "); return v end
   out[#out+1]=table.concat({i,q(s.role),fmt(s.start),fmt(s.finish),num(dur),string.format("%.0f",cps),q(s.text),
-    s.done and "да" or "нет",n,num(math.max(0,over)),q(s.note)},";")
+    s.done and T("да") or T("нет"),n,num(math.max(0,over)),q(s.note)},";")
  end
  local dir,base=out_dir_base()
- local path=dir..base.."_лист_сессии.csv"
+ local path=dir..base..T("_лист_сессии.csv")
  local f=io.open(path,"wb")
- if not f then status="Не удалось записать: "..path; return end
+ if not f then status=T("Не удалось записать: ")..path; return end
  f:write(table.concat(out,"\n").."\n"); f:close()
- log_event("Лист сессии (CSV): реплик "..#rows)
- status="Лист сессии сохранён: "..path
+ log_event(T("Лист сессии (CSV): реплик ")..#rows)
+ status=T("Лист сессии сохранён: ")..path
 end
 
 -- WebVTT export (opens in most editors and NLEs)
 local function export_vtt()
- if #rows==0 then status="Нечего экспортировать"; return end
+ if #rows==0 then status=T("Нечего экспортировать"); return end
  local out={"WEBVTT",""}
  for i,s in ipairs(rows) do
   local r=(s.role or "")~="" and ("<v "..s.role..">") or ""
@@ -1310,9 +3188,9 @@ local function export_vtt()
  local dir,base=out_dir_base()
  local path=dir..base..".vtt"
  local f=io.open(path,"wb")
- if not f then status="Не удалось записать: "..path; return end
+ if not f then status=T("Не удалось записать: ")..path; return end
  f:write(table.concat(out,"\n")); f:close()
- status="VTT сохранён: "..path
+ status=T("VTT сохранён: ")..path
 end
 
 -- session summary: today's journal lines + current verdicts of the project
@@ -1323,8 +3201,8 @@ local function session_summary()
  if f then
   for line in f:lines() do
    if line:sub(1,10)==today then
-    if line:find("записано",1,true) and not line:find("снята",1,true) then rec=rec+1 end
-    if line:find("вызывной",1,true) or line:find("Вызывной",1,true) then verd=verd+1 end
+    if has(line,"записано") and not has(line,"отметка снята") then rec=rec+1 end
+    if has(line,"вызывной") or has(line,"Вызывной") then verd=verd+1 end
    end
   end
   f:close()
@@ -1335,19 +3213,19 @@ local function session_summary()
   if s.done then nd=nd+1 end
  end
  local L={
-  "СВОДКА ЗА "..today,"",
-  "Сегодня отмечено записанным: "..rec,
-  "Вызывных листов сделано сегодня: "..verd,"",
-  "Всего реплик: "..#rows.."  записано: "..nd,
-  "Оценки: ок "..ok.."  переписать "..nr.."  спорно "..nc,
+  T("СВОДКА ЗА ")..today,"",
+  T("Сегодня отмечено записанным: ")..rec,
+  T("Вызывных листов сделано сегодня: ")..verd,"",
+  T("Всего реплик: ")..#rows..T("  записано: ")..nd,
+  T("Оценки: ок ")..ok..T("  переписать ")..nr..T("  спорно ")..nc,
  }
- reaper.ShowMessageBox(table.concat(L,"\n"),"Dubbing Prompter — сводка за день",0)
- status="Сводка за день показана"
+ reaper.ShowMessageBox(table.concat(L,"\n"),T("Dubbing Prompter — сводка за день"),0)
+ status=T("Сводка за день показана")
 end
 
 -- actor summary: lines, recorded, remaining, duration and takes per role
 local function actor_summary()
- if #roles==0 then status="В субтитрах нет ролей"; return end
+ if #roles==0 then status=T("В субтитрах нет ролей"); return end
  local items=load_dub_items()
  local L={}
  for _,r in ipairs(roles) do
@@ -1359,57 +3237,57 @@ local function actor_summary()
     local n=row_takes(s,items); takes=takes+n
    end
   end
-  L[#L+1]=string.format("%s: записано %d из %d, осталось %d · реплик %.0f с · дублей %d",r,done,lines,lines-done,dur,takes)
+  L[#L+1]=string.format(T("%s: записано %d из %d, осталось %d · реплик %.0f с · дублей %d"),r,done,lines,lines-done,dur,takes)
  end
- reaper.ShowMessageBox(table.concat(L,"\n"),"Dubbing Prompter — сводка по актёрам",0)
- status="Сводка по актёрам показана"
+ reaper.ShowMessageBox(table.concat(L,"\n"),T("Dubbing Prompter — сводка по актёрам"),0)
+ status=T("Сводка по актёрам показана")
 end
 
 -- thresholds for QC and warnings (chars/sec, min pause, short line)
 local function edit_qc_thresholds()
  local def=string.format("%s,%s,%s",qc_cps,qc_gap,qc_short)
- local ok,res=reaper.GetUserInputs("Пороги проверки",3,"Скорость, зн/с,Минимальная пауза, с,Короткая реплика, с",def)
+ local ok,res=reaper.GetUserInputs(T("Пороги проверки"),3,T("Скорость, зн/с,Минимальная пауза, с,Короткая реплика, с"),def)
  if not ok then return end
  local v={}; for n in res:gmatch("[^,]+") do v[#v+1]=tonumber((n:gsub(",","."))) end
  if #v==3 and v[1] and v[2] and v[3] then
   qc_cps,qc_gap,qc_short=math.max(1,v[1]),math.max(0,v[2]),math.max(0,v[3])
-  save(); status="Пороги сохранены: "..qc_cps.." зн/с, пауза "..qc_gap.." с, короткая <"..qc_short.." с"
- else status="Неверные значения порогов" end
+  save(); status=T("Пороги сохранены: ")..qc_cps..T(" зн/с, пауза ")..qc_gap..T(" с, короткая <")..qc_short..T(" с")
+ else status=T("Неверные значения порогов") end
 end
 
 -- take verdict: ok / redo (переписать) / check (спорно); same key again clears it
 local function set_verdict(v)
- local s=rows[selected]; if not s then status="Выбери реплику"; return end
+ local s=rows[selected]; if not s then status=T("Выбери реплику"); return end
  push_undo()
  if s.verdict==v then s.verdict=nil else s.verdict=v end
  save(); mark_dirty()
- status=s.verdict and ("Оценка: "..VERDICTS[s.verdict]) or "Оценка снята"
- log_event("№"..selected.." оценка: "..(s.verdict and VERDICTS[s.verdict] or "снята"))
+ status=s.verdict and (T("Оценка: ")..VERDICTS[s.verdict]) or T("Оценка снята")
+ log_event("№"..selected..T(" оценка: ")..(s.verdict and VERDICTS[s.verdict] or T("снята")))
 end
 
 local STATUS_CYCLE={"","redo","check","lip","ok","none"}
-local STATUS_NAME={[""]="все",redo="переписать",check="спорно",lip="губы",ok="ок",none="не записано"}
+local STATUS_NAME={[""]=T("все"),redo=T("переписать"),check=T("спорно"),lip=T("губы"),ok=T("ок"),none=T("не записано")}
 local function cycle_status_filter()
  local idx=1
  for i,v in ipairs(STATUS_CYCLE) do if v==status_filter then idx=i end end
  status_filter=STATUS_CYCLE[(idx % #STATUS_CYCLE)+1]
  rebuild_vis(); scroll=0
- status="Фильтр: "..STATUS_NAME[status_filter]
+ status=T("Фильтр: ")..STATUS_NAME[status_filter]
 end
 
 -- call sheet: lines of one role that are not recorded yet, as HTML (print to PDF) for the next session
 local function export_call_sheet()
- if #roles==0 then status="В субтитрах нет ролей"; return end
+ if #roles==0 then status=T("В субтитрах нет ролей"); return end
  local idx=popup(roles)
  local r=roles[idx]
  if not r then return end
  local dir,base=out_dir_base()
- local h={"<!doctype html><html lang='ru'><head><meta charset='utf-8'><title>Вызывной лист</title><style>",
+ local h={T("<!doctype html><html lang='ru'><head><meta charset='utf-8'><title>Вызывной лист</title><style>"),
   "body{font-family:Arial,sans-serif;margin:24px;color:#111}table{border-collapse:collapse;width:100%}",
   "td,th{border:1px solid #bbb;padding:6px;font-size:14px;vertical-align:top}th{background:#eee;text-align:left}",
   ".t{font-family:monospace;white-space:nowrap}@media print{body{margin:10mm}}</style></head><body>",
-  "<h1>Вызывной лист: "..hesc(r).."</h1><p>"..hesc(base).." · дата: "..os.date("%Y-%m-%d").."</p>",
-  "<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Заметка</th></tr>"}
+  T("<h1>Вызывной лист: ")..hesc(r).."</h1><p>"..hesc(base)..T(" · дата: ")..os.date("%Y-%m-%d").."</p>",
+  T("<table><tr><th>№</th><th>Тайминг</th><th>Текст</th><th>Заметка</th></tr>")}
  local n=0
  for i,s in ipairs(rows) do
   if s.role==r and not s.done then
@@ -1418,20 +3296,20 @@ local function export_call_sheet()
     hesc(s.text):gsub("\n","<br>").."</td><td>"..hesc(s.note or "").."</td></tr>"
   end
  end
- h[#h+1]="</table><p>Реплик к записи: "..n.."</p></body></html>"
+ h[#h+1]=T("</table><p>Реплик к записи: ")..n.."</p></body></html>"
  local fname=(r:gsub("[/\\:*?\"<>|]","_"))
- local f=io.open(dir..base.."_вызывной_"..fname..".html","wb")
- if not f then status="Не удалось записать файл"; return end
+ local f=io.open(dir..base..T("_вызывной_")..fname..".html","wb")
+ if not f then status=T("Не удалось записать файл"); return end
  f:write(table.concat(h,"\n")); f:close()
- log_event("Вызывной лист "..r..": "..n)
- status="Вызывной лист: "..n.." реплик (HTML в папке "..dir..")"
+ log_event(T("Вызывной лист ")..r..": "..n)
+ status=T("Вызывной лист: ")..n..T(" реплик (HTML в папке ")..dir..")"
 end
 
 -- ---------- multi-selection (Ctrl+click) and batch actions ----------
 function toggle_pick(i)
  local s=rows[i]; if not s then return end
  s.pick=not s.pick
- status=s.pick and ("Выбрано реплик: "..count_picks()) or ("Выбор снят, выбрано: "..count_picks())
+ status=s.pick and (T("Выбрано реплик: ")..count_picks()) or (T("Выбор снят, выбрано: ")..count_picks())
 end
 
 function count_picks()
@@ -1450,68 +3328,68 @@ end
 
 function batch_shift()
  local t=batch_targets()
- if #t==0 then status="Нет реплик"; return end
- local ok,res=reaper.GetUserInputs("Пакетный сдвиг",1,"Секунд для "..#t.." реплик (например 0.5 или -1)","0")
+ if #t==0 then status=T("Нет реплик"); return end
+ local ok,res=reaper.GetUserInputs(T("Пакетный сдвиг"),1,T("Секунд для ")..#t..T(" реплик (например 0.5 или -1)"),"0")
  if not ok then return end
  local d=tonumber((res:gsub(",",".")))
- if not d or d==0 then status="Неверное значение сдвига"; return end
+ if not d or d==0 then status=T("Неверное значение сдвига"); return end
  push_undo()
  for _,s in ipairs(t) do
   s.start=math.max(0,s.start+d); s.finish=math.max(s.start+0.05,s.finish+d)
  end
- commit_sorted(rows[selected] or t[1]); log_event("Пакетный сдвиг "..#t.." реплик на "..d.." с")
- status="Сдвинуто реплик: "..#t.." на "..d.." с (Ctrl+Z отменит)"
+ commit_sorted(rows[selected] or t[1]); log_event(T("Пакетный сдвиг ")..#t..T(" реплик на ")..d..T(" с"))
+ status=T("Сдвинуто реплик: ")..#t..T(" на ")..d..T(" с (Ctrl+Z отменит)")
 end
 
 function batch_role()
  local t=batch_targets()
- if #t==0 then status="Нет реплик"; return end
- local ok,res=reaper.GetUserInputs("Пакетная роль",1,"Роль для "..#t.." реплик (пусто = без роли)","")
+ if #t==0 then status=T("Нет реплик"); return end
+ local ok,res=reaper.GetUserInputs(T("Пакетная роль"),1,T("Роль для ")..#t..T(" реплик (пусто = без роли)"),"")
  if not ok then return end
  push_undo()
  local r=clean_name(res)
  for _,s in ipairs(t) do s.role=r end
- save(); mark_dirty(); log_event("Пакетная роль «"..r.."» для "..#t.." реплик")
- status="Роль назначена: "..#t.." реплик (Ctrl+Z отменит)"
+ save(); mark_dirty(); log_event(T("Пакетная роль «")..r..T("» для ")..#t..T(" реплик"))
+ status=T("Роль назначена: ")..#t..T(" реплик (Ctrl+Z отменит)")
 end
 
 function batch_done(v)
  local t=batch_targets()
- if #t==0 then status="Нет реплик"; return end
+ if #t==0 then status=T("Нет реплик"); return end
  push_undo()
  for _,s in ipairs(t) do s.done=v end
- save(); mark_dirty(); log_event((v and "Пакетно записано: " or "Пакетно снято: ")..#t)
- status=(v and "Отмечено записанными: " or "Снята отметка у: ")..#t.." (Ctrl+Z отменит)"
+ save(); mark_dirty(); log_event((v and T("Пакетно записано: ") or T("Пакетно снято: "))..#t)
+ status=(v and T("Отмечено записанными: ") or T("Снята отметка у: "))..#t..T(" (Ctrl+Z отменит)")
 end
 
 function clear_picks()
  for _,s in ipairs(rows) do s.pick=nil end
- status="Выбор реплик снят"
+ status=T("Выбор реплик снят")
 end
 
 -- next actor: cycles the role filter (same order as the role button)
 function cycle_role_filter()
- if #roles==0 then status="В субтитрах нет ролей"; return end
+ if #roles==0 then status=T("В субтитрах нет ролей"); return end
  if role_filter=="" then role_filter=roles[1]
  else
   local i=role_idx[role_filter] or 0
   role_filter=roles[i+1] or ""
  end
  rebuild_vis(); scroll=0
- status="Актёр: "..(role_filter=="" and "все" or role_filter)
+ status=T("Актёр: ")..(role_filter=="" and T("все") or role_filter)
 end
 
 -- environment check: what the script needs and what is missing
 function check_env()
  local function has(name) return reaper[name]~=nil end
  local L={
-  "ОКРУЖЕНИЕ DUBBING",
+  T("ОКРУЖЕНИЕ DUBBING"),
   "REAPER: "..(reaper.GetAppVersion and reaper.GetAppVersion() or "?"),
-  "ReaImGui (оверлей): "..(has("ImGui_CreateContext") and "есть" or "НЕТ — установи через ReaPack"),
-  "js_ReaScriptAPI (привязка оверлея к видео): "..(has("JS_Window_Find") and "есть" or "нет (оверлей будет без привязки)"),
-  "Аудио-доступ (громкость, шум): "..((has("CreateTakeAudioAccessor") and has("new_array")) and "есть" or "НЕТ — нужен REAPER 6.x+"),
-  "Частота кадров проекта: "..(has("TimeMap_curFrameRate") and tostring(fps_now()).." fps" or "нет функции"),
-  "Дорожка дубляжа: "..(extget(K.dub,"")~="" and "назначена" or "НЕ назначена"),
+  T("ReaImGui (оверлей): ")..(has("ImGui_CreateContext") and T("есть") or T("НЕТ — установи через ReaPack")),
+  T("js_ReaScriptAPI (привязка оверлея к видео): ")..(has("JS_Window_Find") and T("есть") or T("нет (оверлей будет без привязки)")),
+  T("Аудио-доступ (громкость, шум): ")..((has("CreateTakeAudioAccessor") and has("new_array")) and T("есть") or T("НЕТ — нужен REAPER 6.x+")),
+  T("Частота кадров проекта: ")..(has("TimeMap_curFrameRate") and tostring(fps_now()).." fps" or T("нет функции")),
+  T("Дорожка дубляжа: ")..(extget(K.dub,"")~="" and T("назначена") or T("НЕ назначена")),
  }
  local found=false
  local dd={reaper.GetResourcePath().."/Scripts/Dubbing System/Various/",reaper.GetResourcePath().."/Scripts/DubbingSystem/"}
@@ -1521,9 +3399,9 @@ function check_env()
   local f=io.open(d.."Dubbing_SubOverlay.lua","r")
   if f then f:close(); found=true end
  end
- L[#L+1]="Файл оверлея рядом с Prompter: "..(found and "найден" or "не найден (положи рядом с Prompter)")
- reaper.ShowMessageBox(table.concat(L,"\n"),"Dubbing — проверка окружения",0)
- status="Проверка окружения показана"
+ L[#L+1]=T("Файл оверлея рядом с Prompter: ")..(found and T("найден") or T("не найден (положи рядом с Prompter)"))
+ reaper.ShowMessageBox(table.concat(L,"\n"),T("Dubbing — проверка окружения"),0)
+ status=T("Проверка окружения показана")
 end
 
 local -- ---------- LUFS (ITU-R BS.1770 K-weighting, gated; 48 kHz) ----------
@@ -1586,8 +3464,8 @@ end
 -- LUFS of every dub item (active take), with the line it belongs to
 function lufs_track()
  local tr=find_track(extget(K.dub,""))
- if not tr then status="Назначь дорожку дубляжа"; return end
- if not reaper.CreateTakeAudioAccessor then status="Нужен REAPER 6.x+"; return end
+ if not tr then status=T("Назначь дорожку дубляжа"); return end
+ if not reaper.CreateTakeAudioAccessor then status=T("Нужен REAPER 6.x+"); return end
  local L,sum,n={},0,0
  for i=0,reaper.CountTrackMediaItems(tr)-1 do
   local it=reaper.GetTrackMediaItem(tr,i)
@@ -1598,21 +3476,21 @@ function lufs_track()
   for j,r in ipairs(rows) do if mid>=r.start and mid<r.finish then no=string.format("№%03d",j); break end end
   local ig,mm,sh=take_loudness(reaper.GetActiveTake(it))
   if ig then sum=sum+ig; n=n+1 end
-  L[#L+1]=string.format("%s  %s  интегральная %s LUFS  макс. момент. %s  макс. кратк. %s",no,fmt(p),
+  L[#L+1]=string.format(T("%s  %s  интегральная %s LUFS  макс. момент. %s  макс. кратк. %s"),no,fmt(p),
     ig and string.format("%.1f",ig) or "—", mm and string.format("%.1f",mm) or "—", sh and string.format("%.1f",sh) or "—")
  end
- local head={"ГРОМКОСТЬ LUFS — "..os.date("%Y-%m-%d %H:%M"),"Дублей измерено: "..n..(n>0 and ("  средняя интегральная: "..string.format("%.1f",sum/n).." LUFS") or ""),""}
+ local head={T("ГРОМКОСТЬ LUFS — ")..os.date("%Y-%m-%d %H:%M"),T("Дублей измерено: ")..n..(n>0 and (T("  средняя интегральная: ")..string.format("%.1f",sum/n).." LUFS") or ""),""}
  local dir,base=out_dir_base()
  local path=dir..base.."_LUFS.txt"
  local f=io.open(path,"wb"); if f then f:write(table.concat(head,"\n").."\n"..table.concat(L,"\n").."\n"); f:close() end
  reaper.ShowMessageBox(table.concat(head,"\n"),"Dubbing Prompter — LUFS",0)
- status="LUFS измерены: "..n.." дублей (файл "..path..")"
+ status=T("LUFS измерены: ")..n..T(" дублей (файл ")..path..")"
 end
 
 -- takes inside one item: each take's loudness against the median of the item
 function take_compare()
  local tr=find_track(extget(K.dub,""))
- if not tr then status="Назначь дорожку дубляжа"; return end
+ if not tr then status=T("Назначь дорожку дубляжа"); return end
  local L,multi,bad={},0,0
  for i=0,reaper.CountTrackMediaItems(tr)-1 do
   local it=reaper.GetTrackMediaItem(tr,i)
@@ -1630,18 +3508,18 @@ function take_compare()
    for _,v in ipairs(vals) do
     local d=v[2] and (v[2]-med) or 0
     local flag=""
-    if math.abs(d)>3 then bad=bad+1; flag="  ⚠ отличается больше 3 дБ" end
-    L[#L+1]=string.format("элемент %d (%s), дубль %d: %s LUFS, %+.1f дБ к медиане%s",i+1,
+    if math.abs(d)>3 then bad=bad+1; flag=T("  ⚠ отличается больше 3 дБ") end
+    L[#L+1]=string.format(T("элемент %d (%s), дубль %d: %s LUFS, %+.1f дБ к медиане%s"),i+1,
       fmt(reaper.GetMediaItemInfo_Value(it,"D_POSITION")),v[1],v[2] and string.format("%.1f",v[2]) or "—",d,flag)
    end
   end
  end
- local head={"ТАКИ ВНУТРИ ЭЛЕМЕНТОВ — "..os.date("%Y-%m-%d %H:%M"),"Элементов с несколькими takes: "..multi.."  отличаются больше 3 дБ: "..bad,""}
+ local head={T("ТАКИ ВНУТРИ ЭЛЕМЕНТОВ — ")..os.date("%Y-%m-%d %H:%M"),T("Элементов с несколькими takes: ")..multi..T("  отличаются больше 3 дБ: ")..bad,""}
  local dir,base=out_dir_base()
  local path=dir..base.."_Takes.txt"
  local f=io.open(path,"wb"); if f then f:write(table.concat(head,"\n").."\n"..table.concat(L,"\n").."\n"); f:close() end
  reaper.ShowMessageBox(table.concat(head,"\n"),"Dubbing Prompter — takes",0)
- status="Takes сравнены: элементов "..multi.."; отличаются: "..bad
+ status=T("Takes сравнены: элементов ")..multi..T("; отличаются: ")..bad
 end
 
 -- problems with the reason, and jump to a chosen line (cursor + scroll)
@@ -1652,16 +3530,16 @@ function problem_items()
   local reasons={}
   local dur=s.finish-s.start
   local cps=ulen((s.text:gsub("\n","")))/math.max(dur,0.05)
-  if cps>=qc_cps then reasons[#reasons+1]=string.format("скорость %.0f зн/с",cps) end
-  if dur<qc_short then reasons[#reasons+1]="короткая" end
+  if cps>=qc_cps then reasons[#reasons+1]=string.format(T("скорость %.0f зн/с"),cps) end
+  if dur<qc_short then reasons[#reasons+1]=T("короткая") end
   local nx=rows[i+1]
-  if nx and nx.start-s.finish<qc_gap then reasons[#reasons+1]="пауза / перекрытие" end
+  if nx and nx.start-s.finish<qc_gap then reasons[#reasons+1]=T("пауза / перекрытие") end
   local n,over=row_takes(s,dub)
-  if n==0 and not s.done then reasons[#reasons+1]="нет дубля" end
-  if n>0 and over>0.25 then reasons[#reasons+1]=string.format("дубль длиннее на %.1f с",over) end
-  if s.verdict=="redo" then reasons[#reasons+1]="переписать"
-  elseif s.verdict=="check" then reasons[#reasons+1]="спорно"
-  elseif s.verdict=="lip" then reasons[#reasons+1]="губы не совпадают" end
+  if n==0 and not s.done then reasons[#reasons+1]=T("нет дубля") end
+  if n>0 and over>0.25 then reasons[#reasons+1]=string.format(T("дубль длиннее на %.1f с"),over) end
+  if s.verdict=="redo" then reasons[#reasons+1]=T("переписать")
+  elseif s.verdict=="check" then reasons[#reasons+1]=T("спорно")
+  elseif s.verdict=="lip" then reasons[#reasons+1]=T("губы не совпадают") end
   if #reasons>0 then items[#items+1]=string.format("№%03d  %s  %s",i,fmt(s.start),table.concat(reasons,", ")); idxs[#idxs+1]=i end
  end
  return items,idxs
@@ -1669,14 +3547,14 @@ end
 
 function problem_jump()
  local items,idxs=problem_items()
- if #items==0 then status="Проблемных реплик нет"; return end
+ if #items==0 then status=T("Проблемных реплик нет"); return end
  local show={}
  for i=1,math.min(#items,60) do show[i]=items[i] end
  local pick=popup(show)
  local idx=idxs[pick]
  if not idx then return end
  goto_row(idx); show_row(idx)
- status="Перешли к реплике №"..idx
+ status=T("Перешли к реплике №")..idx
 end
 
 -- user preferences (key letters and list columns) are kept per user, not per project
@@ -1698,52 +3576,52 @@ end
 
 function hotkeys_menu()
  local order={"play_line","loop","done","mark","next_mark","best","actor"}
- local labels="Воспроизвести реплику,Цикл реплики,Записано,Закладка,След. закладка,Лучший дубль,Следующий актёр"
+ local labels=T("Воспроизвести реплику,Цикл реплики,Записано,Закладка,След. закладка,Лучший дубль,Следующий актёр")
  local defs={}
  for _,name in ipairs(order) do defs[#defs+1]=string.char(PREF.keys[name]) end
- local ok,res=reaper.GetUserInputs("Горячие клавиши (одна латинская буква)",7,labels,table.concat(defs,","))
+ local ok,res=reaper.GetUserInputs(T("Горячие клавиши (одна латинская буква)"),7,labels,table.concat(defs,","))
  if not ok then return end
  local vals={}
  for part in (res..","):gmatch("(.-),") do vals[#vals+1]=trim(part):lower() end
  local seen={}
  for i,name in ipairs(order) do
   local v=vals[i] or ""
-  if not v:match("^%a$") or seen[v] then status="Клавиши не сохранены: нужны разные латинские буквы"; return end
+  if not v:match("^%a$") or seen[v] then status=T("Клавиши не сохранены: нужны разные латинские буквы"); return end
   seen[v]=true
  end
  for i,name in ipairs(order) do PREF.keys[name]=string.byte(vals[i]) end
  save_prefs()
- status="Горячие клавиши сохранены (1–4 для оценок не меняются)"
+ status=T("Горячие клавиши сохранены (1–4 для оценок не меняются)")
 end
 
 function cols_menu()
  local order={"takes","cps","dur","over","note","verdict"}
- local names={takes="дубли (×N)",cps="зн/с",dur="длительность",over="превышение",note="заметка",verdict="оценка"}
+ local names={takes=T("дубли (×N)"),cps=T("зн/с"),dur=T("длительность"),over=T("превышение"),note=T("заметка"),verdict=T("оценка")}
  local items={}
  for i,k in ipairs(order) do items[i]=(PREF.cols[k] and "✓ " or "    ")..names[k] end
  local pick=popup(items)
  local k=order[pick]
  if not k then return end
  PREF.cols[k]=not PREF.cols[k]; save_prefs()
- status="Колонка «"..names[k].."»: "..(PREF.cols[k] and "показана" or "скрыта")
+ status=T("Колонка «")..names[k].."»: "..(PREF.cols[k] and T("показана") or T("скрыта"))
 end
 
 local function profiles_dir() return reaper.GetResourcePath().."/DubbingSystem_profiles/" end
 
 function profile_save()
- local ok,name=reaper.GetUserInputs("Профиль настроек",1,"Имя профиля","Профиль 1")
+ local ok,name=reaper.GetUserInputs(T("Профиль настроек"),1,T("Имя профиля"),T("Профиль 1"))
  if not ok then return end
  name=trim(name):gsub("[/\\:*?\"<>|]","_")
- if name=="" then status="Пустое имя профиля"; return end
+ if name=="" then status=T("Пустое имя профиля"); return end
  reaper.RecursiveCreateDirectory(profiles_dir(),0)
  local L={"duck="..duck,"pre="..pre,"post="..post,"fi="..fi,"fo="..fo,"preroll="..preroll,
   "only_dub="..(only_dub and 1 or 0),"win_from_dub="..(win_from_dub and 1 or 0),
   "qc_cps="..qc_cps,"qc_gap="..qc_gap,"qc_short="..qc_short,"frames="..(frames_mode and 1 or 0)}
  for r,db in pairs(role_duck) do L[#L+1]="role:"..r.."="..db end
  local f=io.open(profiles_dir()..name..".dubprof","wb")
- if not f then status="Не удалось записать профиль"; return end
+ if not f then status=T("Не удалось записать профиль"); return end
  f:write(table.concat(L,"\n").."\n"); f:close()
- status="Профиль сохранён: "..name
+ status=T("Профиль сохранён: ")..name
 end
 
 function profile_load()
@@ -1755,12 +3633,12 @@ function profile_load()
   if f:match("%.dubprof$") then files[#files+1]=f end
   i=i+1
  end
- if #files==0 then status="Сохранённых профилей нет"; return end
+ if #files==0 then status=T("Сохранённых профилей нет"); return end
  local pick=popup(files)
  local fname=files[pick]
  if not fname then return end
  local f=io.open(profiles_dir()..fname,"rb")
- if not f then status="Профиль не открылся"; return end
+ if not f then status=T("Профиль не открылся"); return end
  local data=f:read("*a"); f:close()
  push_undo()
  role_duck={}
@@ -1778,19 +3656,19 @@ function profile_load()
   end
  end
  save(); mark_dirty()
- status="Профиль загружен: "..fname
+ status=T("Профиль загружен: ")..fname
 end
 
 function toggle_frames()
  frames_mode=not frames_mode; save()
- status=frames_mode and "Таймкод в кадрах ("..fps_now().." fps)" or "Таймкод в секундах"
+ status=frames_mode and T("Таймкод в кадрах (")..fps_now().." fps)" or T("Таймкод в секундах")
 end
 
 local function export_project()
- if #rows==0 then status="Нечего экспортировать"; return end
+ if #rows==0 then status=T("Нечего экспортировать"); return end
  local dir,base=out_dir_base()
  local path=dir..base..".dubproj"
- local f=io.open(path,"wb"); if not f then status="Не удалось записать: "..path; return end
+ local f=io.open(path,"wb"); if not f then status=T("Не удалось записать: ")..path; return end
  local t={"DUBPROJ1",
   "duck="..duck,"pre="..pre,"post="..post,"fi="..fi,"fo="..fo,"preroll="..preroll,
   "only_dub="..(only_dub and 1 or 0),"win_from_dub="..(win_from_dub and 1 or 0)}
@@ -1799,17 +3677,17 @@ local function export_project()
  t[#t+1]="@@SUBS"
  t[#t+1]=serialize_rows()
  f:write(table.concat(t,"\n")); f:close()
- status="Проект сохранён: "..path
+ status=T("Проект сохранён: ")..path
 end
 
 local function import_project()
- local ok,path=pick_file("Проект Dubbing (.dubproj)")
+ local ok,path=pick_file(T("Проект Dubbing (.dubproj)"))
  if not ok then return end
- local f=io.open(path,"rb"); if not f then status="Не удалось открыть файл"; return end
+ local f=io.open(path,"rb"); if not f then status=T("Не удалось открыть файл"); return end
  local data=f:read("*a"); f:close()
- if not data:match("^DUBPROJ1") then status="Это не файл проекта Dubbing"; return end
+ if not data:match("^DUBPROJ1") then status=T("Это не файл проекта Dubbing"); return end
  local head,rd,subs=data:match("^(.-)@@ROLEDUCK\n(.-)@@SUBS\n(.*)$")
- if not head then status="Файл проекта повреждён"; return end
+ if not head then status=T("Файл проекта повреждён"); return end
  push_undo()
  local kv={}
  for k,v in head:gmatch("([%w_]+)=([^\n]*)") do kv[k]=tonumber(v) end
@@ -1822,7 +3700,7 @@ local function import_project()
   if r and tonumber(db) then role_duck[r]=tonumber(db) end
  end
  rows=parse_saved(subs); selected=1; scroll=0
- save(); mark_dirty(); status="Проект загружен: реплик "..#rows
+ save(); mark_dirty(); status=T("Проект загружен: реплик ")..#rows
 end
 
 local function native_col(role)
@@ -1832,17 +3710,17 @@ local function native_col(role)
 end
 
 local function to_regions(silent)
- if #rows==0 then status="Нет субтитров"; return end
- if not silent and reaper.ShowMessageBox("Создать "..#rows.." регионов из субтитров?\n(существующие регионы не удаляются)","Dubbing Prompter",1)~=1 then return end
+ if #rows==0 then status=T("Нет субтитров"); return end
+ if not silent and reaper.ShowMessageBox(T("Создать ")..#rows..T(" регионов из субтитров?\n(существующие регионы не удаляются)"),"Dubbing Prompter",1)~=1 then return end
  reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
  for _,s in ipairs(rows) do reaper.AddProjectMarker2(0,true,s.start,s.finish,s.text,-1,native_col(s.role)) end
  reaper.PreventUIRefresh(-1); reaper.UpdateTimeline(); reaper.Undo_EndBlock("Dubbing System: subtitles to regions",-1)
- status="Создано регионов: "..#rows
+ status=T("Создано регионов: ")..#rows
 end
 
 local function to_items(silent)
- if #rows==0 then status="Нет субтитров"; return end
- if not silent and reaper.ShowMessageBox("Создать новую дорожку с "..#rows.." текстовыми итемами?","Dubbing Prompter",1)~=1 then return end
+ if #rows==0 then status=T("Нет субтитров"); return end
+ if not silent and reaper.ShowMessageBox(T("Создать новую дорожку с ")..#rows..T(" текстовыми итемами?"),"Dubbing Prompter",1)~=1 then return end
  reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
  local idx=reaper.CountTracks(0)
  reaper.InsertTrackAtIndex(idx,true)
@@ -1856,7 +3734,7 @@ local function to_items(silent)
   local c=native_col(s.role); if c~=0 then reaper.SetMediaItemInfo_Value(it,"I_CUSTOMCOLOR",c) end
  end
  reaper.PreventUIRefresh(-1); reaper.UpdateArrange(); reaper.Undo_EndBlock("Dubbing System: subtitles to text items",-1)
- status="Создана дорожка с итемами: "..#rows
+ status=T("Создана дорожка с итемами: ")..#rows
 end
 
 -- ---------- дорожка дубляжа с цепочкой эффектов ----------
@@ -2471,7 +4349,7 @@ function anime_mix_exists()
 end
 
 function create_anime_mix()
- if anime_mix_exists() then status="Структура сведения аниме уже есть в проекте, дубль не создан"; return end
+ if anime_mix_exists() then status=T("Структура сведения аниме уже есть в проекте, дубль не создан"); return end
  local base=reaper.CountTracks(0)
  local specs=anime_specs()
  reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
@@ -2497,8 +4375,8 @@ function create_anime_mix()
  reaper.PreventUIRefresh(-1); reaper.TrackList_AdjustWindows(false)
  reaper.Undo_EndBlock("Dubbing System: anime mix",-1)
  wins_dirty=true
- if #missing>0 then status="Сведение аниме создано, цепочка не записана у: "..table.concat(missing,", ")
- else status="Сведение аниме создано: 20 дорожек, роутинг и цепочки из проекта" end
+ if #missing>0 then status=T("Сведение аниме создано, цепочка не записана у: ")..table.concat(missing,", ")
+ else status=T("Сведение аниме создано: 20 дорожек, роутинг и цепочки из проекта") end
 end
 
 function create_dub_track()
@@ -2506,7 +4384,7 @@ function create_dub_track()
  reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
  reaper.InsertTrackAtIndex(idx,true)
  local tr=reaper.GetTrack(0,idx)
- reaper.GetSetMediaTrackInfo_String(tr,"P_NAME","Дубляж",true)
+ reaper.GetSetMediaTrackInfo_String(tr,"P_NAME",T("Дубляж"),true)
  local missing,nopreset={},{}
  local from_tpl=set_chain_from_rfx(tr)
  if not from_tpl then
@@ -2520,10 +4398,10 @@ function create_dub_track()
  reaper.PreventUIRefresh(-1); reaper.TrackList_AdjustWindows(false)
  reaper.Undo_EndBlock("Dubbing System: dub track",-1)
  wins_dirty=true; dub_time=-10
- if from_tpl then status="Дорожка дубляжа создана, цепочка из шаблона со всеми настройками"
- elseif #missing>0 then status="Дорожка создана, плагины не найдены: "..table.concat(missing,", ")
- elseif #nopreset>0 then status="Цепочка добавлена, пресет «Dubbing» не найден у: "..table.concat(nopreset,", ")
- else status="Дорожка дубляжа создана, цепочка эффектов добавлена" end
+ if from_tpl then status=T("Дорожка дубляжа создана, цепочка из шаблона со всеми настройками")
+ elseif #missing>0 then status=T("Дорожка создана, плагины не найдены: ")..table.concat(missing,", ")
+ elseif #nopreset>0 then status=T("Цепочка добавлена, пресет «Dubbing» не найден у: ")..table.concat(nopreset,", ")
+ else status=T("Дорожка дубляжа создана, цепочка эффектов добавлена") end
 end
 
 -- эффекты дорожки дубляжа выключены во время записи и включаются после неё
@@ -2564,7 +4442,7 @@ function dub_clean_on_close()
   if tn=="Dubbing Subtitles (text items)" then reaper.DeleteTrack(tr); n=n+1; tk=tk+1 end
  end
  reaper.PreventUIRefresh(-1); reaper.UpdateArrange(); reaper.UpdateTimeline()
- reaper.Undo_EndBlock("Dubbing System: убрать регионы и итемы субтитров",-1)
+ reaper.Undo_EndBlock(T("Dubbing System: убрать регионы и итемы субтитров"),-1)
  -- запоминаем, что было, чтобы вернуть при следующем открытии суфлёра
  reaper.SetExtState("DubbingPrompter","restore_regions",rg>0 and "1" or "0",true)
  reaper.SetExtState("DubbingPrompter","restore_items",tk>0 and "1" or "0",true)
@@ -2605,13 +4483,13 @@ end
 local function version_label(f)
  local mo,dd,hh,mi,ss,tag=f:match("^%d%d%d%d(%d%d)(%d%d)_(%d%d)(%d%d)(%d%d)_?(%a*)%.dub$")
  if not mo then return f end
- local kind=(tag=="auto") and "авто" or (tag=="manual") and "вручную" or ""
+ local kind=(tag=="auto") and T("авто") or (tag=="manual") and T("вручную") or ""
  return string.format("%s.%s  %s:%s:%s%s",dd,mo,hh,mi,ss,kind~="" and ("  ("..kind..")") or "")
 end
 
 function restore_version()
  local t=list_versions()
- if #t==0 then status="Сохранённых версий пока нет"; return end
+ if #t==0 then status=T("Сохранённых версий пока нет"); return end
  local items,files={},{}
  local n=math.min(#t,12)
  for i=1,n do
@@ -2622,20 +4500,20 @@ function restore_version()
   local list=parse_saved(raw)
   local nd=0
   for _,r in ipairs(list) do if r.done then nd=nd+1 end end
-  items[i]=version_label(f).."   — реплик "..#list..", записано "..nd
+  items[i]=version_label(f)..T("   — реплик ")..#list..T(", записано ")..nd
   files[i]=f
  end
  local idx=popup(items)
  if idx==0 or not files[idx] then return end
  local f=io.open(ver_dir().."/"..files[idx],"rb")
- if not f then status="Не удалось открыть версию"; return end
+ if not f then status=T("Не удалось открыть версию"); return end
  local raw=f:read("*a"); f:close()
  local list=parse_saved(raw)
- if #list==0 then status="Версия пуста"; return end
- local msg="Вернуть версию "..version_label(files[idx]).."?\n\nСейчас в сессии "..#rows.." реплик. Текущее состояние можно вернуть через отмену (↶ или Ctrl+Z).\n"
- if reaper.ShowMessageBox(msg,"Dubbing Prompter — восстановить версию",4)~=6 then status="Восстановление отменено"; return end
+ if #list==0 then status=T("Версия пуста"); return end
+ local msg=T("Вернуть версию ")..version_label(files[idx])..T("?\n\nСейчас в сессии ")..#rows..T(" реплик. Текущее состояние можно вернуть через отмену (↶ или Ctrl+Z).\n")
+ if reaper.ShowMessageBox(msg,T("Dubbing Prompter — восстановить версию"),4)~=6 then status=T("Восстановление отменено"); return end
  push_undo(); rows=list; selected=1; scroll=0
- save(); mark_dirty(); status="Восстановлена версия "..version_label(files[idx])
+ save(); mark_dirty(); status=T("Восстановлена версия ")..version_label(files[idx])
 end
 
 local function autosave_version()
@@ -2651,8 +4529,8 @@ end
 -- full factory reset of SETTINGS: Prompter values, per-track ducking, track assignments,
 -- keys/columns and the overlay's own settings. Subtitles, takes and marks stay.
 function factory_reset()
- local msg="Полный сброс настроек к заводским?\n\nСбросится: ducking и пре/пост-ролл, фейды, пороги QC, глубина по ролям и по дорожкам, назначение дорожек (оригинал и дубляж), горячие клавиши, колонки, таймкод, настройки оверлея.\n\nРеплики, записи, отметки и версии НЕ трогаются. Назначить дорожки заново придётся вручную."
- if reaper.ShowMessageBox(msg,"Dubbing Prompter — полный сброс настроек",4)~=6 then status="Сброс настроек отменён"; return end
+ local msg=T("Полный сброс настроек к заводским?\n\nСбросится: ducking и пре/пост-ролл, фейды, пороги QC, глубина по ролям и по дорожкам, назначение дорожек (оригинал и дубляж), горячие клавиши, колонки, таймкод, настройки оверлея.\n\nРеплики, записи, отметки и версии НЕ трогаются. Назначить дорожки заново придётся вручную.")
+ if reaper.ShowMessageBox(msg,T("Dubbing Prompter — полный сброс настроек"),4)~=6 then status=T("Сброс настроек отменён"); return end
  duck,pre,post,fi,fo=25,100,150,120,220
  only_dub,follow,win_from_dub=false,true,false
  preroll=3
@@ -2671,19 +4549,19 @@ function factory_reset()
  -- overlay settings (its own ExtState section)
  for _,k in ipairs(OV_KEYS) do reaper.DeleteExtState(OV_CFG,k,false) end
  save_prefs(); save(); mark_dirty()
- status="Все настройки сброшены к заводским (реплики сохранены)"
+ status=T("Все настройки сброшены к заводским (реплики сохранены)")
 end
 
 -- clears the session content: subtitles, takes marks, verdicts. Versions stay on disk.
 function clear_session()
- if #rows==0 then status="Сессия уже пустая"; return end
- local msg="Очистить сессию?\n\nБудут удалены все реплики ("..#rows.."), отметки «записано», оценки и заметки. Настройки не меняются.\n\nСохранённые версии остаются на диске и восстанавливаются через «Восстановить версию»."
- if reaper.ShowMessageBox(msg,"Dubbing Prompter — очистка сессии",4)~=6 then status="Очистка отменена"; return end
+ if #rows==0 then status=T("Сессия уже пустая"); return end
+ local msg=T("Очистить сессию?\n\nБудут удалены все реплики (")..#rows..T("), отметки «записано», оценки и заметки. Настройки не меняются.\n\nСохранённые версии остаются на диске и восстанавливаются через «Восстановить версию».")
+ if reaper.ShowMessageBox(msg,T("Dubbing Prompter — очистка сессии"),4)~=6 then status=T("Очистка отменена"); return end
  push_undo()
  rows={}; selected=1; scroll=0; search=""; role_filter=""; status_filter=""
  vis={}; roles={}; role_idx={}
  save(); mark_dirty(); rebuild_vis()
- status="Сессия очищена. Настройки и версии сохранены"
+ status=T("Сессия очищена. Настройки и версии сохранены")
 end
 
 -- ---------- subtitles embedded in a video (MKV/MP4) via ffprobe / ffmpeg ----------
@@ -2733,8 +4611,8 @@ function probe_subs(video)
  local out=ff_capture(ff_tool("ffprobe").." -v error -select_streams s -show_entries stream=index,codec_name:stream_tags=language,title:stream_disposition=default -of flat "..ffq(video))
  out=out or ""
  if not out:find("streams%.stream") then
-  if out:find("not recognized") or out:find("not found") or out:find("не является") then return nil,"Нужен ffprobe: положи ffmpeg.exe и ffprobe.exe в папку Scripts\\Dubbing System" end
-  return nil,"В файле нет дорожек субтитров (или ffprobe не запустился)"
+  if out:find("not recognized") or out:find("not found") or out:find("не является") then return nil,T("Нужен ffprobe: положи ffmpeg.exe и ffprobe.exe в папку Scripts\\Dubbing System") end
+  return nil,T("В файле нет дорожек субтитров (или ffprobe не запустился)")
  end
  local st={}
  for n,k,v in out:gmatch("streams%.stream%.(%d+)%.([%w_%.]+)=([^\r\n]*)") do
@@ -2749,7 +4627,7 @@ function probe_subs(video)
                   title=t["tags.title"] or "",default=(t["disposition.default"]=="1")}
   end
  end
- if #list==0 then return nil,"В файле нет дорожек субтитров" end
+ if #list==0 then return nil,T("В файле нет дорожек субтитров") end
  return list
 end
 -- graphic subtitles (images) cannot be turned into text
@@ -2758,7 +4636,7 @@ function sub_is_graphic(codec)
 end
 function import_from_video(video,auto)
  if not video then
-  local ok,v=pick_file("Видео со вшитыми субтитрами (MKV / MP4)")
+  local ok,v=pick_file(T("Видео со вшитыми субтитрами (MKV / MP4)"))
   if not ok then return end
   video=v
  end
@@ -2768,7 +4646,7 @@ function import_from_video(video,auto)
  for i,t in ipairs(list) do
   local l=(t.lang~="" and t.lang or "?")
   local name=(t.title~="" and (" · "..t.title) or "")
-  local tail=sub_is_graphic(t.codec) and " (картинки, не извлечь)" or ""
+  local tail=sub_is_graphic(t.codec) and T(" (картинки, не извлечь)") or ""
   labels[i]=((i..". "..l.." · "..t.codec..name..tail):gsub("|","/"))
  end
  local pick
@@ -2780,27 +4658,27 @@ function import_from_video(video,auto)
   for i,t in ipairs(list) do if good(t) and (t.lang=="rus" or t.lang=="ru") then pick=i; break end end
   if not pick then for i,t in ipairs(list) do if good(t) and t.default then pick=i; break end end end
   if not pick then for i,t in ipairs(list) do if good(t) then pick=i; break end end end
-  if not pick then status="В файле только графические субтитры (картинки), текст не извлечь"; return end
+  if not pick then status=T("В файле только графические субтитры (картинки), текст не извлечь"); return end
  else
   pick=popup(labels)
  end
- if not pick or pick<1 then status="Дорожка не выбрана"; return end
+ if not pick or pick<1 then status=T("Дорожка не выбрана"); return end
  local t=list[pick]
- if sub_is_graphic(t.codec) then status="Дорожка «"..t.codec.."» — это картинки, текст из неё не извлечь"; return end
+ if sub_is_graphic(t.codec) then status=T("Дорожка «")..t.codec..T("» — это картинки, текст из неё не извлечь"); return end
  local pp=reaper.GetProjectPath("")
  local outp=pp.."/Dubbing_subs_"..(t.lang~="" and t.lang or ("track"..t.index))..".srt"
  os.remove(outp)
  ff_capture(ff_tool("ffmpeg").." -v error -y -i "..ffq(video).." -map 0:"..t.index.." -c:s srt "..ffq(outp))
  local f=io.open(outp,"rb")
- if not f then status="ffmpeg не смог извлечь дорожку (проверь, что ffmpeg.exe на месте)"; return end
+ if not f then status=T("ffmpeg не смог извлечь дорожку (проверь, что ffmpeg.exe на месте)"); return end
  local size=f:seek("end"); f:close()
- if not size or size==0 then status="ffmpeg создал пустой файл: дорожка не извлечена"; return end
- load_subs_path(outp,"Из видео, дорожка "..t.index.." ("..(t.lang~="" and t.lang or "?")..")")
+ if not size or size==0 then status=T("ffmpeg создал пустой файл: дорожка не извлечена"); return end
+ load_subs_path(outp,T("Из видео, дорожка ")..t.index.." ("..(t.lang~="" and t.lang or "?")..")")
 end
 
 -- одна кнопка: выбрать файл (видео или .srt/.ass/.ssa/.txt) → субтитры → регионы → текстовые итемы
 function import_all()
- local ok,path=pick_file("Импорт: видео (MKV/MP4) или субтитры (SRT/ASS/SSA/TXT)")
+ local ok,path=pick_file(T("Импорт: видео (MKV/MP4) или субтитры (SRT/ASS/SSA/TXT)"))
  if not ok then return end
  local ext=(path:match("%.([%w]+)$") or ""):lower()
  if ext=="srt" or ext=="ass" or ext=="ssa" or ext=="txt" then load_subs_path(path)
@@ -2808,7 +4686,7 @@ function import_all()
  if #rows==0 then return end
  local n=#rows
  to_regions(true); to_items(true)
- status="Готово: реплик "..n..", регионы и текстовые итемы созданы"
+ status=T("Готово: реплик ")..n..T(", регионы и текстовые итемы созданы")
 end
 
 -- ---------- суфлёр на телефон / планшет (через веб-интерфейс REAPER) ----------
@@ -3370,7 +5248,7 @@ end
 function Mobile.write(json,ver)
  local tpl=Mobile.TEMPLATE
  local a,b=tpl:find("/*@@CUES@@*/[]",1,true)
- if not a then return false,"в шаблоне нет метки реплик" end
+ if not a then return false,T("в шаблоне нет метки реплик") end
  local head=tpl:sub(1,a-1):gsub("@@VER@@",function() return ver end)
  local tail=tpl:sub(b+1):gsub("@@VER@@",function() return ver end)
  local function put(str,mark,val)
@@ -3389,12 +5267,12 @@ function Mobile.write(json,ver)
  local path=dir.."prompter.html"
  local tmp=dir.."prompter.tmp"
  local f=io.open(tmp,"wb")
- if not f then return false,"не могу писать в "..dir end
+ if not f then return false,T("не могу писать в ")..dir end
  f:write(html); f:close()
  os.remove(path)
  if not os.rename(tmp,path) then
   local g=io.open(path,"wb")
-  if not g then return false,"не могу записать "..path end
+  if not g then return false,T("не могу записать ")..path end
   g:write(html); g:close(); os.remove(tmp)
  end
  return true,path
@@ -3455,14 +5333,14 @@ end
 -- лёгкая копия видео (mp4 480p без звука) в reaper_www_root; ffmpeg работает в фоне
 function Mobile.makevideo()
  Mobile.meta(true)
- local T="Видео для телефона"
+ local T=T("Видео для телефона")
  if (Mobile.vpath or "")=="" then
-  reaper.ShowMessageBox("В проекте не найден видео-элемент.",T,0); return
+  reaper.ShowMessageBox(T("В проекте не найден видео-элемент."),T,0); return
  end
  if Mobile.enc then
-  reaper.ShowMessageBox("Подготовка уже идёт, прогресс показан в строке состояния.",T,0); return
+  reaper.ShowMessageBox(T("Подготовка уже идёт, прогресс показан в строке состояния."),T,0); return
  end
- local ans=reaper.ShowMessageBox("Создать лёгкую копию видео для телефона?\n\n"..Mobile.vname..(((Mobile.nsrc or 1)>1) and "\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)" or "").."\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\Dubbing System или в PATH.",T,1)
+ local ans=reaper.ShowMessageBox(T("Создать лёгкую копию видео для телефона?\n\n")..Mobile.vname..(((Mobile.nsrc or 1)>1) and T("\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)") or "")..T("\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\Dubbing System или в PATH."),T,1)
  if ans~=1 then return end
  local www=Mobile.www()
  reaper.RecursiveCreateDirectory(www,0)
@@ -3482,15 +5360,15 @@ function Mobile.makevideo()
   " move /y "..ffq(e.tmp).." "..ffq(e.out).." >nul",
   ")"}
  local f=io.open(e.bat,"wb")
- if not f then reaper.ShowMessageBox("Не могу записать "..e.bat,T,0); return end
+ if not f then reaper.ShowMessageBox(T("Не могу записать ")..e.bat,T,0); return end
  f:write(table.concat(lines,"\r\n").."\r\n"); f:close()
  if not Mobile.launch(e.bat) then
-  reaper.ShowMessageBox("Не удалось запустить ffmpeg автоматически. Запустите вручную двойным щелчком:\n"..e.bat,T,0)
+  reaper.ShowMessageBox(T("Не удалось запустить ffmpeg автоматически. Запустите вручную двойным щелчком:\n")..e.bat,T,0)
  end
  Mobile.enc=e
  Mobile.on=true
  reaper.SetExtState(SEC,"mobile_on","1",true)
- status="Видео для телефона: подготовка…"
+ status=T("Видео для телефона: подготовка…")
 end
 
 function Mobile.check_enc()
@@ -3498,17 +5376,17 @@ function Mobile.check_enc()
  if not e then return end
  local function has(p) local f=io.open(p,"rb"); if f then f:close(); return true end return false end
  if has(e.out) then
-  Mobile.enc=nil; status="Видео для телефона готово: страница сама подхватит его"; Mobile.refresh(true); return
+  Mobile.enc=nil; status=T("Видео для телефона готово: страница сама подхватит его"); Mobile.refresh(true); return
  end
  if has(e.fail) then
-  Mobile.enc=nil; status="Видео для телефона: ffmpeg не справился (лог: "..e.log..")"; return
+  Mobile.enc=nil; status=T("Видео для телефона: ffmpeg не справился (лог: ")..e.log..")"; return
  end
  local f=io.open(e.prog,"rb")
  if f then
   local t=f:read("a") or ""; f:close()
   local us; for v in t:gmatch("out_time_us=(%d+)") do us=tonumber(v) end
   if us and (e.len or 0)>0 then
-   status=string.format("Видео для телефона: %d%%",math.min(99,math.floor(us/1e6/e.len*100)))
+   status=string.format(T("Видео для телефона: %d%%"),math.min(99,math.floor(us/1e6/e.len*100)))
   end
  end
 end
@@ -3548,7 +5426,7 @@ end
 
 -- запуск сервера видео (Python) в отдельном окне; сервер отдаёт на телефон оригинальный файл
 function Mobile.server_start()
- local T="Сервер видео"
+ local T=T("Сервер видео")
  Mobile.on=true
  reaper.SetExtState(SEC,"mobile_on","1",true)
  Mobile.cfgSig=nil
@@ -3556,7 +5434,7 @@ function Mobile.server_start()
  local bat=(Mobile.dir or "").."/MobileServer/start_server.bat"
  local f=io.open(bat,"rb")
  if not f then
-  reaper.ShowMessageBox("Не найден start_server.bat:\n"..bat.."\n\nПереустановите Dubbing System или скопируйте папку MobileServer рядом со скриптом.",T,0)
+  reaper.ShowMessageBox(T("Не найден start_server.bat:\n")..bat..T("\n\nПереустановите Dubbing System или скопируйте папку MobileServer рядом со скриптом."),T,0)
   return
  end
  f:close()
@@ -3565,20 +5443,20 @@ function Mobile.server_start()
  local ips=Mobile.ips()
  local addr={}
  for _,ip in ipairs(ips) do addr[#addr+1]="http://"..ip..":"..Mobile.sport.."/" end
- local msg="Сервер видео запускается в отдельном окне.\n\n"
+ local msg=T("Сервер видео запускается в отдельном окне.\n\n")
  if (Mobile.vpath or "")=="" then
-  msg=msg.."ВНИМАНИЕ: в проекте не найден видео-элемент — сервер нечего отдавать.\n\n"
+  msg=msg..T("ВНИМАНИЕ: в проекте не найден видео-элемент — сервер нечего отдавать.\n\n")
  else
-  msg=msg.."Видео: "..Mobile.vpath.."\n\n"
+  msg=msg..T("Видео: ")..Mobile.vpath.."\n\n"
  end
- msg=msg.."Проверка в браузере ПК: "..(addr[1] or ("http://IP-ПК:"..Mobile.sport.."/")).."\n"
- msg=msg.."Телефон подхватит видео сам (страница суфлёра ищет сервер на этом же ПК, порт "..Mobile.sport..").\n\n"
- msg=msg.."Нужен Python 3 (python.org, галочка Add to PATH). При первом запуске разрешите python.exe в брандмауэре Windows (частная сеть).\n"
- msg=msg.."Если окно сервера сразу закрылось или показало ошибку, прочитайте её: там указана причина."
+ msg=msg..T("Проверка в браузере ПК: ")..(addr[1] or (T("http://IP-ПК:")..Mobile.sport.."/")).."\n"
+ msg=msg..T("Телефон подхватит видео сам (страница суфлёра ищет сервер на этом же ПК, порт ")..Mobile.sport..").\n\n"
+ msg=msg..T("Нужен Python 3 (python.org, галочка Add to PATH). При первом запуске разрешите python.exe в брандмауэре Windows (частная сеть).\n")
+ msg=msg..T("Если окно сервера сразу закрылось или показало ошибку, прочитайте её: там указана причина.")
  if not started then
-  msg=msg.."\n\nОкно сервера открыть не удалось. Запустите вручную двойным щелчком:\n"..W(bat)
+  msg=msg..T("\n\nОкно сервера открыть не удалось. Запустите вручную двойным щелчком:\n")..W(bat)
  end
- status="Сервер видео: "..(addr[1] or ("порт "..Mobile.sport))
+ status=T("Сервер видео: ")..(addr[1] or (T("порт ")..Mobile.sport))
  reaper.ShowMessageBox(msg,T,0)
 end
 
@@ -3592,7 +5470,7 @@ function Mobile.refresh(force)
  Mobile.n=(Mobile.n or 0)+1
  Mobile.ver=tostring(os.time()).."-"..Mobile.n
  local ok,info=Mobile.write(json,Mobile.ver)
- if not ok then status="Суфлёр на телефон: "..tostring(info) end
+ if not ok then status=T("Суфлёр на телефон: ")..tostring(info) end
  return ok,info
 end
 
@@ -3633,10 +5511,10 @@ end
 function Mobile.open()
  Mobile.on=true
  reaper.SetExtState(SEC,"mobile_on","1",true)
- if #rows==0 then status="Суфлёр на телефон: сначала импортируйте субтитры"; end
+ if #rows==0 then status=T("Суфлёр на телефон: сначала импортируйте субтитры"); end
  local ok,info=Mobile.refresh(true)
  if not ok then
-  reaper.ShowMessageBox("Не удалось создать страницу суфлёра:\n"..tostring(info),"Суфлёр на телефон",0)
+  reaper.ShowMessageBox(T("Не удалось создать страницу суфлёра:\n")..tostring(info),T("Суфлёр на телефон"),0)
   return
  end
  local port=Mobile.port()
@@ -3646,26 +5524,26 @@ function Mobile.open()
  if #ips>0 then
   for _,ip in ipairs(ips) do lines[#lines+1]="http://"..ip..":"..p.."/prompter.html" end
  else
-  lines[1]="http://IP-ПК:"..p.."/prompter.html   (IP смотрите командой ipconfig)"
+  lines[1]=T("http://IP-ПК:")..p..T("/prompter.html   (IP смотрите командой ipconfig)")
  end
  Mobile.url=lines[1]
  if reaper.CF_SetClipboard and #ips>0 then pcall(reaper.CF_SetClipboard,lines[1]) end
- local msg="Страница суфлёра создана:\n"..tostring(info).."\n\nАдрес для телефона / планшета (одна Wi-Fi сеть с ПК):\n"..table.concat(lines,"\n").."\n\n"
+ local msg=T("Страница суфлёра создана:\n")..tostring(info)..T("\n\nАдрес для телефона / планшета (одна Wi-Fi сеть с ПК):\n")..table.concat(lines,"\n").."\n\n"
  if port then
-  msg=msg.."Веб-интерфейс REAPER найден в настройках, порт "..port..".\n"
+  msg=msg..T("Веб-интерфейс REAPER найден в настройках, порт ")..port..".\n"
  else
-  msg=msg.."ВНИМАНИЕ: веб-интерфейс REAPER не найден в reaper.ini. Включите его один раз:\nPreferences → Control/OSC/web → Add → «Web browser interface», порт 8080, нажмите OK.\n(Если вы только что включили его — адрес выше всё равно верный.)\n"
+  msg=msg..T("ВНИМАНИЕ: веб-интерфейс REAPER не найден в reaper.ini. Включите его один раз:\nPreferences → Control/OSC/web → Add → «Web browser interface», порт 8080, нажмите OK.\n(Если вы только что включили его — адрес выше всё равно верный.)\n")
  end
- msg=msg.."\nЕсли телефон не подключается: разрешите reaper.exe в брандмауэре Windows для частной сети.\nСтраница обновляется сама при изменении реплик."
- status="Суфлёр на телефон: "..lines[1]
- reaper.ShowMessageBox(msg,"Суфлёр на телефон",0)
+ msg=msg..T("\nЕсли телефон не подключается: разрешите reaper.exe в брандмауэре Windows для частной сети.\nСтраница обновляется сама при изменении реплик.")
+ status=T("Суфлёр на телефон: ")..lines[1]
+ reaper.ShowMessageBox(msg,T("Суфлёр на телефон"),0)
 end
 
 function Mobile.toggle_roles()
  Mobile.roles=not Mobile.roles
  reaper.SetExtState(SEC,"mobile_roles",Mobile.roles and "1" or "0",true)
  Mobile.refresh(true)
- status="Суфлёр на телефон: имена ролей "..(Mobile.roles and "включены" or "выключены")
+ status=T("Суфлёр на телефон: имена ролей ")..(Mobile.roles and T("включены") or T("выключены"))
 end
 
 function Mobile.init()
@@ -3692,13 +5570,13 @@ function run_tool(idx)
  elseif idx==5 then rename_role()
  elseif idx==6 then edit_role_duck()
  elseif idx==7 then edit_track_duck()
- elseif idx==8 then win_from_dub=not win_from_dub; save(); status=win_from_dub and "Окна приглушения берутся из записей на дорожке дубляжа" or "Окна приглушения берутся из субтитров"
+ elseif idx==8 then win_from_dub=not win_from_dub; save(); status=win_from_dub and T("Окна приглушения берутся из записей на дорожке дубляжа") or T("Окна приглушения берутся из субтитров")
  elseif idx==9 then set_preroll()
  elseif idx==10 then reset_done()
  elseif idx==11 then export_srt_roles()
  elseif idx==12 then export_project()
  elseif idx==13 then import_project()
- elseif idx==14 then if save_version("manual") then status="Версия сохранена в "..ver_dir() else status="Не удалось сохранить версию" end
+ elseif idx==14 then if save_version("manual") then status=T("Версия сохранена в ")..ver_dir() else status=T("Не удалось сохранить версию") end
  elseif idx==15 then restore_version()
  elseif idx==16 then qc_report()
  elseif idx==17 then export_role_scripts()
@@ -3794,7 +5672,7 @@ local KX,KY,KF=1,1,1
 local MX,MY=0,0
 local function grect(x,y,w,h,fill) gfx.rect(x*KX,y*KY,w*KX,h*KY,fill) end
 local function gline(x1,y1,x2,y2) gfx.line(x1*KX,y1*KY,x2*KX,y2*KY) end
-local function setf(size) gfx.setfont(1,"Arial",math.max(8,math.floor((size or 16)*KF+0.5))) end
+local function setf(size) gfx.setfont(1,FONT,math.max(8,math.floor((size or 16)*KF+0.5))) end
 local function rect(x,y,w,h,c) gfx.set(c[1],c[2],c[3],c[4] or 1); grect(x,y,w,h,1) end
 local C={bg={.040,.040,.047},panel={.075,.075,.085},panel2={.115,.110,.122},line={.22,.16,.17},text={.96,.94,.90},muted={.60,.56,.53},blue={.88,.70,.24},green={.89,.70,.24},red={.88,.20,.24},yellow={.88,.70,.24}}
 local function txt(x,y,s,size,col) setf(size or 16); gfx.set(col[1],col[2],col[3],col[4] or 1); gfx.x=x*KX; gfx.y=y*KY; gfx.drawstr(tostring(s or "")) end
@@ -3878,7 +5756,7 @@ local function draw_preview(x,y,w,h,pos)
   gfx.set(.88,.20,.24,math.min(.85,.25+wn.db/60))
   grect(x1,y+4,math.max(1,x2-x1),h-8,1)
  end
- txt(x+6,y+2,"превью приглушения оригинала",10,C.muted)
+ txt(x+6,y+2,T("превью приглушения оригинала"),10,C.muted)
  gfx.set(.05,.80,.45,1)
  local cx=x+w*math.max(0,math.min(1,pos/total))
  gline(cx,y,cx,y+h)
@@ -3921,10 +5799,10 @@ end
 
 function list_actions()
  return {
-  {l="Текст",id=11},{l="Время",id=12},{l="Разбить",id=13},{l="Склеить",id=14},{l="Удалить",id=15},{l="↶",id=16},
-  {l="Следить",k=follow and "green" or nil,id=17},{l="Играть",id=22},
-  {l="Цикл",k=loop_active and "green" or nil,id=23},
-  {l="Записано",id=24},{l="Заметка",id=25},{l="Закладка",id=26},{l="Подогнать",id=27}}
+  {l=T("Текст"),id=11},{l=T("Время"),id=12},{l=T("Разбить"),id=13},{l=T("Склеить"),id=14},{l=T("Удалить"),id=15},{l="↶",id=16},
+  {l=T("Следить"),k=follow and "green" or nil,id=17},{l=T("Играть"),id=22},
+  {l=T("Цикл"),k=loop_active and "green" or nil,id=23},
+  {l=T("Записано"),id=24},{l=T("Заметка"),id=25},{l=T("Закладка"),id=26},{l=T("Подогнать"),id=27}}
 end
 
 local function draw_edit_modal()
@@ -3933,7 +5811,7 @@ local function draw_edit_modal()
  local bx=math.floor((W-bw)/2); local by=math.floor((H-bh)/2)
  rect(bx,by,bw,bh,C.panel)
  gfx.set(.88,.20,.24,1); grect(bx,by,bw,bh,0)
- txt(bx+16,by+12,(edit_target=="note" and "Заметка к реплике №" or "Правка реплики №")..selected,17,C.text)
+ txt(bx+16,by+12,(edit_target=="note" and T("Заметка к реплике №") or T("Правка реплики №"))..selected,17,C.text)
  local lines=wrap_gfx(edit_buf,20,bw-50)
  local caret=(math.floor(reaper.time_precise()*2)%2==0) and "|" or " "
  lines[#lines]=lines[#lines]..caret
@@ -3942,7 +5820,7 @@ local function draw_edit_modal()
   if i>maxl then break end
   txt(bx+24,by+46+(i-1)*26,l,20,C.text)
  end
- txt(bx+16,by+bh-80,"Enter — сохранить · Ctrl+Enter — перенос строки · Esc — отмена",12,C.muted)
+ txt(bx+16,by+bh-80,T("Enter — сохранить · Ctrl+Enter — перенос строки · Esc — отмена"),12,C.muted)
  local function mbtn(x,label,kind,id)
   local c=kind=="primary" and C.blue or C.panel2
   local y=by+bh-44
@@ -3950,8 +5828,8 @@ local function draw_edit_modal()
   rect(x,y,150,34,c); txt(x+14,y+8,label,15,C.text)
   if raw_pressed() and inside(x,y,150,34) then return id end
  end
- local a=mbtn(bx+bw-340,"Сохранить","primary",1)
- local b=mbtn(bx+bw-170,"Отмена",nil,2)
+ local a=mbtn(bx+bw-340,T("Сохранить"),"primary",1)
+ local b=mbtn(bx+bw-170,T("Отмена"),nil,2)
  if a==1 then end_edit(true) elseif b==2 then end_edit(false) end
 end
 
@@ -3979,7 +5857,7 @@ function draw_list(x,y,w,h,narrow,items,cur_idx,rb)
  rect(sx,sy,sw1,sh,C.panel)
  gfx.set(C.line[1],C.line[2],C.line[3],1); grect(sx,sy,sw1,sh,0)
  if search_focus then gfx.set(.88,.20,.24,1); grect(sx,sy,sw1,sh,0) end
- if search=="" and not search_focus then txt(sx+12,sy+9,"Поиск по тексту…",13,C.muted)
+ if search=="" and not search_focus then txt(sx+12,sy+9,T("Поиск по тексту…"),13,C.muted)
  else txt(sx+12,sy+9,tail(search,28)..((search_focus and (math.floor(os.clock()*2)%2==0)) and "|" or ""),13,C.text) end
  local hdr_down=(gfx.mouse_cap&1)==1
  local hdr_click=hdr_down and not HDR_WAS and not ui_locked
@@ -3992,7 +5870,7 @@ function draw_list(x,y,w,h,narrow,items,cur_idx,rb)
  rect(rx,sy,rw,sh,rov and C.panel2 or C.panel)
  gfx.set(C.line[1],C.line[2],C.line[3],1); grect(rx,sy,rw,sh,0)
  if rcol then rect(rx+10,sy+12,8,8,rcol) end
- txt(rx+(rcol and 26 or 12),sy+9,fit_text(role_filter=="" and "Все роли" or short(role_filter,12),13,rw-34),13,C.text)
+ txt(rx+(rcol and 26 or 12),sy+9,fit_text(role_filter=="" and T("Все роли") or short(role_filter,12),13,rw-34),13,C.text)
  if hdr_click and rov then
   if role_filter=="" then role_filter=roles[1]
   else
@@ -4017,7 +5895,7 @@ function draw_list(x,y,w,h,narrow,items,cur_idx,rb)
  local ract=nil
  -- кнопки выбранной реплики: коды 100000+idx*10+k
  local mini=narrow or w<950
- local bdef=mini and {{"▶",0},{"✓",1},{"⚑",2},{"✎",4}} or {{"▶ Играть",0},{"✓ Записано",1},{"⚑ Заметка",2},{"★ Лучший",3},{"✎ Текст",4},{"ок",5},{"↺",6},{"?",7},{"губы",8}}
+ local bdef=mini and {{"▶",0},{"✓",1},{"⚑",2},{"✎",4}} or {{T("▶ Играть"),0},{T("✓ Записано"),1},{T("⚑ Заметка"),2},{T("★ Лучший"),3},{T("✎ Текст"),4},{T("ок"),5},{"↺",6},{"?",7},{T("губы"),8}}
  local bw,bg=0,6
  local abw=0
  local bws={}
@@ -4063,21 +5941,21 @@ function draw_list(x,y,w,h,narrow,items,cur_idx,rb)
     stx=sadv(stx,L2,short(s.role,12),11,rc or {.48,.66,1})
    end
    local ccol=(cps>=qc_cps*1.25) and C.red or (cps>=qc_cps) and C.yellow or C.muted
-   if PREF.cols.cps then stx=sadv(stx,L2,string.format("%.0f зн/с",cps),11,ccol) end
-   if PREF.cols.dur then stx=sadv(stx,L2,string.format("%.1f с",dur),11,C.muted) end
+   if PREF.cols.cps then stx=sadv(stx,L2,string.format(T("%.0f зн/с"),cps),11,ccol) end
+   if PREF.cols.dur then stx=sadv(stx,L2,string.format(T("%.1f с"),dur),11,C.muted) end
    local n,over=row_takes(s,items)
    if PREF.cols.takes then
     if n>0 then stx=sadv(stx,L2,"×"..n,11,C.green)
-    elseif not s.done then stx=sadv(stx,L2,"нет дубля",11,{.75,.40,.40}) end
+    elseif not s.done then stx=sadv(stx,L2,T("нет дубля"),11,{.75,.40,.40}) end
    end
    if s.mark then stx=sadv(stx,L2,"⚑",11,C.yellow) end
-   if PREF.cols.verdict and s.verdict=="ok" then stx=sadv(stx,L2,"✓ ок",11,C.green)
-   elseif s.verdict=="redo" then stx=sadv(stx,L2,"↺ переписать",11,C.red)
-   elseif s.verdict=="check" then stx=sadv(stx,L2,"? спорно",11,C.yellow)
-   elseif s.verdict=="lip" then stx=sadv(stx,L2,"губы",11,C.yellow) end
-   if PREF.cols.over and n>0 and over>0.25 then stx=sadv(stx,L2,string.format("+%.1f с",over),11,C.red) end
+   if PREF.cols.verdict and s.verdict=="ok" then stx=sadv(stx,L2,T("✓ ок"),11,C.green)
+   elseif s.verdict=="redo" then stx=sadv(stx,L2,T("↺ переписать"),11,C.red)
+   elseif s.verdict=="check" then stx=sadv(stx,L2,T("? спорно"),11,C.yellow)
+   elseif s.verdict=="lip" then stx=sadv(stx,L2,T("губы"),11,C.yellow) end
+   if PREF.cols.over and n>0 and over>0.25 then stx=sadv(stx,L2,string.format(T("+%.1f с"),over),11,C.red) end
    if PREF.cols.note and (s.note or "")~="" then stx=sadv(stx,L2,"✎ "..short(s.note,18),11,C.yellow) end
-   if s.take then stx=sadv(stx,L2,"★ лучший",11,C.green) end
+   if s.take then stx=sadv(stx,L2,T("★ лучший"),11,C.green) end
    end
    local rowbtn=false
    if showact then
@@ -4105,7 +5983,7 @@ function draw_list(x,y,w,h,narrow,items,cur_idx,rb)
    end
   end
  end
- if #vis==0 then txt(x+24,RT+8,fit_text((#rows==0) and "Импортируй субтитры" or "Ничего не найдено",14,w-48),14,C.muted) end
+ if #vis==0 then txt(x+24,RT+8,fit_text((#rows==0) and T("Импортируй субтитры") or T("Ничего не найдено"),14,w-48),14,C.muted) end
  return ract
 end
 
@@ -4123,16 +6001,16 @@ function draw_duck(x,y,w,h,pos)
   txt(x+10,y+5,"Ducking −"..duck.." dB",13,C.text)
   B(x+w-132,y+2,60,22,"−5 dB",nil,6,12)
   B(x+w-68,y+2,56,22,"＋5 dB",nil,7,12)
-  B(x+10,y+28,w-20,22,"Только под дубляжом: "..(only_dub and "ВКЛ" or "ВЫКЛ"),only_dub and "green" or nil,18,12)
-  local line="Перед "..pre.." ms · После "..post.." ms · Плавно "..fi.." ms · Возврат "..fo.." ms"
+  B(x+10,y+28,w-20,22,T("Только под дубляжом: ")..(only_dub and T("ВКЛ") or T("ВЫКЛ")),only_dub and "green" or nil,18,12)
+  local line=T("Перед ")..pre..T(" ms · После ")..post..T(" ms · Плавно ")..fi..T(" ms · Возврат ")..fo.." ms"
   if y+56+14<=bottom then txt(x+10,y+56,fit_text(line,12,w-20),12,C.muted) end
   return a
  end
- rect(x,y,w,h,C.panel); txt(x+12,y+8,"АВТОМАТИЗАЦИЯ ГРОМКОСТИ",14,C.text)
+ rect(x,y,w,h,C.panel); txt(x+12,y+8,T("АВТОМАТИЗАЦИЯ ГРОМКОСТИ"),14,C.text)
  local k=clampf(math.floor((h-100)/5),12,26)
  local y0=y+34
- local L={{"Приглушить оригинал","−"..duck.." dB"},{"Перед репликой",pre.." ms"},{"После реплики",post.." ms"},
-          {"Плавное снижение",fi.." ms"},{"Возврат громкости",fo.." ms"}}
+ local L={{T("Приглушить оригинал"),"−"..duck.." dB"},{T("Перед репликой"),pre.." ms"},{T("После реплики"),post.." ms"},
+          {T("Плавное снижение"),fi.." ms"},{T("Возврат громкости"),fo.." ms"}}
  for i,p in ipairs(L) do
   local ry=y0+(i-1)*k
   if ry+14<=bottom then
@@ -4144,7 +6022,7 @@ function draw_duck(x,y,w,h,pos)
  local hw=math.floor((w-36)/2)
  B(x+12,by,hw,28,"−5 dB",nil,6,13)
  B(x+24+hw,by,hw,28,"＋5 dB",nil,7,13)
- B(x+12,by+34,w-24,28,"Только под дубляжом: "..(only_dub and "ВКЛ" or "ВЫКЛ"),only_dub and "green" or nil,18,13)
+ B(x+12,by+34,w-24,28,T("Только под дубляжом: ")..(only_dub and T("ВКЛ") or T("ВЫКЛ")),only_dub and "green" or nil,18,13)
  if by+34+28+36<=y+h then draw_preview(x+12,by+70,w-24,math.min(34,y+h-(by+70)-6),pos) end
  return a
 end
@@ -4159,21 +6037,21 @@ function draw_subs(x,y,w,h)
  if h<150 then
   rect(x,y,w,h,C.panel)
   local hw=math.floor((w-30)/2)
-  B(x+10,y+4,w-20,22,"Оверлей на видео: вкл / выкл","primary",8,12)
-  B(x+10,y+30,hw,22,"Экспорт SRT",nil,19,12)
-  B(x+20+hw,y+30,hw,22,"В регионы",nil,20,12)
-  B(x+10,y+56,hw,22,"В текстовые итемы",nil,21,12)
-  B(x+20+hw,y+56,hw,22,"Восстановить оверлей",nil,31,12)
+  B(x+10,y+4,w-20,22,T("Оверлей на видео: вкл / выкл"),"primary",8,12)
+  B(x+10,y+30,hw,22,T("Экспорт SRT"),nil,19,12)
+  B(x+20+hw,y+30,hw,22,T("В регионы"),nil,20,12)
+  B(x+10,y+56,hw,22,T("В текстовые итемы"),nil,21,12)
+  B(x+20+hw,y+56,hw,22,T("Восстановить оверлей"),nil,31,12)
   return a
  end
- rect(x,y,w,h,C.panel); txt(x+12,y+8,"СУБТИТРЫ",14,C.text)
+ rect(x,y,w,h,C.panel); txt(x+12,y+8,T("СУБТИТРЫ"),14,C.text)
  local by=y+34
  local hw=math.floor((w-36)/2)
- B(x+12,by,w-24,28,"Оверлей на видео: вкл / выкл","primary",8,13)
- B(x+12,by+34,hw,28,"Экспорт SRT",nil,19,13)
- B(x+24+hw,by+34,hw,28,"В регионы",nil,20,13)
- B(x+12,by+68,hw,28,"В текстовые итемы",nil,21,13)
- B(x+24+hw,by+68,hw,28,"Восстановить оверлей",nil,31,13)
+ B(x+12,by,w-24,28,T("Оверлей на видео: вкл / выкл"),"primary",8,13)
+ B(x+12,by+34,hw,28,T("Экспорт SRT"),nil,19,13)
+ B(x+24+hw,by+34,hw,28,T("В регионы"),nil,20,13)
+ B(x+12,by+68,hw,28,T("В текстовые итемы"),nil,21,13)
+ B(x+24+hw,by+68,hw,28,T("Восстановить оверлей"),nil,31,13)
  return a
 end
 
@@ -4184,72 +6062,72 @@ VKEY_ROW={[5]="ok",[6]="redo",[7]="check",[8]="lip"}
 
 -- all tools: label (short), help (what it does)
 TOOL_ITEMS={
- [1]={l="Импорт оригинала",h="Загрузить второй файл субтитров для сравнения с переводом."},
- [2]={l="Подогнать под дубли",h="Подогнать тайминг всех реплик под записи дубляжа на дорожке (по takes)."},
- [3]={l="Сдвинуть время",h="Сдвинуть все реплики (или выбранные) на заданное время."},
- [4]={l="Замена текста",h="Глобальная замена слова или фразы в тексте всех реплик."},
- [5]={l="Переименовать роль",h="Поменять имя роли во всех репликах."},
- [6]={l="Приглушение по ролям",h="Глубина приглушения оригинала (дБ) отдельно для каждой роли."},
- [7]={l="Приглушение по дорожкам",h="Глубина приглушения по дорожкам оригинала."},
- [8]={l="Окна приглушения",h="Переключить: брать окна приглушения из записей дубляжа или из субтитров."},
- [9]={l="Пре-ролл",h="Сколько секунд звучит перед репликой при воспроизведении (задаётся числом)."},
- [10]={l="Сбросить «записано»",h="Снять отметку «записано» со всех реплик."},
- [11]={l="SRT по ролям",h="Экспорт субтитров SRT отдельным файлом на каждую роль."},
- [12]={l="Экспорт проекта",h="Сохранить всю сессию (реплики, роли, настройки) в файл .dubproj."},
- [13]={l="Импорт проекта",h="Загрузить сессию из файла .dubproj."},
- [14]={l="Сохранить версию",h="Записать текущее состояние сессии как версию сейчас."},
- [15]={l="Восстановить версию",h="Выбрать сохранённую версию и вернуть сессию к ней."},
- [16]={l="Проверка QC",h="Отчёт: скорость речи, паузы, дубли, выход дубля за окно реплики."},
- [17]={l="Сценарии (текст)",h="Текстовые сценарии для каждого актёра, по одному файлу на роль."},
- [18]={l="Дубли на N кадров",h="Сдвинуть дубли выбранной реплики на заданное число кадров."},
- [19]={l="Лучший дубль",h="Выбрать лучший дубль выбранной реплики, остальные приглушить."},
- [20]={l="Справка (F6)",h="Открыть окно с горячими клавишами и описанием."},
- [21]={l="Записано по дорожке",h="Отметить как записанные реплики, по которым на дорожке дубляжа уже есть запись."},
- [22]={l="Громкость дублей",h="Проверить клиппинг и тишину в дублях, записать отчёт."},
- [23]={l="Сценарии (HTML)",h="HTML-сценарии по ролям, открываются для печати в PDF."},
- [24]={l="Таймкод: кадры",h="Переключить таймкод между секундами и кадрами."},
- [25]={l="Пороги проверки",h="Изменить пороги скорости, паузы и короткой реплики для проверки QC."},
- [26]={l="Сводка по актёрам",h="Сколько реплик записано и осталось у каждого актёра."},
- [27]={l="Лист сессии (CSV)",h="Таблица сессии для Excel (разделитель «;», запятая в числах)."},
- [28]={l="Экспорт VTT",h="Субтитры в формате WebVTT."},
- [29]={l="Фильтр по статусу",h="Показать только реплики с выбранным статусом: все, переписать, спорно, ок, не записано."},
- [30]={l="Вызывной лист",h="HTML-лист для актёра с ещё не записанными репликами."},
- [31]={l="Сводка за день",h="Сколько записано, листов и оценок сделано в сессии."},
- [32]={l="Выровнять громкость",h="Привести громкость дублей к медиане, не больше ±6 дБ от неё."},
- [33]={l="Сдвинуть выбранные",h="Сдвинуть все отмеченные (Ctrl+клик) реплики на N секунд."},
- [34]={l="Назначить роль",h="Назначить одну роль всем отмеченным репликам."},
- [35]={l="Отметить записано",h="Отметить все отмеченные реплики как записанные."},
- [36]={l="Снять «записано»",h="Снять отметку «записано» с отмеченных реплик."},
- [37]={l="Снять выбор",h="Убрать все отмеченные реплики (Ctrl+клик)."},
- [38]={l="Проверка окружения",h="Проверить ReaImGui, js_ReaScriptAPI, аудио и файл оверлея."},
- [39]={l="Горячие клавиши",h="Задать свои латинские буквы для действий (1–4 оценки не меняются)."},
- [40]={l="Колонки в списке",h="Включить или выключить колонки статистики в строках."},
- [41]={l="Сохранить профиль",h="Сохранить настройки ducking, пре/пост-ролла, фейдов и порогов в файл."},
- [42]={l="Загрузить профиль",h="Загрузить сохранённый профиль настроек."},
- [43]={l="Проблемы проверки",h="Список реплик, требующих проверки, с переходом к выбранной."},
- [44]={l="Сравнение takes",h="Громкость каждого дубля внутри элемента относительно медианы."},
- [45]={l="LUFS по дубляжу",h="Интегральная и пиковая громкость каждого дубля по BS.1770."},
- [46]={l="Полный сброс настроек",h="Все настройки к заводским, включая оверлей и назначение дорожек. Реплики не трогаются."},
- [47]={l="Очистить сессию",h="Удалить все реплики, отметки и оценки. Настройки и версии остаются."},
- [49]={l="Новая дорожка дубляжа",h="Создать НОВУЮ дорожку «Дубляж» с цепочкой эффектов из DUB_CHAIN (не назначает существующую). Эффекты выключаются на время записи и включаются после неё."},
- [50]={l="Сведение аниме",h="Создать структуру сведения из проекта anime_mix: Master, Raw, Voice (ALL), Effects (All), Effects (Voice 1–8), Voice 1–8. Роутинг и цепочки эффектов из проекта. Если структура уже есть, дубль не создаётся."},
- [51]={l="Суфлёр на телефон / планшет",h="Создать страницу суфлёра с репликами проекта и показать адрес для телефона. Нужен включённый веб-интерфейс REAPER (Preferences → Control/OSC/web → Web browser interface, порт 8080). Страница сама следит за курсором REAPER; кнопки «Назад / Следующая» переставляют курсор."},
- [54]={l="Суфлёр: сервер видео",h="Запустить Python-сервер, который отдаёт на телефон ОРИГИНАЛЬНОЕ видео проекта (без копий и ffmpeg). Нужен Python 3. Страница суфлёра на телефоне находит сервер сама."},
- [53]={l="Суфлёр: видео для телефона",h="Сделать лёгкую копию видео проекта (mp4 480p со звуком, ffmpeg в фоне) в reaper_www_root. Телефон сам заберёт её с ПК, копировать файл на телефон не нужно. Прогресс в строке состояния."},
- [48]={l="Субтитры из видео",h="Выбрать дорожку субтитров, вшитую в MKV/MP4, и импортировать её. Нужны ffmpeg и ffprobe."},
+ [1]={l=T("Импорт оригинала"),h=T("Загрузить второй файл субтитров для сравнения с переводом.")},
+ [2]={l=T("Подогнать под дубли"),h=T("Подогнать тайминг всех реплик под записи дубляжа на дорожке (по takes).")},
+ [3]={l=T("Сдвинуть время"),h=T("Сдвинуть все реплики (или выбранные) на заданное время.")},
+ [4]={l=T("Замена текста"),h=T("Глобальная замена слова или фразы в тексте всех реплик.")},
+ [5]={l=T("Переименовать роль"),h=T("Поменять имя роли во всех репликах.")},
+ [6]={l=T("Приглушение по ролям"),h=T("Глубина приглушения оригинала (дБ) отдельно для каждой роли.")},
+ [7]={l=T("Приглушение по дорожкам"),h=T("Глубина приглушения по дорожкам оригинала.")},
+ [8]={l=T("Окна приглушения"),h=T("Переключить: брать окна приглушения из записей дубляжа или из субтитров.")},
+ [9]={l=T("Пре-ролл"),h=T("Сколько секунд звучит перед репликой при воспроизведении (задаётся числом).")},
+ [10]={l=T("Сбросить «записано»"),h=T("Снять отметку «записано» со всех реплик.")},
+ [11]={l=T("SRT по ролям"),h=T("Экспорт субтитров SRT отдельным файлом на каждую роль.")},
+ [12]={l=T("Экспорт проекта"),h=T("Сохранить всю сессию (реплики, роли, настройки) в файл .dubproj.")},
+ [13]={l=T("Импорт проекта"),h=T("Загрузить сессию из файла .dubproj.")},
+ [14]={l=T("Сохранить версию"),h=T("Записать текущее состояние сессии как версию сейчас.")},
+ [15]={l=T("Восстановить версию"),h=T("Выбрать сохранённую версию и вернуть сессию к ней.")},
+ [16]={l=T("Проверка QC"),h=T("Отчёт: скорость речи, паузы, дубли, выход дубля за окно реплики.")},
+ [17]={l=T("Сценарии (текст)"),h=T("Текстовые сценарии для каждого актёра, по одному файлу на роль.")},
+ [18]={l=T("Дубли на N кадров"),h=T("Сдвинуть дубли выбранной реплики на заданное число кадров.")},
+ [19]={l=T("Лучший дубль"),h=T("Выбрать лучший дубль выбранной реплики, остальные приглушить.")},
+ [20]={l=T("Справка (F6)"),h=T("Открыть окно с горячими клавишами и описанием.")},
+ [21]={l=T("Записано по дорожке"),h=T("Отметить как записанные реплики, по которым на дорожке дубляжа уже есть запись.")},
+ [22]={l=T("Громкость дублей"),h=T("Проверить клиппинг и тишину в дублях, записать отчёт.")},
+ [23]={l=T("Сценарии (HTML)"),h=T("HTML-сценарии по ролям, открываются для печати в PDF.")},
+ [24]={l=T("Таймкод: кадры"),h=T("Переключить таймкод между секундами и кадрами.")},
+ [25]={l=T("Пороги проверки"),h=T("Изменить пороги скорости, паузы и короткой реплики для проверки QC.")},
+ [26]={l=T("Сводка по актёрам"),h=T("Сколько реплик записано и осталось у каждого актёра.")},
+ [27]={l=T("Лист сессии (CSV)"),h=T("Таблица сессии для Excel (разделитель «;», запятая в числах).")},
+ [28]={l=T("Экспорт VTT"),h=T("Субтитры в формате WebVTT.")},
+ [29]={l=T("Фильтр по статусу"),h=T("Показать только реплики с выбранным статусом: все, переписать, спорно, ок, не записано.")},
+ [30]={l=T("Вызывной лист"),h=T("HTML-лист для актёра с ещё не записанными репликами.")},
+ [31]={l=T("Сводка за день"),h=T("Сколько записано, листов и оценок сделано в сессии.")},
+ [32]={l=T("Выровнять громкость"),h=T("Привести громкость дублей к медиане, не больше ±6 дБ от неё.")},
+ [33]={l=T("Сдвинуть выбранные"),h=T("Сдвинуть все отмеченные (Ctrl+клик) реплики на N секунд.")},
+ [34]={l=T("Назначить роль"),h=T("Назначить одну роль всем отмеченным репликам.")},
+ [35]={l=T("Отметить записано"),h=T("Отметить все отмеченные реплики как записанные.")},
+ [36]={l=T("Снять «записано»"),h=T("Снять отметку «записано» с отмеченных реплик.")},
+ [37]={l=T("Снять выбор"),h=T("Убрать все отмеченные реплики (Ctrl+клик).")},
+ [38]={l=T("Проверка окружения"),h=T("Проверить ReaImGui, js_ReaScriptAPI, аудио и файл оверлея.")},
+ [39]={l=T("Горячие клавиши"),h=T("Задать свои латинские буквы для действий (1–4 оценки не меняются).")},
+ [40]={l=T("Колонки в списке"),h=T("Включить или выключить колонки статистики в строках.")},
+ [41]={l=T("Сохранить профиль"),h=T("Сохранить настройки ducking, пре/пост-ролла, фейдов и порогов в файл.")},
+ [42]={l=T("Загрузить профиль"),h=T("Загрузить сохранённый профиль настроек.")},
+ [43]={l=T("Проблемы проверки"),h=T("Список реплик, требующих проверки, с переходом к выбранной.")},
+ [44]={l=T("Сравнение takes"),h=T("Громкость каждого дубля внутри элемента относительно медианы.")},
+ [45]={l=T("LUFS по дубляжу"),h=T("Интегральная и пиковая громкость каждого дубля по BS.1770.")},
+ [46]={l=T("Полный сброс настроек"),h=T("Все настройки к заводским, включая оверлей и назначение дорожек. Реплики не трогаются.")},
+ [47]={l=T("Очистить сессию"),h=T("Удалить все реплики, отметки и оценки. Настройки и версии остаются.")},
+ [49]={l=T("Новая дорожка дубляжа"),h=T("Создать НОВУЮ дорожку «Дубляж» с цепочкой эффектов из DUB_CHAIN (не назначает существующую). Эффекты выключаются на время записи и включаются после неё.")},
+ [50]={l=T("Сведение аниме"),h=T("Создать структуру сведения из проекта anime_mix: Master, Raw, Voice (ALL), Effects (All), Effects (Voice 1–8), Voice 1–8. Роутинг и цепочки эффектов из проекта. Если структура уже есть, дубль не создаётся.")},
+ [51]={l=T("Суфлёр на телефон / планшет"),h=T("Создать страницу суфлёра с репликами проекта и показать адрес для телефона. Нужен включённый веб-интерфейс REAPER (Preferences → Control/OSC/web → Web browser interface, порт 8080). Страница сама следит за курсором REAPER; кнопки «Назад / Следующая» переставляют курсор.")},
+ [54]={l=T("Суфлёр: сервер видео"),h=T("Запустить Python-сервер, который отдаёт на телефон ОРИГИНАЛЬНОЕ видео проекта (без копий и ffmpeg). Нужен Python 3. Страница суфлёра на телефоне находит сервер сама.")},
+ [53]={l=T("Суфлёр: видео для телефона"),h=T("Сделать лёгкую копию видео проекта (mp4 480p со звуком, ffmpeg в фоне) в reaper_www_root. Телефон сам заберёт её с ПК, копировать файл на телефон не нужно. Прогресс в строке состояния.")},
+ [48]={l=T("Субтитры из видео"),h=T("Выбрать дорожку субтитров, вшитую в MKV/MP4, и импортировать её. Нужны ffmpeg и ffprobe.")},
 }
 -- panel layout: groups stacked inside columns (col 1..4)
 TOOL_GROUPS={
- {name="Импорт и тайминг",col=1,ids={1,48,49,2,3,18,4,5,9}},
- {name="Профили",col=1,ids={41,42}},
- {name="Записи и громкость",col=2,ids={10,21,19,6,7,8,32}},
- {name="Пакетные действия",col=2,ids={33,34,35,36,37}},
- {name="Проверка качества",col=3,ids={16,22,44,45,43,25}},
- {name="Сессия и сводки",col=3,ids={12,13,14,15,26,31,47}},
- {name="Экспорт",col=4,ids={11,17,23,27,28,30}},
- {name="Настройки",col=4,ids={29,20,24,38,39,40,46}},
- {name="Сведение аниме",col=4,ids={50}},
- {name="Телефон / планшет",col=4,ids={51,53,54}},
+ {name=T("Импорт и тайминг"),col=1,ids={1,48,49,2,3,18,4,5,9}},
+ {name=T("Профили"),col=1,ids={41,42}},
+ {name=T("Записи и громкость"),col=2,ids={10,21,19,6,7,8,32}},
+ {name=T("Пакетные действия"),col=2,ids={33,34,35,36,37}},
+ {name=T("Проверка качества"),col=3,ids={16,22,44,45,43,25}},
+ {name=T("Сессия и сводки"),col=3,ids={12,13,14,15,26,31,47}},
+ {name=T("Экспорт"),col=4,ids={11,17,23,27,28,30}},
+ {name=T("Настройки"),col=4,ids={29,20,24,38,39,40,46}},
+ {name=T("Сведение аниме"),col=4,ids={50}},
+ {name=T("Телефон / планшет"),col=4,ids={51,53,54}},
 }
 
 -- full-window panel with every tool as a visible button (columns follow the window width)
@@ -4316,7 +6194,7 @@ function home_up(str)
 end
 -- текст с разрядкой; dry=true только измеряет; возвращает ширину
 function home_spaced(x,y,str,size,col,sp,dry,bold)
- gfx.setfont(1,"Arial",math.max(8,math.floor(size*KF+0.5)),bold and 98 or 0)
+ gfx.setfont(1,FONT,math.max(8,math.floor(size*KF+0.5)),bold and 98 or 0)
  local chars={}
  for _,c in utf8.codes(str) do chars[#chars+1]=utf8.char(c) end
  local w=0
@@ -4332,7 +6210,7 @@ function home_big(s,x,y,w,h)
  local sz=math.floor(math.min(h*0.5,w*0.16,52)*HOME_FS)
  local lines
  while true do
-  gfx.setfont(1,"Arial",math.max(8,math.floor(sz*KF+0.5)),98)
+  gfx.setfont(1,FONT,math.max(8,math.floor(sz*KF+0.5)),98)
   lines={}
   for para in (s.."\n"):gmatch("(.-)\n") do
    local cur=""
@@ -4380,8 +6258,8 @@ function do_act(act)
  elseif act==14 then merge_row()
  elseif act==15 then delete_row()
  elseif act==16 then undo()
- elseif act==17 then follow=not follow; save(); status=follow and "Слежение за воспроизведением: вкл" or "Слежение за воспроизведением: выкл"
- elseif act==18 then only_dub=not only_dub; save(); status=only_dub and "Приглушение только там, где на дорожке дубляжа есть звук" or "Приглушение по всем репликам"
+ elseif act==17 then follow=not follow; save(); status=follow and T("Слежение за воспроизведением: вкл") or T("Слежение за воспроизведением: выкл")
+ elseif act==18 then only_dub=not only_dub; save(); status=only_dub and T("Приглушение только там, где на дорожке дубляжа есть звук") or T("Приглушение по всем репликам")
  elseif act==19 then export_srt()
  elseif act==20 then to_regions()
  elseif act==21 then to_items()
@@ -4476,18 +6354,18 @@ function draw_shell()
   local dc=(playing or #rows>0) and C.green or {.93,.36,.36}
   gfx.set(dc[1],dc[2],dc[3],1); gfx.circle(24*KX,TH/2*KY,4.5*KX,1,1)
   local tsz=22
-  gfx.setfont(1,"Arial",math.max(8,math.floor(tsz*KF+0.5)),98)
+  gfx.setfont(1,FONT,math.max(8,math.floor(tsz*KF+0.5)),98)
   local tstr=ftime(pos)
   gfx.set(.95,.92,.88,1); gfx.x=40*KX; gfx.y=(TH/2-tsz/2-2)*KY; gfx.drawstr(tstr)
   local tend=40+(gfx.measurestr(tstr) or 0)/KX
-  if #rows>0 and W>=640 then home_spaced(tend+14,TH/2-7,string.format("РЕПЛИКА %03d / %d",ci,#rows),11,C.muted,1.4,false,true) end
+  if #rows>0 and W>=640 then home_spaced(tend+14,TH/2-7,string.format(T("РЕПЛИКА %03d / %d"),ci,#rows),11,C.muted,1.4,false,true) end
  else
   -- верх экрана «Суфлёр»: точка, время, номер реплики; справа Ещё / Aa / замок
   rect(0,0,W,TH,C.bg)
   local dc=(playing or #rows>0) and C.green or {.93,.36,.36}
   gfx.set(dc[1],dc[2],dc[3],1); gfx.circle(24*KX,TH/2*KY,4.5*KX,1,1)
   local tsz=22
-  gfx.setfont(1,"Arial",math.max(8,math.floor(tsz*KF+0.5)),98)
+  gfx.setfont(1,FONT,math.max(8,math.floor(tsz*KF+0.5)),98)
   local tstr=ftime(pos)
   gfx.set(.95,.92,.88,1); gfx.x=40*KX; gfx.y=(TH/2-tsz/2-2)*KY; gfx.drawstr(tstr)
   local tend=40+(gfx.measurestr(tstr) or 0)/KX
@@ -4496,44 +6374,45 @@ function draw_shell()
   local xr=W-14
   xr=xr-32; local rl=home_ibtn(xr,by0,32,bh,"",HOME_LOCK); home_lock_icon(xr,by0,32,bh,HOME_LOCK)
   xr=xr-bgp-32; local ra=home_ibtn(xr,by0,32,bh,"Aa",false)
-  xr=xr-bgp-54; local rm=home_ibtn(xr,by0,54,bh,"Ещё ▾",false)
+  xr=xr-bgp-54; local rm=home_ibtn(xr,by0,54,bh,T("Ещё ▾"),false)
   if #rows>0 then
-   local full=string.format("РЕПЛИКА %03d / %d",ci,#rows)
+   local full=string.format(T("РЕПЛИКА %03d / %d"),ci,#rows)
    local cx=tend+14
    if cx+home_spaced(0,0,full,11,C.muted,1.4,true,true)>xr-10 then full=string.format("%03d / %d",ci,#rows) end
    if cx+home_spaced(0,0,full,11,C.muted,1.4,true,true)<=xr-10 then home_spaced(cx,TH/2-7,full,11,C.muted,1.4,false,true) end
   end
-  if rl then HOME_LOCK=not HOME_LOCK; status=HOME_LOCK and "Кнопки заблокированы — замок справа сверху снимает блокировку" or "Кнопки разблокированы" end
+  if rl then HOME_LOCK=not HOME_LOCK; status=HOME_LOCK and T("Кнопки заблокированы — замок справа сверху снимает блокировку") or T("Кнопки разблокированы") end
   if ra then
-   local m=popup({"Текст крупнее","Текст мельче",(frames_mode and "!" or "").."Таймкод в кадрах"})
+   local m=popup({T("Текст крупнее"),T("Текст мельче"),(frames_mode and "!" or "")..T("Таймкод в кадрах")})
    if m==1 then HOME_FS=math.min(3.2,HOME_FS+0.15) elseif m==2 then HOME_FS=math.max(0.4,HOME_FS-0.15) elseif m==3 then toggle_frames() end
   end
   if rm then
-   local m=popup({"Реплики (список)","Громкость","Инструменты","","Экспорт…","Субтитры из видео (выбор дорожки)",(TOPBAR and "!" or "").."Верхняя строка"})
+   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),"",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文"})
    if m==1 then TAB=2 elseif m==2 then TAB=3 elseif m==3 then TAB=4
-   elseif m==5 then act=19 elseif m==6 then act=32 elseif m==7 then TOPBAR=not TOPBAR end
+   elseif m==5 then act=19 elseif m==6 then act=32 elseif m==7 then TOPBAR=not TOPBAR
+   elseif m==9 then set_lang("en") elseif m==10 then set_lang("ru") elseif m==11 then set_lang("ja") elseif m==12 then set_lang("zh") end
   end
  end
  end
 
 
  setf(13)
- local ibw=math.floor((gfx.measurestr("+ Импорт субтитров") or 0)/KX)+28
+ local ibw=math.floor((gfx.measurestr(T("+ Импорт субтитров")) or 0)/KX)+28
  local by=H-TB
  if TAB~=1 then
-  if home_btn(W-18-ibw,TH/2-14,ibw,28,"+ Импорт субтитров",C.blue,{1,1,1},13) then act=1 end
+  if home_btn(W-18-ibw,TH/2-14,ibw,28,T("+ Импорт субтитров"),C.blue,{1,1,1},13) then act=1 end
  end
  -- нижняя полоса: на «Суфлёре» вкладки и A−/A+ прячутся и появляются при наведении
  local hover=(TAB~=1) or (MY>=by-8 and MY<=H)
  if hover and TAB~=1 then rect(0,by,W,TB,C.panel); rect(0,by,W,1,C.line) end
- local names={"Суфлёр","Реплики","Громкость","Инструменты"}
+ local names={T("Суфлёр"),T("Реплики"),T("Громкость"),T("Инструменты")}
  local dcol={{.25,.78,.35},{.93,.68,.22},{.88,.31,.30},{.30,.52,1}}
  if TAB==1 then
   setf(13)
-  local b1=math.floor((gfx.measurestr("Импорт…") or 0)/KX)+28
-  local b2=math.floor((gfx.measurestr("Экспорт…") or 0)/KX)+28
-  if home_btn(16,by+(TB-28)/2,b1,28,"Импорт…",{.17,.17,.18},{.85,.87,.90},13) then act=1 end
-  if home_btn(16+b1+8,by+(TB-28)/2,b2,28,"Экспорт…",{.17,.17,.18},{.85,.87,.90},13) then act=19 end
+  local b1=math.floor((gfx.measurestr(T("Импорт…")) or 0)/KX)+28
+  local b2=math.floor((gfx.measurestr(T("Экспорт…")) or 0)/KX)+28
+  if home_btn(16,by+(TB-28)/2,b1,28,T("Импорт…"),{.17,.17,.18},{.85,.87,.90},13) then act=1 end
+  if home_btn(16+b1+8,by+(TB-28)/2,b2,28,T("Экспорт…"),{.17,.17,.18},{.85,.87,.90},13) then act=19 end
   if hover then
    for j,d in ipairs({{"−",-0.15},{"+",0.15}}) do
     local cx=W-70+(j-1)*34
@@ -4550,7 +6429,7 @@ function draw_shell()
   local x0=W/2-(nn-1)*gap/2
   if TAB==1 then
    setf(13)
-   local lend=16+math.floor((gfx.measurestr("Импорт…") or 0)/KX)+28+8+math.floor((gfx.measurestr("Экспорт…") or 0)/KX)+28
+   local lend=16+math.floor((gfx.measurestr(T("Импорт…")) or 0)/KX)+28+8+math.floor((gfx.measurestr(T("Экспорт…")) or 0)/KX)+28
    x0=math.max(x0,lend+28)
   end
   local label=nil
@@ -4559,7 +6438,7 @@ function draw_shell()
    local ov=(not ui_locked) and ((MX-cx)^2+(MY-cy)^2<=170)
    if TOPBAR then gfx.set(1,1,1,.9); gfx.circle(cx*KX,cy*KY,10*KX,0,1) end
    gfx.set(1,1,1,(TOPBAR or ov) and 1 or .75); gfx.circle(cx*KX,cy*KY,(ov and 9 or 7.5)*KX,1,1)
-   if ov then label="Верхняя строка"; if pressed() then TOPBAR=not TOPBAR end end
+   if ov then label=T("Верхняя строка"); if pressed() then TOPBAR=not TOPBAR end end
   end
   for i,nm in ipairs(names) do
    local cx=x0+(i-1)*gap
@@ -4605,7 +6484,7 @@ function draw_shell()
   local dw=wide and math.floor((W-60)*0.5) or (W-40)
   local dact=draw_duck(20,top+12,dw,bot-top-24-46,pos)
   act=act or dact
-  if home_btn(20,bot-12-38,dw,38,"Создать автоматизацию",C.green,{.02,.13,.06},14) then act=5 end
+  if home_btn(20,bot-12-38,dw,38,T("Создать автоматизацию"),C.green,{.02,.13,.06},14) then act=5 end
   if wide then
    local sact=draw_subs(20+dw+20,top+12,W-dw-60,bot-top-24)
    act=act or sact
@@ -4645,8 +6524,8 @@ function dub_handle_drop()
   reaper.SetEditCurPos(0,false,false)
   reaper.InsertMedia(media,1)
   reaper.PreventUIRefresh(-1); reaper.UpdateArrange()
-  reaper.Undo_EndBlock("Dubbing System: добавить видео",-1)
-  status="Видео добавлено: "..(media:match("([^\\/]+)$") or media)
+  reaper.Undo_EndBlock(T("Dubbing System: добавить видео"),-1)
+  status=T("Видео добавлено: ")..(media:match("([^\\/]+)$") or media)
  end
  -- как у кнопки «Импорт…»: субтитры из файла или из вшитой в видео дорожки (если их несколько, спросит язык) → регионы и итемы
  if subs then load_subs_path(subs)
@@ -4663,7 +6542,7 @@ function dub_handle_drop()
    if tn=="Dubbing Subtitles (text items)" then has=true end
   end
   if not has then to_items(true) end
-  status="Готово: реплик "..#rows..", регионы и текстовые итемы созданы"
+  status=T("Готово: реплик ")..#rows..T(", регионы и текстовые итемы созданы")
  end
 end
 
@@ -4675,7 +6554,7 @@ local function loop()
  refresh_layout()
  MX=gfx.mouse_x; MY=gfx.mouse_y
  if ov_restore_at and reaper.time_precise()>=ov_restore_at then
-  ov_restore_at=nil; launch_overlay(); status="Оверлей восстановлен с настройками по умолчанию"
+  ov_restore_at=nil; launch_overlay(); status=T("Оверлей восстановлен с настройками по умолчанию")
  end
  if not edit_mode then
   -- F1 text, F2 list, F3 volume, F4 tools, F5 text with the top bar (works from any screen; F5 again hides the bar), F6 help
@@ -4700,17 +6579,17 @@ local function loop()
  if show_help then
   rect(0,0,W,H,{.03,.04,.06})
   local L={
-   "СПРАВКА — горячие клавиши",
+   T("СПРАВКА — горячие клавиши"),
    "",
-   "F1  суфлёр          F2  список реплик     F3  громкость",
-   "F4  инструменты     F5  суфлёр с верхней строкой     F6  эта справка",
+   T("F1  суфлёр          F2  список реплик     F3  громкость"),
+   T("F4  инструменты     F5  суфлёр с верхней строкой     F6  эта справка"),
    "",
-   "Пробел — play / stop        P — играть реплику        L — цикл",
-   "D — записано        B — закладка        N — следующая закладка",
-   "Стрелки вверх / вниз — предыдущая / следующая реплика",
-   "Enter — править текст реплики        Ctrl+Z — отмена",
+   T("Пробел — play / stop        P — играть реплику        L — цикл"),
+   T("D — записано        B — закладка        N — следующая закладка"),
+   T("Стрелки вверх / вниз — предыдущая / следующая реплика"),
+   T("Enter — править текст реплики        Ctrl+Z — отмена"),
    "",
-   "Esc, Enter, F6 или клик — закрыть справку"}
+   T("Esc, Enter, F6 или клик — закрыть справку")}
   for i,l in ipairs(L) do txt(40,30+(i-1)*30,l,(i==1) and 20 or 15,C.text) end
   if pressed() then show_help=false end
  end
