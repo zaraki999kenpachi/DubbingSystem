@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.22
+-- @version 8.0.23
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -6588,10 +6588,10 @@ function draw_shell()
    if m==1 then HOME_FS=math.min(3.2,HOME_FS+0.15) elseif m==2 then HOME_FS=math.max(0.4,HOME_FS-0.15) elseif m==3 then toggle_frames() end
   end
   if rm then
-   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),"","#Language / Язык / 言語 / 语言",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文"})
+   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),"",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文"})
    if m==1 then TAB=2 elseif m==2 then TAB=3 elseif m==3 then TAB=4
    elseif m==5 then act=19 elseif m==6 then act=32 elseif m==7 then TOPBAR=not TOPBAR
-   elseif m==10 then set_lang("en") elseif m==11 then set_lang("ru") elseif m==12 then set_lang("ja") elseif m==13 then set_lang("zh") end
+   elseif m==9 then set_lang("en") elseif m==10 then set_lang("ru") elseif m==11 then set_lang("ja") elseif m==12 then set_lang("zh") end
   end
  end
  end
