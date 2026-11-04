@@ -5,6 +5,64 @@
       <metadata>
         <description><![CDATA[Workstation for dubbing sound directors: prompter with the current line, subtitle import (SRT/ASS/SSA/VTT/TXT or tracks embedded in MKV/MP4 via ffmpeg), roles, recorded marks, takes, regions and text items synced with the cursor. Works together with Dubbing_SubOverlay.lua.]]></description>
       </metadata>
+      <version name="8.0.16" author="zaraki999kenpachi" time="2026-11-04T10:00:00Z">
+        <changelog><![CDATA[Phone page: removed duplicate A-/A+ under the video (top buttons now hold-to-repeat); dots no longer overlap the video controls.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.15" author="zaraki999kenpachi" time="2026-11-04T09:50:00Z">
+        <changelog><![CDATA[Phone page: Back/Next buttons moved under the video (landscape), dots centred under the video; fixed a typo that broke connection error messages.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.14" author="zaraki999kenpachi" time="2026-11-04T09:40:00Z">
+        <changelog><![CDATA[Phone page: the top-right Back/Next toggle button now really shows/hides the bottom buttons and stays in sync with the dot.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.13" author="zaraki999kenpachi" time="2026-11-04T09:30:00Z">
+        <changelog><![CDATA[Fix: the phone page now loads the lines and the video after refresh (it stayed on "No lines / No video in the project").]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.12" author="zaraki999kenpachi" time="2026-11-04T05:20:00Z">
+        <changelog><![CDATA[Phone page: text size can be made much smaller and much larger (hold A- / A+ to change it quickly).]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.11" author="zaraki999kenpachi" time="2026-11-04T05:00:00Z">
+        <changelog><![CDATA[Phone page: clearer A- / A+ text size buttons; larger text on tablets and wide screens.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.10" author="zaraki999kenpachi" time="2026-11-04T04:30:00Z">
+        <changelog><![CDATA[Phone page: the previous/next lines around the current one are removed.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.9" author="zaraki999kenpachi" time="2026-11-04T04:00:00Z">
+        <changelog><![CDATA[One "Prompter on phone / tablet" button: creates the page and starts the video server. Fixes the error in the video buttons; MobileServer files are installed.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.8" author="zaraki999kenpachi" time="2026-11-04T03:45:00Z">
+        <changelog><![CDATA[Fix: "Prompter: video for phone" and "Prompter: video server" no longer fail; the video server files (MobileServer) are now installed.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+              <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
+      <version name="8.0.7" author="zaraki999kenpachi" time="2026-11-04T06:00:00Z">
+        <changelog><![CDATA[Phone/tablet prompter page: Russian/English/Japanese/Chinese, previous and next lines around the current one, "my role" filter with a countdown to your next line, timecode with a progress bar, refreshed look.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+      </version>
       <version name="8.0.6" author="zaraki999kenpachi" time="2026-11-03T05:30:00Z">
         <changelog><![CDATA[Multilingual interface: Russian, English, Japanese, Chinese. The language follows the REAPER language pack automatically (including Chinese packs); change it in the "More" menu and restart the script.]]></changelog>
         <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>

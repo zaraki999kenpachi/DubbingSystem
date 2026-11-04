@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.6
+-- @version 8.0.16
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -1871,6 +1871,12 @@ I18N.zh={
 }
 
 -- ---------- interface language (ru / en / ja / zh) ----------
+I18N.en["В проекте нет видео: сервер видео не запускался."]="No video in the project: the video server was not started."
+I18N.ja["В проекте нет видео: сервер видео не запускался."]="プロジェクトに動画がないため、動画サーバーは起動しませんでした。"
+I18N.zh["В проекте нет видео: сервер видео не запускался."]="项目中没有视频：未启动视频服务器。"
+I18N.en["Сервер видео запущен в отдельном окне, закрывать его не нужно, пока идёт работа. Нужен Python 3 (python.org, галочка Add to PATH). Видео на телефон идёт с сервера, порт "]="The video server is running in a separate window; do not close it while you work. Python 3 is required (python.org, tick Add to PATH). The phone gets the video from the server, port "
+I18N.ja["Сервер видео запущен в отдельном окне, закрывать его не нужно, пока идёт работа. Нужен Python 3 (python.org, галочка Add to PATH). Видео на телефон идёт с сервера, порт "]="動画サーバーは別ウィンドウで起動しています。作業中は閉じないでください。Python 3 (python.org、Add to PATH にチェック) が必要です。スマホはサーバー経由で動画を受け取ります。ポート "
+I18N.zh["Сервер видео запущен в отдельном окне, закрывать его не нужно, пока идёт работа. Нужен Python 3 (python.org, галочка Add to PATH). Видео на телефон идёт с сервера, порт "]="视频服务器已在单独窗口中启动，工作期间请勿关闭。需要 Python 3 (python.org，勾选 Add to PATH)。手机通过该服务器获取视频，端口 "
 LANG="en"
 do
  local l=reaper.GetExtState("DubbingPrompter","lang")
@@ -4695,7 +4701,7 @@ end
 -- чтобы не тратить локальные переменные главного блока (лимит Lua: 200).
 Mobile={on=false,last=0,sport=8765,dir="",cfgSig=nil,sig=nil,voff=0,vname="",vpath="",vlen=0,enc=nil,ver="",url=nil,roles=true}
 Mobile.TEMPLATE=[==[<!doctype html>
-<html lang="ru"><head><meta charset="utf-8">
+<html lang="ru" id="html"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0f141c">
 <title>Суфлёр</title>
@@ -4773,7 +4779,7 @@ body.single #list{padding-bottom:60px}
 .cue .t{white-space:normal}
 /* ---- 2.0 новый вид ---- */
 :root{--bg:#0f141c;--tx:#8a94a6;--cur:#1a2236;--cond:"Barlow Condensed","Roboto Condensed","Arial Narrow","Helvetica Neue",system-ui,sans-serif}
-html,body{font-family:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{font-family:"Golos Text","Noto Sans JP","Noto Sans SC","Hiragino Sans","Yu Gothic UI","PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 #top{height:48px;background:#0f141c;border-bottom:1px solid #232b38;gap:5px;padding:0 10px}
 #dot{width:9px;height:9px;background:#5b6577}#dot.ok{background:#4ade80}
 #tm{font:600 17px/1 var(--cond);letter-spacing:.02em;color:#c3cad6;min-width:52px}
@@ -4793,6 +4799,42 @@ body.single .cue.cur .r{font:600 .26em var(--cond);letter-spacing:.16em;margin-b
 #bar #nx{background:#f5f7fa;color:#0f141c;border:0;font-weight:700}
 #bar button:active{opacity:.8}
 #vwrap{background:#000}
+
+/* ---- 8.1: соседние реплики, роли, HUD, оформление ---- */
+body.single #list{justify-content:center;padding:12px 18px 130px;gap:0}
+body.single .cue.cur{margin:16px 0!important;padding:0!important;background:none!important}
+body.single .cue.nb{display:none!important;text-align:center;border:0;background:none;padding:6px 4px;margin:0;font:500 calc(1.12rem*var(--fs))/1.3 "Golos Text","Noto Sans JP","Noto Sans SC","Hiragino Sans","Yu Gothic UI","Microsoft YaHei",system-ui,sans-serif;color:#7d8798;opacity:.55;-webkit-mask-image:none}
+body.single .cue.nb .r{display:inline-block;font-size:.62em;margin:0 8px 0 0;padding:1px 7px;border-width:1px}
+body.single .cue.nb .t{display:inline}
+.cue .r{display:inline-block;padding:2px 9px;border:1px solid currentColor;border-radius:99px;font:600 .66em var(--cond);letter-spacing:.14em;margin-bottom:6px;text-transform:uppercase;opacity:.95}
+body.single .cue.cur .r{display:block;width:max-content;max-width:100%;margin:0 auto 1.1em;font-size:.24em;padding:.25em .9em}
+body:not(.single) .cue .r{display:block;width:max-content}
+body.single .cue.cur.oth{opacity:.5}
+body.my:not(.single) .cue.oth:not(.cur){display:none}
+body.my:not(.single) .cue.oth.cur{opacity:.5}
+body.single .cue.cur .t{text-shadow:0 2px 24px rgba(76,92,255,.25)}
+#hud{position:fixed;left:0;right:0;bottom:46px;z-index:40;display:none;align-items:center;gap:12px;padding:0 20px;font:600 14px var(--cond);letter-spacing:.08em;color:#8a94a6;pointer-events:none}
+#hud b{font-weight:600;min-width:52px;font-variant-numeric:tabular-nums}#hud #h2{text-align:right}
+#hud .pb{flex:1;height:3px;background:#232b38;border-radius:2px;overflow:hidden}
+#hud .pb i{display:block;height:100%;width:0;background:#4c5cff;transition:width .08s linear}
+body.single #hud{display:flex}
+body.showbar #hud{bottom:122px}
+#hint{position:fixed;left:0;right:0;bottom:70px;z-index:40;text-align:center;font:600 13px "Golos Text",system-ui,sans-serif;color:#7aa8ff;pointer-events:none;min-height:1em}
+body.showbar #hint{bottom:146px}
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:60;background:rgba(20,26,40,.95);border:1px solid #2c3544;color:#e6edf3;padding:8px 16px;border-radius:99px;font:600 14px "Golos Text",system-ui,sans-serif;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+@media(orientation:landscape){body.hasvid #hud,body.hasvid #hint{left:56%}}
+body.single .cue.cur{background:none}
+#dots button.tx#d6{font-size:17px;opacity:.8}
+#dots button#dm,#dots button#dp{width:52px;height:38px;margin:0 2px;font:700 17px "Golos Text",system-ui,sans-serif;color:#e6edf3;opacity:.95;background:#1b2330;border:1px solid #2c3544;border-radius:10px}
+#dots button#dm:active,#dots button#dp:active{background:#2c3a52}
+@media(min-width:800px){body.single .cue.cur{font-size:calc(5.2rem*var(--fs))!important}body.hasvid.single .cue.cur{font-size:calc(3.6rem*var(--fs))!important}}
+@media(orientation:landscape){
+body.hasvid #dots{right:44%;bottom:44px}
+body.hasvid #bar{position:fixed;left:0;width:56%;bottom:40px;z-index:49;grid-column:auto;grid-row:auto;padding:0 12px;background:none;border:0;box-sizing:border-box}
+body.hasvid #bar button{height:46px}
+body.hasvid.showbar #dots{bottom:92px}
+body.hasvid #list{padding-bottom:10px}
+}
 </style></head><body>
 <div id="vwrap"><video id="vid" muted playsinline preload="auto"></video>
 <div id="vph"><div id="vmsg">Видео не выбрано</div><button id="pcv" style="display:none">Повторить</button><button id="pick">Выбрать файл на телефоне</button></div>
@@ -4803,25 +4845,37 @@ body.single .cue.cur .r{font:600 .26em var(--cond);letter-spacing:.16em;margin-b
 <button class="tb" id="rl" title="Имена ролей">Роли</button><button class="tb" id="vw" title="Одна реплика / список">▭</button><button class="tb" id="vb" title="Видео">🎬</button><button class="tb" id="bt" title="Кнопки Назад / Следующая">◀▶</button><button class="tb" id="fm">A−</button><button class="tb" id="fp">A+</button><button class="tb" id="lk">🔒</button></div>
 <div id="diag"></div>
 <div id="list"></div>
+<div id="hint"></div><div id="hud"><b id="h1">00:00.0</b><span class="pb"><i id="hp"></i></span><b id="h2"></b></div><div id="toast"></div>
 <div id="bar"><button id="pv">◀ Назад</button><button id="nx">Следующая ▶</button></div>
 <script>
 "use strict";
 var VER="@@VER@@";
-var TPL="8.0.0";
+var TPL="8.1.7";
 var CUES=/*@@CUES@@*/[];
 var ROLES=/*@@ROLES@@*/true;
+var LANGP=/*@@LANG@@*/"ru";
 var CLIPS=/*@@CLIPS@@*/[];
 var VSRC=/*@@VSRC@@*/"";
 var vbase="",vtag="";
 var VURL=/*@@VURL@@*/"";
 var $=function(s){return document.querySelector(s)};
-var idx=-1,pos=0,fails=0,els=[],fs=1,lock=false,okOnce=false,showRoles=ROLES,single=false,bar=true,showVid=true,vshift=0,vready=false,tFetch=0,playing=false,vurl=null;
+var I18={"en": {"Суфлёр": "Prompter", "Видео не выбрано": "No video selected", "Повторить": "Retry", "Выбрать файл на телефоне": "Choose a file on the phone", "Звук": "Sound", "Другой файл": "Another file", "Сдвиг видео, мс": "Video offset, ms", "Имена ролей": "Role names", "Роли": "Roles", "Одна реплика / список": "One line / list", "Видео": "Video", "Кнопки Назад / Следующая": "Back / Next buttons", "◀ Назад": "◀ Back", "Следующая ▶": "Next ▶", "Нет видео в этой точке проекта": "No video at this point of the project", "Для клипа «": "No copy for clip “", "» нет копии": "”", " · клип ": " · clip ", "в файле нет звука": "no sound in the file", "формат звука ": "sound format ", " может не играть на телефоне": " may not play on the phone", " · нажмите 🔊": " · tap 🔊", "сервер · копия": "server · copy", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\nOn the PC: Prompter → “Prompter: video server”.", "сервер": "server", "Сервер ответил без видео.": "The server replied without video.", "Сервер видео не найден (": "Video server not found (", "копия": "copy", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "No video copy on the PC (404). In Prompter choose “Prompter: video for phone”.", "Копия видео недоступна (HTTP ": "Video copy unavailable (HTTP ", "копия · в памяти": "copy · in memory", "копия: ": "copy: ", " МБ": " MB", "Не удалось получить копию видео с ПК.": "Could not get the video copy from the PC.", "В проекте нет видео": "No video in the project", "Видео проекта: ": "Project video: ", "звук не воспроизводится (формат не поддерживается телефоном)": "sound does not play (format not supported by the phone)", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "No lines. In Dubbing Prompter import subtitles and choose “Prompter on phone” again.", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "The page was opened as a file. Open it via the REAPER address, e.g. http://IP:8080/prompter.html", "Нет связи с REAPER (": "No connection to REAPER (", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "). Check: 1) REAPER is running, 2) the web interface is on (Preferences → Control/OSC/web → Web browser interface), 3) the port in the address matches the port in settings, 4) phone and PC are on the same Wi-Fi network, 5) Windows Firewall allows reaper.exe on private networks.", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER responds, but the /_/TRANSPORT command was not found (HTTP 404). The web interface setting must be “Web browser interface”, not OSC.", "REAPER требует пароль (HTTP ": "REAPER requires a password (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "). Remove the web interface password in REAPER settings.", "REAPER ответил, но не в ожидаемом формате: ": "REAPER replied, but not in the expected format: ", "Ошибка: ": "Error: ", "файл": "file", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "The phone could not play the original file (format or codec). Make a light copy: Prompter → “Prompter: video for phone”.", "Сервер видео недоступен.": "The video server is unavailable.", "Телефон не смог воспроизвести копию видео (HTTP ": "The phone could not play the video copy (HTTP ", "Нет связи с ПК для получения копии видео.": "No connection to the PC to get the video copy.", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "Could not play the video. An mp4 (H.264) or webm is needed.", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\nOn the PC: Prompter → “Prompter: video server” (original, no copies). Or choose a file on the phone.", "Список": "List", "Назад / Следующая": "Back / Next", "Верхняя строка": "Top bar", "Меньше": "Smaller", "Больше": "Larger", "Все роли": "All roles", "Моя роль": "My role", "Твоя реплика": "Your line", "Твоя реплика через ": "Your line in ", " с": " s"}, "ja": {"Суфлёр": "プロンプター", "Видео не выбрано": "動画が選択されていません", "Повторить": "再試行", "Выбрать файл на телефоне": "スマホ内のファイルを選ぶ", "Звук": "音声", "Другой файл": "別のファイル", "Сдвиг видео, мс": "動画のずれ (ms)", "Имена ролей": "役名", "Роли": "役", "Одна реплика / список": "1セリフ / 一覧", "Видео": "動画", "Кнопки Назад / Следующая": "戻る / 次へボタン", "◀ Назад": "◀ 戻る", "Следующая ▶": "次へ ▶", "Нет видео в этой точке проекта": "プロジェクトのこの位置に動画がありません", "Для клипа «": "クリップ「", "» нет копии": "」のコピーがありません", " · клип ": " · クリップ ", "в файле нет звука": "ファイルに音声がありません", "формат звука ": "音声形式 ", " может не играть на телефоне": " はスマホで再生できない場合があります", " · нажмите 🔊": " · 🔊 をタップ", "сервер · копия": "サーバー · コピー", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\nPCで: Prompter →「プロンプター: 動画サーバー」。", "сервер": "サーバー", "Сервер ответил без видео.": "サーバーから動画が返されませんでした。", "Сервер видео не найден (": "動画サーバーが見つかりません (", "копия": "コピー", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "PCに動画のコピーがありません (404)。Prompter で「プロンプター: スマホ用動画」を選んでください。", "Копия видео недоступна (HTTP ": "動画コピーを利用できません (HTTP ", "копия · в памяти": "コピー · メモリ内", "копия: ": "コピー: ", " МБ": " MB", "Не удалось получить копию видео с ПК.": "PCから動画のコピーを取得できませんでした。", "В проекте нет видео": "プロジェクトに動画がありません", "Видео проекта: ": "プロジェクトの動画: ", "звук не воспроизводится (формат не поддерживается телефоном)": "音声が再生されません (スマホ非対応の形式)", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "セリフがありません。Dubbing Prompter で字幕をインポートし、もう一度「スマホ用プロンプター」を選んでください。", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "ページがファイルとして開かれています。REAPER のアドレス (例: http://IP:8080/prompter.html) で開いてください。", "Нет связи с REAPER (": "REAPER に接続できません (", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "）。確認してください: 1) REAPER が起動している、2) Web インターフェースが有効 (Preferences → Control/OSC/web → Web browser interface)、3) アドレスのポートが設定と一致している、4) スマホと PC が同じ Wi-Fi にある、5) Windows ファイアウォールがプライベートネットワークで reaper.exe を許可している。", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER は応答しますが、/_/TRANSPORT コマンドが見つかりません (HTTP 404)。Web インターフェースの設定は OSC ではなく「Web browser interface」にしてください。", "REAPER требует пароль (HTTP ": "REAPER がパスワードを要求しています (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "）。REAPER の設定で Web インターフェースのパスワードを外してください。", "REAPER ответил, но не в ожидаемом формате: ": "REAPER は応答しましたが、想定外の形式です: ", "Ошибка: ": "エラー: ", "файл": "ファイル", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "スマホで元のファイルを再生できませんでした (形式またはコーデック)。軽量コピーを作成してください: Prompter →「プロンプター: スマホ用動画」。", "Сервер видео недоступен.": "動画サーバーを利用できません。", "Телефон не смог воспроизвести копию видео (HTTP ": "スマホで動画コピーを再生できませんでした (HTTP ", "Нет связи с ПК для получения копии видео.": "動画コピーを取得するための PC との接続がありません。", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "動画を再生できませんでした。mp4 (H.264) または webm が必要です。", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\nPCで: Prompter →「プロンプター: 動画サーバー」(コピーなしの元動画)。またはスマホ内のファイルを選んでください。", "Список": "一覧", "Назад / Следующая": "戻る / 次へ", "Верхняя строка": "上部バー", "Меньше": "小さく", "Больше": "大きく", "Все роли": "全役", "Моя роль": "自分の役", "Твоя реплика": "あなたのセリフ", "Твоя реплика через ": "あなたのセリフまで ", " с": " 秒"}, "zh": {"Суфлёр": "提词器", "Видео не выбрано": "未选择视频", "Повторить": "重试", "Выбрать файл на телефоне": "在手机上选择文件", "Звук": "声音", "Другой файл": "其他文件", "Сдвиг видео, мс": "视频偏移（毫秒）", "Имена ролей": "角色名", "Роли": "角色", "Одна реплика / список": "单句 / 列表", "Видео": "视频", "Кнопки Назад / Следующая": "上一句 / 下一句按钮", "◀ Назад": "◀ 上一句", "Следующая ▶": "下一句 ▶", "Нет видео в этой точке проекта": "项目此位置没有视频", "Для клипа «": "片段「", "» нет копии": "」没有副本", " · клип ": " · 片段 ", "в файле нет звука": "文件中没有声音", "формат звука ": "音频格式 ", " может не играть на телефоне": " 可能无法在手机上播放", " · нажмите 🔊": " · 点击 🔊", "сервер · копия": "服务器 · 副本", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\n在电脑上：Prompter →“提词器：视频服务器”。", "сервер": "服务器", "Сервер ответил без видео.": "服务器没有返回视频。", "Сервер видео не найден (": "未找到视频服务器（", "копия": "副本", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "电脑上没有视频副本 (404)。请在 Prompter 中选择“提词器：手机视频”。", "Копия видео недоступна (HTTP ": "视频副本不可用 (HTTP ", "копия · в памяти": "副本 · 内存中", "копия: ": "副本：", " МБ": " MB", "Не удалось получить копию видео с ПК.": "无法从电脑获取视频副本。", "В проекте нет видео": "项目中没有视频", "Видео проекта: ": "项目视频：", "звук не воспроизводится (формат не поддерживается телефоном)": "声音无法播放（手机不支持该格式）", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "没有台词。请在 Dubbing Prompter 中导入字幕，然后再次选择“手机提词器”。", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "页面是作为文件打开的。请通过 REAPER 的地址打开，例如 http://IP:8080/prompter.html", "Нет связи с REAPER (": "无法连接到 REAPER（", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "）。请检查：1) REAPER 已运行，2) 已启用网页界面 (Preferences → Control/OSC/web → Web browser interface)，3) 地址中的端口与设置一致，4) 手机和电脑在同一 Wi-Fi 网络，5) Windows 防火墙允许 reaper.exe 在专用网络中通信。", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER 有响应，但找不到 /_/TRANSPORT 命令 (HTTP 404)。网页界面设置必须是“Web browser interface”，而不是 OSC。", "REAPER требует пароль (HTTP ": "REAPER 需要密码 (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "）。请在 REAPER 设置中取消网页界面的密码。", "REAPER ответил, но не в ожидаемом формате: ": "REAPER 有响应，但格式不符合预期：", "Ошибка: ": "错误：", "файл": "文件", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "手机无法播放原始文件（格式或编码）。请制作轻量副本：Prompter →“提词器：手机视频”。", "Сервер видео недоступен.": "视频服务器不可用。", "Телефон не смог воспроизвести копию видео (HTTP ": "手机无法播放视频副本 (HTTP ", "Нет связи с ПК для получения копии видео.": "无法连接电脑以获取视频副本。", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "无法播放视频。需要 mp4 (H.264) 或 webm。", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\n在电脑上：Prompter →“提词器：视频服务器”（原始视频，无副本）。或在手机上选择文件。", "Список": "列表", "Назад / Следующая": "上一句 / 下一句", "Верхняя строка": "顶栏", "Меньше": "缩小", "Больше": "放大", "Все роли": "全部角色", "Моя роль": "我的角色", "Твоя реплика": "你的台词", "Твоя реплика через ": "你的台词还有 ", " с": " 秒"}};
+function tr(s){var d=I18[LANGP];return(d&&d[s])||s}
+
+var myRole="",idx=-1,pos=0,fails=0,els=[],fs=1,lock=false,okOnce=false,showRoles=ROLES,single=false,bar=true,showVid=true,vshift=0,vready=false,tFetch=0,playing=false,vurl=null;
 var vid=document.getElementById("vid");
 var loadedName="",vgone=false,audioOn=true,soundBlocked=false;
 var srvInfo=null,audioMsg="",audioDead=false,usingProxy=false,aTick=0;
-try{fs=parseFloat(localStorage.getItem("dp_fs"))||1;lock=localStorage.getItem("dp_lock")==="1";single=localStorage.getItem("dp_view")!=="0";bar=true;showVid=localStorage.getItem("dp_video")!=="0";vshift=parseFloat(localStorage.getItem("dp_vshift"))||0;audioOn=localStorage.getItem("dp_audio")!=="0";
+try{myRole=localStorage.getItem("dp_myrole")||"";fs=parseFloat(localStorage.getItem("dp_fs"))||1;lock=localStorage.getItem("dp_lock")==="1";single=localStorage.getItem("dp_view")!=="0";bar=true;showVid=localStorage.getItem("dp_video")!=="0";vshift=parseFloat(localStorage.getItem("dp_vshift"))||0;audioOn=localStorage.getItem("dp_audio")!=="0";
   var ro=localStorage.getItem("dp_roles"),rb=localStorage.getItem("dp_roles_base");
   if(ro!==null&&rb===(ROLES?"1":"0"))showRoles=(ro==="1")}catch(e){}
+function applyLang(){
+  document.documentElement.lang=LANGP;document.title=tr("Суфлёр");
+  var m={"#pcv":["Повторить"],"#pick":["Выбрать файл на телефоне"],"#rl":["Роли","Имена ролей"],"#pv":["◀ Назад"],"#nx":["Следующая ▶"]};
+  for(var s in m){var e=$(s);if(!e)continue;e.textContent=tr(m[s][0]);if(m[s][1])e.title=tr(m[s][1])}
+  var ti={"#au":"Звук","#vre":"Другой файл","#vs":"Сдвиг видео, мс","#vw":"Одна реплика / список","#vb":"Видео","#bt":"Кнопки Назад / Следующая","#d1":"Суфлёр","#d2":"Список","#d3":"Видео","#d4":"Назад / Следующая","#d5":"Верхняя строка","#dm":"Меньше","#dp":"Больше","#d6":"Моя роль"};
+  for(var q in ti){var x=$(q);if(x)x.title=tr(ti[q])}
+}
 function applyFs(){document.documentElement.style.setProperty("--fs",fs);try{localStorage.setItem("dp_fs",fs)}catch(e){}}
 function applyRoles(){document.body.classList.toggle("noroles",!showRoles);$("#rl").classList.toggle("on",showRoles);if(idx>=0&&els[idx])els[idx].scrollIntoView({block:"center"})}
 function applyView(){document.body.classList.toggle("single",single);$("#vw").classList.toggle("on",single);if(!single&&idx>=0&&els[idx])els[idx].scrollIntoView({block:"center"})}
@@ -4860,11 +4914,11 @@ function vsync(){
   if(!vready||!showVid||vgone)return;
   var P=posNow(),ci=activeClip(P),note="";
   if(CLIPS.length){
-    if(ci<0)note="Нет видео в этой точке проекта";
-    else if(CLIPS[ci][4]!==VSRC)note="Для клипа «"+CLIPS[ci][4]+"» нет копии";
+    if(ci<0)note=tr("Нет видео в этой точке проекта");
+    else if(CLIPS[ci][4]!==VSRC)note=tr("Для клипа «")+CLIPS[ci][4]+tr("» нет копии");
   }
   vnote(note);
-  var tag=(CLIPS.length>1&&ci>=0)?" · клип "+(ci+1)+"/"+CLIPS.length:"";
+  var tag=(CLIPS.length>1&&ci>=0)?tr(" · клип ")+(ci+1)+"/"+CLIPS.length:"";
   if(tag!==vtag){vtag=tag;$("#vinfo").textContent=vinfoText()}
   if(note){if(!vid.paused)vid.pause();return}
   var c=ci>=0?CLIPS[ci]:[0,1e9,0,1,VSRC],rate=c[3]||1;
@@ -4887,7 +4941,7 @@ function vsync(){
     if(Math.abs(vid.currentTime-t)>0.04)vid.currentTime=t
   }
 }
-function tick(){var P=posNow(),tm=stIcon+fmt(P);if(tm!==lastTm){lastTm=tm;$("#tm").textContent=tm}show(find(P));vsync()}
+function tick(){var P=posNow(),tm=stIcon+fmt(P);if(tm!==lastTm){lastTm=tm;$("#tm").textContent=tm}show(find(P));hud();vsync()}
 function setSrc(u,info,kind){
   if(kind==="proxy"&&(sKind==="server"||vurl))return;
   sKind=kind||"file";
@@ -4899,14 +4953,14 @@ function setSrc(u,info,kind){
 var A_OK={aac:1,mp3:1,opus:1,vorbis:1,flac:1,pcm_s16le:1,pcm_s24le:1,pcm_u8:1,pcm_f32le:1,pcm_s16be:1};
 function audioFromInfo(j){
   var a=j&&j.audio;if(!a)return "";
-  if(a.length===0)return "в файле нет звука";
+  if(a.length===0)return tr("в файле нет звука");
   for(var i=0;i<a.length;i++)if(A_OK[a[i]])return "";
-  return "формат звука "+a.join("/")+" может не играть на телефоне"
+  return tr("формат звука ")+a.join("/")+tr(" может не играть на телефоне")
 }
-function vinfoText(){return vbase+vtag+((audioMsg&&audioOn)?" · "+audioMsg:"")+(soundBlocked?" · нажмите 🔊":"")}
+function vinfoText(){return vbase+vtag+((audioMsg&&audioOn)?" · "+audioMsg:"")+(soundBlocked?tr(" · нажмите 🔊"):"")}
 function switchProxy(){
   usingProxy=true;
-  setSrc(srvBase()+"/video?src=proxy","сервер · копия","server")
+  setSrc(srvBase()+"/video?src=proxy",tr("сервер · копия"),"server")
 }
 function vfail(t){$("#vph").style.display="flex";$("#vsh").style.display="none";$("#vmsg").textContent=t}
 var SPORT=/*@@SPORT@@*/8765,sKind="",srvBad=false,srvMsg="",vbaseMsg="",probeFails=0,probeTimer=0,probeBusy=false,lastTm="";
@@ -4915,7 +4969,7 @@ function srvBase(){return location.protocol+"//"+location.hostname+":"+SPORT}
 function srvHint(){
   if(vready||vurl||sKind)return;
   $("#vph").style.display="flex";$("#vsh").style.display="none";
-  $("#vmsg").textContent=vbaseMsg+(srvMsg?"\n\n"+srvMsg:"")+"\nНа ПК: Prompter → «Суфлёр: сервер видео».";
+  $("#vmsg").textContent=vbaseMsg+(srvMsg?"\n\n"+srvMsg:"")+tr("\nНа ПК: Prompter → «Суфлёр: сервер видео».");
   $("#pcv").style.display="inline-block"
 }
 function schedProbe(ms){clearTimeout(probeTimer);probeTimer=setTimeout(function(){ensureSource()},ms)}
@@ -4942,15 +4996,15 @@ function ensureSource(force){
       }
       if(sKind==="server"&&loadedName===VSRC)return;
       usingProxy=false;
-      setSrc(srvBase()+"/video"+(sKind==="server"?"?n="+encodeURIComponent(VSRC):""),"сервер","server");
+      setSrc(srvBase()+"/video"+(sKind==="server"?"?n="+encodeURIComponent(VSRC):""),tr("сервер"),"server");
       if(j.audio===null&&j.audio_ready===false)setTimeout(refreshInfo,2500)
     }else{
-      srvMsg=(j&&j.error)||"Сервер ответил без видео.";
+      srvMsg=(j&&j.error)||tr("Сервер ответил без видео.");
       if(!sKind&&VURL)useProxyDirect();else srvHint();
       schedProbe(5000)
     }
   }).catch(function(){
-    probeBusy=false;probeFails++;srvMsg="Сервер видео не найден ("+location.hostname+":"+SPORT+").";
+    probeBusy=false;probeFails++;srvMsg=tr("Сервер видео не найден (")+location.hostname+":"+SPORT+").";
     if(!sKind&&VURL&&probeFails>=2)useProxyDirect();     // сервера нет: играем копию напрямую, без скачивания
     else if(!sKind)srvHint();
     schedProbe(BACKOFF[Math.min(probeFails-1,BACKOFF.length-1)])
@@ -4965,25 +5019,25 @@ function useProxyDirect(){
   var u="/"+VURL;
   fetch(u,{headers:{Range:"bytes=0-1"},cache:"no-store"}).then(function(r){
     if(sKind||vurl)return;
-    if(r.status===206){setSrc(u,"копия","proxy");return}
-    if(r.status===404)throw new Error("Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».");
-    if(!r.ok)throw new Error("Копия видео недоступна (HTTP "+r.status+").");
+    if(r.status===206){setSrc(u,tr("копия"),"proxy");return}
+    if(r.status===404){var er=new Error(tr("Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона»."));er.cp=1;throw er};
+    if(!r.ok){var er2=new Error(tr("Копия видео недоступна (HTTP ")+r.status+").");er2.cp=1;throw er2};
     var total=parseInt(r.headers.get("Content-Length"),10)||0,type=r.headers.get("Content-Type")||"video/mp4";
-    if(!r.body||!r.body.getReader)return r.blob().then(function(b){if(!sKind&&!vurl)setSrc(URL.createObjectURL(b),"копия · в памяти","proxy")});
+    if(!r.body||!r.body.getReader)return r.blob().then(function(b){if(!sKind&&!vurl)setSrc(URL.createObjectURL(b),tr("копия · в памяти"),"proxy")});
     var rd=r.body.getReader(),parts=[],got=0;
     function pump(){
       return rd.read().then(function(x){
         if(sKind||vurl){rd.cancel();vprog("");return}        // за это время подключился сервер или выбран файл
-        if(x.done){vprog("");setSrc(URL.createObjectURL(new Blob(parts,{type:type})),"копия · в памяти","proxy");return}
+        if(x.done){vprog("");setSrc(URL.createObjectURL(new Blob(parts,{type:type})),tr("копия · в памяти"),"proxy");return}
         parts.push(x.value);got+=x.value.length;
-        vprog("копия: "+(total?Math.floor(got*100/total)+"%":(got/1048576).toFixed(0)+" МБ"));
+        vprog(tr("копия: ")+(total?Math.floor(got*100/total)+"%":(got/1048576).toFixed(0)+tr(" МБ")));
         return pump()
       })
     }
     return pump()
   }).catch(function(e){
     vprog("");
-    var m=e&&e.message&&/^Копи/.test(e.message)?e.message:"Не удалось получить копию видео с ПК.";
+    var m=e&&e.message&&e.cp?e.message:tr("Не удалось получить копию видео с ПК.");
     if(!sKind&&!vurl){vfail(m);$("#pcv").style.display="inline-block"}
   }).then(function(){proxyBusy=false})
 }
@@ -5003,7 +5057,7 @@ function projVideoState(){
   var has=CLIPS.length>0;
   if(!has){
     if(!vid.paused)vid.pause();
-    if(sKind){vgone=true;vnote("");$("#vph").style.display="flex";$("#vsh").style.display="none";$("#pcv").style.display="none";$("#vmsg").textContent="В проекте нет видео"}
+    if(sKind){vgone=true;vnote("");$("#vph").style.display="flex";$("#vsh").style.display="none";$("#pcv").style.display="none";$("#vmsg").textContent=tr("В проекте нет видео")}
     return
   }
   if(vgone){
@@ -5011,7 +5065,7 @@ function projVideoState(){
     if(vready&&loadedName===VSRC){$("#vph").style.display="none";$("#vsh").style.display="flex";vsync();return}
     sKind="";srvBad=false;vready=false;ensureSource();return
   }
-  if(sKind==="server"&&VSRC&&loadedName!==VSRC){usingProxy=false;setSrc(srvBase()+"/video?n="+encodeURIComponent(VSRC),"сервер","server");return}
+  if(sKind==="server"&&VSRC&&loadedName!==VSRC){usingProxy=false;setSrc(srvBase()+"/video?n="+encodeURIComponent(VSRC),tr("сервер"),"server");return}
   if(!sKind)ensureSource()
 }
 function grab(re,t){var m=re.exec(t);return m?m[1]:null}
@@ -5026,7 +5080,7 @@ function applyData(t){
   try{nc=JSON.parse(cj);ncl=JSON.parse(cl);nvs=JSON.parse(vs);nvu=JSON.parse(vu)}catch(e){return}
   VER=nv;CUES=nc;CLIPS=ncl;VSRC=nvs;VURL=nvu;
   if(nro!==ROLES){ROLES=nro;showRoles=nro;try{localStorage.removeItem("dp_roles");localStorage.removeItem("dp_roles_base")}catch(e){}}
-  vbaseMsg=VSRC?("Видео проекта: "+VSRC):"В проекте нет видео";
+  vbaseMsg=VSRC?(tr("Видео проекта: ")+VSRC):tr("В проекте нет видео");
   build();idx=-2;show(find(pos));applyRoles();
   projVideoState()
 }
@@ -5037,7 +5091,7 @@ setInterval(function(){
   if(vid.webkitAudioDecodedByteCount===0){
     audioDead=true;
     var none=!!(srvInfo&&srvInfo.audio&&srvInfo.audio.length===0);
-    audioMsg=none?"в файле нет звука":"звук не воспроизводится (формат не поддерживается телефоном)";
+    audioMsg=none?tr("в файле нет звука"):tr("звук не воспроизводится (формат не поддерживается телефоном)");
     try{console.warn("звук: аудио не декодируется; кодеки: "+(srvInfo&&srvInfo.audio?srvInfo.audio.join(","):"неизвестно")+(usingProxy?"; копия":""))}catch(e){}
     $("#vinfo").textContent=vinfoText();
     if(sKind==="server"&&!usingProxy&&!none&&srvInfo&&srvInfo.proxy)switchProxy()
@@ -5048,7 +5102,7 @@ function fmt(t){t=Math.max(0,t||0);var m=Math.floor(t/60),s=t-m*60;if(m>=60){var
 function color(r){var h=0;for(var i=0;i<r.length;i++)h=(h*31+r.charCodeAt(i))%360;return"hsl("+h+",70%,72%)"}
 function build(){
   var L=$("#list");L.textContent="";els=[];
-  if(!CUES.length){var e=document.createElement("div");e.id="empty";e.textContent="Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».";L.appendChild(e);return}
+  if(!CUES.length){var e=document.createElement("div");e.id="empty";e.textContent=tr("Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».");L.appendChild(e);return}
   var fr=document.createDocumentFragment();
   CUES.forEach(function(c,i){
     var d=document.createElement("div");d.className="cue";
@@ -5057,28 +5111,49 @@ function build(){
     d.onclick=function(){go(c[0])};
     fr.appendChild(d);els.push(d)
   });
-  L.appendChild(fr)
+  L.appendChild(fr);if(myRole&&roleList().indexOf(myRole)<0){myRole="";try{localStorage.removeItem("dp_myrole")}catch(e){}}
+  allClasses()
 }
 function find(p){var lo=0,hi=CUES.length-1,r=-1;while(lo<=hi){var m=(lo+hi)>>1;if(CUES[m][0]<=p+0.02){r=m;lo=m+1}else hi=m-1}return r}
+function cueClass(k,i){var s=k<i?"cue past":(k>i?"cue":"cue cur");if(k===i-1||k===i+1)s+=" nb";if(myRole&&CUES[k]&&CUES[k][2]!==myRole)s+=" oth";return s}
+function allClasses(){for(var k=0;k<els.length;k++)els[k].className=cueClass(k,idx);document.body.classList.toggle("my",!!myRole)}
+function roleList(){var r=[];CUES.forEach(function(c){if(c[2]&&r.indexOf(c[2])<0)r.push(c[2])});return r}
+function toast(m){var e=$("#toast");e.textContent=m;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(function(){e.style.opacity=0},1600)}
+function nextRole(){
+  var r=roleList();if(!r.length){toast(tr("Все роли"));return}
+  var i=r.indexOf(myRole);myRole=(i<0)?r[0]:(i+1<r.length?r[i+1]:"");
+  try{localStorage.setItem("dp_myrole",myRole)}catch(e){}
+  allClasses();toast(tr("Моя роль")+": "+(myRole||tr("Все роли")));hud()
+}
+function hud(){
+  var P=posNow(),c=idx>=0?CUES[idx]:null;
+  $("#h1").textContent=fmt(P);
+  if(c&&c[1]>c[0]){var f=Math.min(1,Math.max(0,(P-c[0])/(c[1]-c[0])));$("#hp").style.width=(f*100).toFixed(1)+"%";$("#h2").textContent="−"+Math.max(0,c[1]-P).toFixed(1)}
+  else{$("#hp").style.width="0";$("#h2").textContent=""}
+  var h="";
+  if(myRole){
+    if(c&&c[2]===myRole&&P<c[1])h=tr("Твоя реплика");
+    else{for(var k=Math.max(0,idx+1);k<CUES.length;k++)if(CUES[k][2]===myRole){var d=CUES[k][0]-P;if(d>=0)h=tr("Твоя реплика через ")+d.toFixed(1)+tr(" с");break}}
+  }
+  var H=$("#hint");if(H.textContent!==h)H.textContent=h
+}
 function show(i){
   if(i===idx)return;
   var o=idx;idx=i;
-  if(o>=0&&els[o])els[o].className="cue past";
-  if(i>=0&&els[i])els[i].className="cue cur";
-  var from=Math.max(0,(o<0?0:Math.min(o,i)));var to=Math.min(els.length-1,(o<0?i:Math.max(o,i)));
-  for(var k=from;k<=to;k++){if(k<i)els[k].className="cue past";else if(k>i)els[k].className="cue"}
+  var from=Math.max(0,(o<0?0:Math.min(o,i))-1),to=Math.min(els.length-1,(o<0?i:Math.max(o,i))+1);
+  for(var k=from;k<=to;k++)els[k].className=cueClass(k,i);
   if(i>=0&&els[i])els[i].scrollIntoView({block:"center",behavior:(o<0||Math.abs(i-o)>4)?"instant":"smooth"});
   $("#cnt").textContent=(i>=0?(i+1):"–")+" / "+CUES.length
 }
 function diag(msg){var d=$("#diag");if(msg){d.textContent=msg;d.style.display="block"}else d.style.display="none"}
 function explain(kind,detail){
   var h=location.host||"?";
-  if(location.protocol==="file:")return"Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html";
-  if(kind==="net")return"Нет связи с REAPER ("+h+"). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.";
-  if(kind==="404")return"REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.";
-  if(kind==="auth")return"REAPER требует пароль (HTTP "+detail+"). Уберите пароль веб-интерфейса в настройках REAPER.";
-  if(kind==="fmt")return"REAPER ответил, но не в ожидаемом формате: "+String(detail).slice(0,60);
-  return"Ошибка: "+detail
+  if(location.protocol==="file:")return tr("Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html");
+  if(kind==="net")return tr("Нет связи с REAPER (")+h+tr("). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.");
+  if(kind==="404")return tr("REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.");
+  if(kind==="auth")return tr("REAPER требует пароль (HTTP ")+detail+tr("). Уберите пароль веб-интерфейса в настройках REAPER.");
+  if(kind==="fmt")return tr("REAPER ответил, но не в ожидаемом формате: ")+String(detail).slice(0,60);
+  return tr("Ошибка: ")+detail
 }
 function poll(){
   var t0=performance.now();
@@ -5117,8 +5192,8 @@ $("#pv").onclick=function(){
   if(idx<0)return;var c=CUES[idx];
   if(idx===0||posNow()-c[0]>1.5)go(c[0]);else go(CUES[idx-1][0])
 };
-$("#fm").onclick=function(){fs=Math.max(.7,fs-.1);applyFs()};
-$("#fp").onclick=function(){fs=Math.min(2,fs+.1);applyFs()};
+$("#fm").onclick=function(){fs=Math.max(.15,fs/1.1);applyFs()};
+$("#fp").onclick=function(){fs=Math.min(8,fs*1.1);applyFs()};
 $("#rl").onclick=function(){showRoles=!showRoles;try{localStorage.setItem("dp_roles",showRoles?"1":"0");localStorage.setItem("dp_roles_base",ROLES?"1":"0")}catch(e){}applyRoles()};
 $("#vw").onclick=function(){single=!single;try{localStorage.setItem("dp_view",single?"1":"0")}catch(e){}applyView()};
 $("#bt").onclick=function(){bar=!bar;try{localStorage.setItem("dp_bar",bar?"1":"0")}catch(e){}applyBar()};
@@ -5129,7 +5204,7 @@ $("#vpl").onclick=function(){vshift=Math.round((vshift+0.05)*100)/100;try{localS
 $("#vfile").onchange=function(){
   var f=this.files&&this.files[0];if(!f)return;
   if(vurl)URL.revokeObjectURL(vurl);
-  vurl=URL.createObjectURL(f);setSrc(vurl,"файл","file")
+  vurl=URL.createObjectURL(f);setSrc(vurl,tr("файл"),"file")
 };
 vid.onloadedmetadata=function(){vready=true;vsync()};
 vid.onerror=function(){
@@ -5142,12 +5217,12 @@ vid.onerror=function(){
       if(j&&j.ok&&!usingProxy&&j.proxy){switchProxy();return}
       srvBad=true;sKind="";
       if(VURL){useProxyDirect();schedProbe(15000);return}
-      vfail("Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».");
+      vfail(tr("Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона»."));
       schedProbe(15000)
     }).catch(function(){
       if(sKind!=="server")return;
       sKind="";probeFails=Math.max(probeFails,1);       // сервер пропал во время просмотра
-      if(VURL)useProxyDirect();else{srvMsg="Сервер видео недоступен.";srvHint()}
+      if(VURL)useProxyDirect();else{srvMsg=tr("Сервер видео недоступен.");srvHint()}
       schedProbe(2000)
     });
     return
@@ -5155,12 +5230,12 @@ vid.onerror=function(){
   if(k==="proxy"){
     sKind="";
     fetch("/"+VURL,{headers:{Range:"bytes=0-1"},cache:"no-store"}).then(function(r){
-      vfail(r.status===404?"Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».":"Телефон не смог воспроизвести копию видео (HTTP "+r.status+").")
-    }).catch(function(){vfail("Нет связи с ПК для получения копии видео.")});
+      vfail(r.status===404?tr("Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона»."):tr("Телефон не смог воспроизвести копию видео (HTTP ")+r.status+").")
+    }).catch(function(){vfail(tr("Нет связи с ПК для получения копии видео."))});
     $("#pcv").style.display="inline-block";
     schedProbe(5000);return
   }
-  vfail("Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.")
+  vfail(tr("Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm."))
 };
 $("#au").onclick=function(){
   if(soundBlocked){soundBlocked=false;audioOn=true;vid.muted=false;var p=vid.play();if(p&&p.then)p.then(function(){if(!playing)vid.pause()}).catch(function(){})}
@@ -5199,25 +5274,34 @@ function checkVer(){
     applyData(t)
   }).catch(function(){}).then(function(){setTimeout(checkVer,2000)})
 }
-applyFs();applyLock();build();applyRoles();applyView();applyBar();vshowShift();applyVid();applyAudio();
-vbaseMsg=VSRC?("Видео проекта: "+VSRC):"В проекте нет видео";
-$("#vmsg").textContent=vbaseMsg+"\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.";
+applyLang();applyFs();applyLock();build();applyRoles();applyView();applyBar();vshowShift();applyVid();applyAudio();
+vbaseMsg=VSRC?(tr("Видео проекта: ")+VSRC):tr("В проекте нет видео");
+$("#vmsg").textContent=vbaseMsg+tr("\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.");
 ensureSource();
 show(-1);
 setInterval(tick,40);
 if(location.protocol!=="file:"){poll();setTimeout(checkVer,3000)}else diag(explain("net"));
 </script>
-<div id="dots"><button id="d1" title="Суфлёр"><i style="background:#3fb950"></i></button><button id="d2" title="Список"><i style="background:#eab339"></i></button><button id="d3" title="Видео"><i style="background:#e5534b"></i></button><button id="d4" title="Назад / Следующая"><i style="background:#4c8dff"></i></button><button id="d5" title="Верхняя строка"><i style="background:#fff"></i></button><button id="dm" class="tx" title="Меньше">−</button><button id="dp" class="tx" title="Больше">+</button></div>
+<div id="dots"><button id="d1" title="Суфлёр"><i style="background:#3fb950"></i></button><button id="d2" title="Список"><i style="background:#eab339"></i></button><button id="d3" title="Видео"><i style="background:#e5534b"></i></button><button id="d4" title="Назад / Следующая"><i style="background:#4c8dff"></i></button><button id="d5" title="Верхняя строка"><i style="background:#fff"></i></button><button id="d6" class="tx">👤</button></div>
 <script>
 (function(){
 var b=document.body,$=function(i){return document.getElementById(i)};
-function sync(){$("d1").classList.toggle("on",b.classList.contains("single"));$("d2").classList.toggle("on",!b.classList.contains("single"));$("d3").classList.toggle("on",b.classList.contains("hasvid"));$("d4").classList.toggle("on",b.classList.contains("showbar"));$("d5").classList.toggle("on",b.classList.contains("showtop"))}
+function sync(){$("d1").classList.toggle("on",b.classList.contains("single"));$("d2").classList.toggle("on",!b.classList.contains("single"));$("d3").classList.toggle("on",b.classList.contains("hasvid"));$("d4").classList.toggle("on",b.classList.contains("showbar"));$("bt").classList.toggle("on",b.classList.contains("showbar"));$("d5").classList.toggle("on",b.classList.contains("showtop"))}
 $("d1").onclick=function(){if(!b.classList.contains("single"))$("vw").click();sync()};
 $("d2").onclick=function(){if(b.classList.contains("single"))$("vw").click();sync()};
 $("d3").onclick=function(){$("vb").click();setTimeout(sync,50)};
-$("d4").onclick=function(){b.classList.toggle("showbar");sync()};
+$("d4").onclick=function(){b.classList.toggle("showbar");sync()};$("bt").onclick=function(){b.classList.toggle("showbar");sync()};sync();
 $("d5").onclick=function(){b.classList.toggle("showtop");sync()};
-$("dm").onclick=function(){$("fm").click()};$("dp").onclick=function(){$("fp").click()};
+$("d6").onclick=function(){nextRole()};function hold(id,target){var el=$(id),tm=0,iv=0;
+  function stop(){clearTimeout(tm);clearInterval(iv);tm=iv=0}
+  el.addEventListener("pointerdown",function(e){e.preventDefault();$(target).click();stop();tm=setTimeout(function(){iv=setInterval(function(){$(target).click()},70)},350)});
+  ["pointerup","pointerleave","pointercancel"].forEach(function(n){el.addEventListener(n,stop)});
+  el.onclick=function(e){e.preventDefault()}}
+function hold2(id){var el=document.getElementById(id),tm=0,iv=0;
+  function stop(){clearTimeout(tm);clearInterval(iv);tm=iv=0}
+  el.addEventListener("pointerdown",function(){stop();tm=setTimeout(function(){iv=setInterval(function(){el.onclick&&el.onclick()},70)},350)});
+  ["pointerup","pointerleave","pointercancel"].forEach(function(n){el.addEventListener(n,stop)})}
+hold2("fm");hold2("fp");
 setInterval(sync,500);sync();
 })();
 </script></body></html>
@@ -5257,6 +5341,7 @@ function Mobile.write(json,ver)
   return str:sub(1,x-1)..val..str:sub(y+1)
  end
  tail=put(tail,"/*@@ROLES@@*/true",Mobile.roles and "true" or "false")
+ tail=put(tail,'/*@@LANG@@*/"ru"','"'..(LANG or "ru")..'"')
  tail=put(tail,"/*@@CLIPS@@*/[]",Mobile.clipsJson or "[]")
  tail=put(tail,"/*@@SPORT@@*/8765",tostring(Mobile.sport))
  tail=put(tail,'/*@@VSRC@@*/""',Mobile.js(Mobile.vname or ""))
@@ -5333,14 +5418,14 @@ end
 -- лёгкая копия видео (mp4 480p без звука) в reaper_www_root; ffmpeg работает в фоне
 function Mobile.makevideo()
  Mobile.meta(true)
- local T=T("Видео для телефона")
+ local TTL=T("Видео для телефона")
  if (Mobile.vpath or "")=="" then
-  reaper.ShowMessageBox(T("В проекте не найден видео-элемент."),T,0); return
+  reaper.ShowMessageBox(T("В проекте не найден видео-элемент."),TTL,0); return
  end
  if Mobile.enc then
-  reaper.ShowMessageBox(T("Подготовка уже идёт, прогресс показан в строке состояния."),T,0); return
+  reaper.ShowMessageBox(T("Подготовка уже идёт, прогресс показан в строке состояния."),TTL,0); return
  end
- local ans=reaper.ShowMessageBox(T("Создать лёгкую копию видео для телефона?\n\n")..Mobile.vname..(((Mobile.nsrc or 1)>1) and T("\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)") or "")..T("\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\Dubbing System или в PATH."),T,1)
+ local ans=reaper.ShowMessageBox(T("Создать лёгкую копию видео для телефона?\n\n")..Mobile.vname..(((Mobile.nsrc or 1)>1) and T("\n\n(В проекте несколько видеофайлов: копия делается только для основного, самого длинного. Для остальных клипов на телефоне будет пометка «нет копии».)") or "")..T("\n\nmp4 480p со звуком. ffmpeg работает в фоне (несколько минут, REAPER можно использовать). Копия кладётся в reaper_www_root и отдаётся телефону с ПК. Нужен ffmpeg.exe в Scripts\\Dubbing System или в PATH."),TTL,1)
  if ans~=1 then return end
  local www=Mobile.www()
  reaper.RecursiveCreateDirectory(www,0)
@@ -5360,10 +5445,10 @@ function Mobile.makevideo()
   " move /y "..ffq(e.tmp).." "..ffq(e.out).." >nul",
   ")"}
  local f=io.open(e.bat,"wb")
- if not f then reaper.ShowMessageBox(T("Не могу записать ")..e.bat,T,0); return end
+ if not f then reaper.ShowMessageBox(T("Не могу записать ")..e.bat,TTL,0); return end
  f:write(table.concat(lines,"\r\n").."\r\n"); f:close()
  if not Mobile.launch(e.bat) then
-  reaper.ShowMessageBox(T("Не удалось запустить ffmpeg автоматически. Запустите вручную двойным щелчком:\n")..e.bat,T,0)
+  reaper.ShowMessageBox(T("Не удалось запустить ffmpeg автоматически. Запустите вручную двойным щелчком:\n")..e.bat,TTL,0)
  end
  Mobile.enc=e
  Mobile.on=true
@@ -5426,7 +5511,7 @@ end
 
 -- запуск сервера видео (Python) в отдельном окне; сервер отдаёт на телефон оригинальный файл
 function Mobile.server_start()
- local T=T("Сервер видео")
+ local TTL=T("Сервер видео")
  Mobile.on=true
  reaper.SetExtState(SEC,"mobile_on","1",true)
  Mobile.cfgSig=nil
@@ -5434,7 +5519,7 @@ function Mobile.server_start()
  local bat=(Mobile.dir or "").."/MobileServer/start_server.bat"
  local f=io.open(bat,"rb")
  if not f then
-  reaper.ShowMessageBox(T("Не найден start_server.bat:\n")..bat..T("\n\nПереустановите Dubbing System или скопируйте папку MobileServer рядом со скриптом."),T,0)
+  reaper.ShowMessageBox(T("Не найден start_server.bat:\n")..bat..T("\n\nПереустановите Dubbing System или скопируйте папку MobileServer рядом со скриптом."),TTL,0)
   return
  end
  f:close()
@@ -5457,7 +5542,7 @@ function Mobile.server_start()
   msg=msg..T("\n\nОкно сервера открыть не удалось. Запустите вручную двойным щелчком:\n")..W(bat)
  end
  status=T("Сервер видео: ")..(addr[1] or (T("порт ")..Mobile.sport))
- reaper.ShowMessageBox(msg,T,0)
+ reaper.ShowMessageBox(msg,TTL,0)
 end
 
 function Mobile.refresh(force)
@@ -5508,7 +5593,7 @@ function Mobile.ips()
  return res
 end
 
-function Mobile.open()
+function Mobile.open(quiet)
  Mobile.on=true
  reaper.SetExtState(SEC,"mobile_on","1",true)
  if #rows==0 then status=T("Суфлёр на телефон: сначала импортируйте субтитры"); end
@@ -5536,6 +5621,29 @@ function Mobile.open()
  end
  msg=msg..T("\nЕсли телефон не подключается: разрешите reaper.exe в брандмауэре Windows для частной сети.\nСтраница обновляется сама при изменении реплик.")
  status=T("Суфлёр на телефон: ")..lines[1]
+ if quiet then return msg end
+ reaper.ShowMessageBox(msg,T("Суфлёр на телефон"),0)
+end
+
+-- одна кнопка: страница суфлёра + сервер видео (если в проекте есть видео)
+function Mobile.all()
+ local msg=Mobile.open(true)
+ if not msg then return end
+ if (Mobile.vpath or "")=="" then
+  msg=msg.."\n"..T("В проекте нет видео: сервер видео не запускался.")
+ else
+  local bat=(Mobile.dir or "").."/MobileServer/start_server.bat"
+  local f=io.open(bat,"rb")
+  if f then
+   f:close()
+   if not Mobile.srvStarted then
+    Mobile.srvStarted=Mobile.launch((bat:gsub("/","\\"))) and true or false
+   end
+   msg=msg.."\n"..T("Сервер видео запущен в отдельном окне, закрывать его не нужно, пока идёт работа. Нужен Python 3 (python.org, галочка Add to PATH). Видео на телефон идёт с сервера, порт ")..Mobile.sport.."."
+  else
+   msg=msg.."\n"..T("Не найден start_server.bat:\n")..bat
+  end
+ end
  reaper.ShowMessageBox(msg,T("Суфлёр на телефон"),0)
 end
 
@@ -5613,7 +5721,7 @@ function run_tool(idx)
  elseif idx==47 then clear_session()
  elseif idx==48 then import_from_video()
  elseif idx==49 then create_dub_track()
- elseif idx==51 then Mobile.open()
+ elseif idx==51 then Mobile.all()
  elseif idx==53 then Mobile.makevideo()
  elseif idx==54 then Mobile.server_start() end
 end
@@ -6127,7 +6235,7 @@ TOOL_GROUPS={
  {name=T("Экспорт"),col=4,ids={11,17,23,27,28,30}},
  {name=T("Настройки"),col=4,ids={29,20,24,38,39,40,46}},
  {name=T("Сведение аниме"),col=4,ids={50}},
- {name=T("Телефон / планшет"),col=4,ids={51,53,54}},
+ {name=T("Телефон / планшет"),col=4,ids={51}},
 }
 
 -- full-window panel with every tool as a visible button (columns follow the window width)
