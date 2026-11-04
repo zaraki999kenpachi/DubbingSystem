@@ -21,4 +21,4 @@ Subtitles embedded in MKV/MP4 need ffmpeg and ffprobe (in `Scripts/Dubbing Syste
 MIT, see [LICENSE](LICENSE). Free to use, modify and share.
 
 ## Android app
-A small WebView app that opens the phone/tablet prompter page served by REAPER (`http://IP:8080/prompter.html`) in full screen. The source is in `android/`; the APK is built automatically by GitHub Actions (tab **Actions → Build Android app (APK) → Run workflow**, then download `DubbingPrompter-apk`). Allow "install from unknown sources" on the phone to install it.
+A small WebView app that opens the phone/tablet prompter page served by REAPER (`http://IP:8080/prompter.html`) in full screen. Download `DubbingPrompter.apk` from the [latest release](../../releases/latest) and allow "install from unknown sources" on the phone to install it.
