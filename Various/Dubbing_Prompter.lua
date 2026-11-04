@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.18
+-- @version 8.0.19
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -1939,6 +1939,7 @@ function set_lang(code)
  reaper.SetExtState("DubbingPrompter","lang",code,true)
  local t=I18N[code]; local m="Язык изменён. Закрой окно суфлёра и запусти скрипт снова."
  status=(t and t[m]) or m
+ reaper.ShowMessageBox(status,"Dubbing Prompter",0)
 end
 local SEC="DubbingSystem"
 local K={subs="subtitle_data_v1",orig="original_track_guid",dub="dubbing_track_guid",duck="duck_db",pre="pre_roll_ms",post="post_roll_ms",fi="fade_in_ms",fo="fade_out_ms",source="subtitle_source"}
