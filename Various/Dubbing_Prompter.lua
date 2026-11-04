@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.19
+-- @version 8.0.20
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -1910,6 +1910,9 @@ I18N.zh[", регионов "]="，区域 "
 I18N.en[", дорожек "]=", tracks "
 I18N.ja[", дорожек "]=", トラック "
 I18N.zh[", дорожек "]="，轨道 "
+I18N.en["Язык изменён"]="Language changed"
+I18N.ja["Язык изменён"]="言語を変更しました"
+I18N.zh["Язык изменён"]="语言已更改"
 I18N.en["В проекте нет видео: сервер видео не запускался."]="No video in the project: the video server was not started."
 I18N.ja["В проекте нет видео: сервер видео не запускался."]="プロジェクトに動画がないため、動画サーバーは起動しませんでした。"
 I18N.zh["В проекте нет видео: сервер видео не запускался."]="项目中没有视频：未启动视频服务器。"
@@ -1935,11 +1938,14 @@ function has(line,ru)
  for _,l in ipairs({"en","ja","zh"}) do local t=I18N[l][ru]; if t and line:find(t,1,true) then return true end end
  return false
 end
+REFRESH={}
 function set_lang(code)
  reaper.SetExtState("DubbingPrompter","lang",code,true)
- local t=I18N[code]; local m="Язык изменён. Закрой окно суфлёра и запусти скрипт снова."
- status=(t and t[m]) or m
- reaper.ShowMessageBox(status,"Dubbing Prompter",0)
+ LANG=code
+ FONT=(LANG=="ja") and "Yu Gothic UI" or (LANG=="zh") and "Microsoft YaHei" or "Arial"
+ for _,f in ipairs(REFRESH) do f() end
+ if build_tool_tables then build_tool_tables() end
+ status=T("Язык изменён")
 end
 local SEC="DubbingSystem"
 local K={subs="subtitle_data_v1",orig="original_track_guid",dub="dubbing_track_guid",duck="duck_db",pre="pre_roll_ms",post="post_roll_ms",fi="fade_in_ms",fo="fade_out_ms",source="subtitle_source"}
@@ -1972,6 +1978,7 @@ local ui_locked=false
 local search,search_focus,role_filter="",false,""
 local status_filter=""   -- "", "redo", "check", "ok", "none" (not recorded)
 local VERDICTS={ok=T("ок"),redo=T("переписать"),check=T("спорно"),lip=T("губы не совпадают")}
+REFRESH[#REFRESH+1]=function() VERDICTS.ok=T("ок");VERDICTS.redo=T("переписать");VERDICTS.check=T("спорно");VERDICTS.lip=T("губы не совпадают") end
 local edit_mode,edit_buf,edit_target=false,"","text"
 local undo_stack={}
 local vis,roles,role_idx={}, {}, {}
@@ -3313,6 +3320,7 @@ end
 
 local STATUS_CYCLE={"","redo","check","lip","ok","none"}
 local STATUS_NAME={[""]=T("все"),redo=T("переписать"),check=T("спорно"),lip=T("губы"),ok=T("ок"),none=T("не записано")}
+REFRESH[#REFRESH+1]=function() STATUS_NAME[""]=T("все");STATUS_NAME.redo=T("переписать");STATUS_NAME.check=T("спорно");STATUS_NAME.lip=T("губы");STATUS_NAME.ok=T("ок");STATUS_NAME.none=T("не записано") end
 local function cycle_status_filter()
  local idx=1
  for i,v in ipairs(STATUS_CYCLE) do if v==status_filter then idx=i end end
@@ -6247,6 +6255,7 @@ VKEY_ROW={[5]="ok",[6]="redo",[7]="check",[8]="lip"}
 
 
 -- all tools: label (short), help (what it does)
+function build_tool_tables()
 TOOL_ITEMS={
  [1]={l=T("Импорт оригинала"),h=T("Загрузить второй файл субтитров для сравнения с переводом.")},
  [2]={l=T("Подогнать под дубли"),h=T("Подогнать тайминг всех реплик под записи дубляжа на дорожке (по takes).")},
@@ -6316,6 +6325,8 @@ TOOL_GROUPS={
  {name=T("Сведение аниме"),col=4,ids={50}},
  {name=T("Телефон / планшет"),col=4,ids={51}},
 }
+end
+build_tool_tables()
 
 -- full-window panel with every tool as a visible button (columns follow the window width)
 tools_panel=false
