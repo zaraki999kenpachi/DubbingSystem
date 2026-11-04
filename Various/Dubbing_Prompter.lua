@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.16
+-- @version 8.0.17
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -1871,6 +1871,45 @@ I18N.zh={
 }
 
 -- ---------- interface language (ru / en / ja / zh) ----------
+I18N.en["Удалить субтитры, регионы и итемы"]="Delete subtitles, regions and items"
+I18N.ja["Удалить субтитры, регионы и итемы"]="字幕・リージョン・アイテムを削除"
+I18N.zh["Удалить субтитры, регионы и итемы"]="删除字幕、区域和素材"
+I18N.en["Удалить реплики из суфлёра, созданные из них регионы и дорожку с текстовыми итемами. Отменяется через Ctrl+Z."]="Delete the lines from the prompter, the regions made from them and the track with text items. Can be undone with Ctrl+Z."
+I18N.ja["Удалить реплики из суфлёра, созданные из них регионы и дорожку с текстовыми итемами. Отменяется через Ctrl+Z."]="プロンプターのセリフ、そこから作成したリージョン、テキストアイテムのトラックを削除します。Ctrl+Z で元に戻せます。"
+I18N.zh["Удалить реплики из суфлёра, созданные из них регионы и дорожку с текстовыми итемами. Отменяется через Ctrl+Z."]="删除提词器中的台词、由其生成的区域以及文字素材轨道。可用 Ctrl+Z 撤销。"
+I18N.en["Субтитров, регионов и итемов нет"]="No subtitles, regions or items"
+I18N.ja["Субтитров, регионов и итемов нет"]="字幕・リージョン・アイテムはありません"
+I18N.zh["Субтитров, регионов и итемов нет"]="没有字幕、区域或素材"
+I18N.en["Удалить субтитры, регионы и итемы?\n\nРеплик в суфлёре: "]="Delete subtitles, regions and items?\n\nLines in the prompter: "
+I18N.ja["Удалить субтитры, регионы и итемы?\n\nРеплик в суфлёре: "]="字幕・リージョン・アイテムを削除しますか?\n\nプロンプターのセリフ: "
+I18N.zh["Удалить субтитры, регионы и итемы?\n\nРеплик в суфлёре: "]="删除字幕、区域和素材？\n\n提词器中的台词："
+I18N.en["\nРегионов: "]="\nRegions: "
+I18N.ja["\nРегионов: "]="\nリージョン: "
+I18N.zh["\nРегионов: "]="\n区域："
+I18N.en["\nДорожек с текстовыми итемами: "]="\nTracks with text items: "
+I18N.ja["\nДорожек с текстовыми итемами: "]="\nテキストアイテムのトラック: "
+I18N.zh["\nДорожек с текстовыми итемами: "]="\n文字素材轨道："
+I18N.en["\n\nМожно отменить через Ctrl+Z."]="\n\nCan be undone with Ctrl+Z."
+I18N.ja["\n\nМожно отменить через Ctrl+Z."]="\n\nCtrl+Z で元に戻せます。"
+I18N.zh["\n\nМожно отменить через Ctrl+Z."]="\n\n可用 Ctrl+Z 撤销。"
+I18N.en["Dubbing Prompter — удалить субтитры"]="Dubbing Prompter — delete subtitles"
+I18N.ja["Dubbing Prompter — удалить субтитры"]="Dubbing Prompter — 字幕を削除"
+I18N.zh["Dubbing Prompter — удалить субтитры"]="Dubbing Prompter — 删除字幕"
+I18N.en["Удаление отменено"]="Deletion canceled"
+I18N.ja["Удаление отменено"]="削除を取り消しました"
+I18N.zh["Удаление отменено"]="删除已取消"
+I18N.en["Dubbing System: удалить субтитры, регионы и итемы"]="Dubbing System: delete subtitles, regions and items"
+I18N.ja["Dubbing System: удалить субтитры, регионы и итемы"]="Dubbing System: 字幕・リージョン・アイテムを削除"
+I18N.zh["Dubbing System: удалить субтитры, регионы и итемы"]="Dubbing System: 删除字幕、区域和素材"
+I18N.en["Удалено: реплик "]="Deleted: lines "
+I18N.ja["Удалено: реплик "]="削除: セリフ "
+I18N.zh["Удалено: реплик "]="已删除：台词 "
+I18N.en[", регионов "]=", regions "
+I18N.ja[", регионов "]=", リージョン "
+I18N.zh[", регионов "]="，区域 "
+I18N.en[", дорожек "]=", tracks "
+I18N.ja[", дорожек "]=", トラック "
+I18N.zh[", дорожек "]="，轨道 "
 I18N.en["В проекте нет видео: сервер видео не запускался."]="No video in the project: the video server was not started."
 I18N.ja["В проекте нет видео: сервер видео не запускался."]="プロジェクトに動画がないため、動画サーバーは起動しませんでした。"
 I18N.zh["В проекте нет видео: сервер видео не запускался."]="项目中没有视频：未启动视频服务器。"
@@ -4570,6 +4609,43 @@ function clear_session()
  status=T("Сессия очищена. Настройки и версии сохранены")
 end
 
+-- deletes the subtitles from the prompter AND from the project: regions made from them and the text-item track
+function delete_subs_everywhere()
+ local want,n_rows={}, #rows
+ for _,r in ipairs(rows) do want[(r.text or "").."|"..string.format("%.2f",r.start or 0)]=true end
+ local trk={}
+ for i=0,reaper.CountTracks(0)-1 do
+  local tr=reaper.GetTrack(0,i)
+  local _,tn=reaper.GetSetMediaTrackInfo_String(tr,"P_NAME","",false)
+  if tn=="Dubbing Subtitles (text items)" then trk[#trk+1]=tr end
+ end
+ local n_rg=0
+ local _,nm,nr=reaper.CountProjectMarkers(0)
+ for i=0,nm+nr-1 do
+  local _,isrgn,pos,_,name=reaper.EnumProjectMarkers3(0,i)
+  if isrgn and want[(name or "").."|"..string.format("%.2f",pos)] then n_rg=n_rg+1 end
+ end
+ if n_rows==0 and n_rg==0 and #trk==0 then status=T("Субтитров, регионов и итемов нет"); return end
+ local msg=T("Удалить субтитры, регионы и итемы?\n\nРеплик в суфлёре: ")..n_rows..T("\nРегионов: ")..n_rg..T("\nДорожек с текстовыми итемами: ")..#trk..T("\n\nМожно отменить через Ctrl+Z.")
+ if reaper.ShowMessageBox(msg,T("Dubbing Prompter — удалить субтитры"),4)~=6 then status=T("Удаление отменено"); return end
+ push_undo()
+ reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
+ _,nm,nr=reaper.CountProjectMarkers(0)
+ for i=nm+nr-1,0,-1 do
+  local _,isrgn,pos,_,name=reaper.EnumProjectMarkers3(0,i)
+  if isrgn and want[(name or "").."|"..string.format("%.2f",pos)] then reaper.DeleteProjectMarkerByIndex(0,i) end
+ end
+ for i=#trk,1,-1 do reaper.DeleteTrack(trk[i]) end
+ reaper.PreventUIRefresh(-1); reaper.UpdateArrange(); reaper.UpdateTimeline()
+ reaper.Undo_EndBlock(T("Dubbing System: удалить субтитры, регионы и итемы"),-1)
+ rows={}; selected=1; scroll=0; search=""; role_filter=""; status_filter=""
+ vis={}; roles={}; role_idx={}
+ reaper.SetExtState("DubbingPrompter","restore_regions","0",true)
+ reaper.SetExtState("DubbingPrompter","restore_items","0",true)
+ save(); mark_dirty(); rebuild_vis()
+ status=T("Удалено: реплик ")..n_rows..T(", регионов ")..n_rg..T(", дорожек ")..#trk
+end
+
 -- ---------- subtitles embedded in a video (MKV/MP4) via ffprobe / ffmpeg ----------
 -- Needs ffmpeg.exe and ffprobe.exe either in Scripts\Dubbing System or on PATH.
 function ffq(x) return '"'..(tostring(x):gsub('"',''))..'"' end
@@ -5719,6 +5795,7 @@ function run_tool(idx)
  elseif idx==30 then export_call_sheet()
  elseif idx==46 then factory_reset()
  elseif idx==47 then clear_session()
+ elseif idx==55 then delete_subs_everywhere()
  elseif idx==48 then import_from_video()
  elseif idx==49 then create_dub_track()
  elseif idx==51 then Mobile.all()
@@ -6216,6 +6293,7 @@ TOOL_ITEMS={
  [44]={l=T("Сравнение takes"),h=T("Громкость каждого дубля внутри элемента относительно медианы.")},
  [45]={l=T("LUFS по дубляжу"),h=T("Интегральная и пиковая громкость каждого дубля по BS.1770.")},
  [46]={l=T("Полный сброс настроек"),h=T("Все настройки к заводским, включая оверлей и назначение дорожек. Реплики не трогаются.")},
+ [55]={l=T("Удалить субтитры, регионы и итемы"),h=T("Удалить реплики из суфлёра, созданные из них регионы и дорожку с текстовыми итемами. Отменяется через Ctrl+Z.")},
  [47]={l=T("Очистить сессию"),h=T("Удалить все реплики, отметки и оценки. Настройки и версии остаются.")},
  [49]={l=T("Новая дорожка дубляжа"),h=T("Создать НОВУЮ дорожку «Дубляж» с цепочкой эффектов из DUB_CHAIN (не назначает существующую). Эффекты выключаются на время записи и включаются после неё.")},
  [50]={l=T("Сведение аниме"),h=T("Создать структуру сведения из проекта anime_mix: Master, Raw, Voice (ALL), Effects (All), Effects (Voice 1–8), Voice 1–8. Роутинг и цепочки эффектов из проекта. Если структура уже есть, дубль не создаётся.")},
@@ -6231,7 +6309,7 @@ TOOL_GROUPS={
  {name=T("Записи и громкость"),col=2,ids={10,21,19,6,7,8,32}},
  {name=T("Пакетные действия"),col=2,ids={33,34,35,36,37}},
  {name=T("Проверка качества"),col=3,ids={16,22,44,45,43,25}},
- {name=T("Сессия и сводки"),col=3,ids={12,13,14,15,26,31,47}},
+ {name=T("Сессия и сводки"),col=3,ids={12,13,14,15,26,31,47,55}},
  {name=T("Экспорт"),col=4,ids={11,17,23,27,28,30}},
  {name=T("Настройки"),col=4,ids={29,20,24,38,39,40,46}},
  {name=T("Сведение аниме"),col=4,ids={50}},
