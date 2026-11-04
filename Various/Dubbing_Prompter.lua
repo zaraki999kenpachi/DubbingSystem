@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.20
+-- @version 8.0.21
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -1919,8 +1919,7 @@ I18N.zh["В проекте нет видео: сервер видео не за�
 I18N.en["Сервер видео запущен в отдельном окне, закрывать его не нужно, пока идёт работа. Нужен Python 3 (python.org, галочка Add to PATH). Видео на телефон идёт с сервера, порт "]="The video server is running in a separate window; do not close it while you work. Python 3 is required (python.org, tick Add to PATH). The phone gets the video from the server, port "
 I18N.ja["Сервер видео запущен в отдельном окне, закрывать его не нужно, пока идёт работа. Нужен Python 3 (python.org, галочка Add to PATH). Видео на телефон идёт с сервера, порт "]="動画サーバーは別ウィンドウで起動しています。作業中は閉じないでください。Python 3 (python.org、Add to PATH にチェック) が必要です。スマホはサーバー経由で動画を受け取ります。ポート "
 I18N.zh["Сервер видео запущен в отдельном окне, закрывать его не нужно, пока идёт работа. Нужен Python 3 (python.org, галочка Add to PATH). Видео на телефон идёт с сервера, порт "]="视频服务器已在单独窗口中启动，工作期间请勿关闭。需要 Python 3 (python.org，勾选 Add to PATH)。手机通过该服务器获取视频，端口 "
-LANG="en"
-do
+function detect_lang()
  local l=reaper.GetExtState("DubbingPrompter","lang")
  if l=="" then
   local ini=reaper.get_ini_file and reaper.get_ini_file() or ""
@@ -1929,8 +1928,11 @@ do
   lp=lp:lower()
   if lp:find("ru",1,true) or lp:find("русск",1,true) then l="ru" elseif lp:find("ja",1,true) or lp:find("jp",1,true) or lp:find("日本",1,true) then l="ja" elseif lp:find("zh",1,true) or lp:find("chs",1,true) or lp:find("cht",1,true) or lp:find("cn",1,true) or lp:find("chin",1,true) or lp:find("中文",1,true) or lp:find("简",1,true) or lp:find("繁",1,true) then l="zh" else l="en" end
  end
- if l=="ru" or l=="en" or l=="ja" or l=="zh" then LANG=l end
+ if l=="ru" or l=="en" or l=="ja" or l=="zh" then return l end
+ return "en"
 end
+LANG=detect_lang()
+
 FONT=(LANG=="ja") and "Yu Gothic UI" or (LANG=="zh") and "Microsoft YaHei" or "Arial"
 function T(s) if LANG=="ru" then return s end local t=I18N[LANG]; return (t and t[s]) or s end
 function has(line,ru)
@@ -1940,7 +1942,8 @@ function has(line,ru)
 end
 REFRESH={}
 function set_lang(code)
- reaper.SetExtState("DubbingPrompter","lang",code,true)
+ if code=="auto" then reaper.DeleteExtState("DubbingPrompter","lang",true); code=detect_lang()
+ else reaper.SetExtState("DubbingPrompter","lang",code,true) end
  LANG=code
  FONT=(LANG=="ja") and "Yu Gothic UI" or (LANG=="zh") and "Microsoft YaHei" or "Arial"
  for _,f in ipairs(REFRESH) do f() end
@@ -6585,10 +6588,10 @@ function draw_shell()
    if m==1 then HOME_FS=math.min(3.2,HOME_FS+0.15) elseif m==2 then HOME_FS=math.max(0.4,HOME_FS-0.15) elseif m==3 then toggle_frames() end
   end
   if rm then
-   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),"","#Language / Язык / 言語 / 语言",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文"})
+   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),"","#Language / Язык / 言語 / 语言",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文",(reaper.GetExtState("DubbingPrompter","lang")=="" and "!" or "").."Auto (REAPER)"})
    if m==1 then TAB=2 elseif m==2 then TAB=3 elseif m==3 then TAB=4
    elseif m==5 then act=19 elseif m==6 then act=32 elseif m==7 then TOPBAR=not TOPBAR
-   elseif m==10 then set_lang("en") elseif m==11 then set_lang("ru") elseif m==12 then set_lang("ja") elseif m==13 then set_lang("zh") end
+   elseif m==10 then set_lang("en") elseif m==11 then set_lang("ru") elseif m==12 then set_lang("ja") elseif m==13 then set_lang("zh") elseif m==14 then set_lang("auto") end
   end
  end
  end
