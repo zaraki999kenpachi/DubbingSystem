@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.26
+-- @version 8.0.25
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -6429,7 +6429,7 @@ function home_big(s,x,y,w,h)
  HOME_Y0=y0
  for i,l in ipairs(lines) do
   local tw=(gfx.measurestr(l) or 0)/KX
-  local al=HOME_DIM and .35 or 1; gfx.set(1,1,1,al); gfx.x=(x+(w-tw)/2)*KX; gfx.y=(y0+(i-1)*lh)*KY; gfx.drawstr(l)
+  gfx.set(1,1,1,1); gfx.x=(x+(w-tw)/2)*KX; gfx.y=(y0+(i-1)*lh)*KY; gfx.drawstr(l)
  end
 end
 function do_act(act)
@@ -6588,12 +6588,11 @@ function draw_shell()
    if m==1 then HOME_FS=math.min(3.2,HOME_FS+0.15) elseif m==2 then HOME_FS=math.max(0.4,HOME_FS-0.15) elseif m==3 then toggle_frames() end
   end
   if rm then
-   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),((role_filter~="") and "!" or "")..T("Актёр: ")..(role_filter=="" and T("все") or role_filter),"",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文"})
+   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),"",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文"})
    if m==1 then TAB=2 elseif m==2 then TAB=3 elseif m==3 then TAB=4
    -- gfx.showmenu does not count the "" separators in the returned index
    elseif m==4 then act=19 elseif m==5 then act=32 elseif m==6 then TOPBAR=not TOPBAR
-   elseif m==7 then cycle_role_filter()
-   elseif m==8 then set_lang("en") elseif m==9 then set_lang("ru") elseif m==10 then set_lang("ja") elseif m==11 then set_lang("zh") end
+   elseif m==7 then set_lang("en") elseif m==8 then set_lang("ru") elseif m==9 then set_lang("ja") elseif m==10 then set_lang("zh") end
   end
  end
  end
@@ -6665,7 +6664,6 @@ function draw_shell()
   local ty,th=top+rsv,by-top-rsv-6
   if th<20 then th=20 end
   if s then
-   HOME_DIM=(role_filter~="" and (s.role or "")~=role_filter)   -- чужая роль: текст приглушён
    home_big(s.text or "",30,ty,W-60,th)
    -- отсчёт перед репликой: 3-2-1 и полоска, пока играет и до начала осталось <3 с
    if playing and cur_idx<=0 and s.start>pos and s.start-pos<=3 then
@@ -6677,7 +6675,7 @@ function draw_shell()
     txt(W-30-nw,by-44,tostring(n),28,{.30,.52,1})
    end
    local r=s.role or ""
-   if r~="" then setf(13); local rw=(gfx.measurestr(r) or 0)/KX; txt((W-rw)/2,math.max(ty,HOME_Y0-26),r,13,role_rgb(r) or {.48,.66,1}) end
+   if r~="" then setf(13); local rw=(gfx.measurestr(r) or 0)/KX; txt((W-rw)/2,math.max(ty,HOME_Y0-26),r,13,{.48,.66,1}) end
   else
   end
  elseif TAB==2 then
