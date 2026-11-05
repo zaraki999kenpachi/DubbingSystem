@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.24
+-- @version 8.0.25
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -6421,11 +6421,11 @@ function home_big(s,x,y,w,h)
    end
    lines[#lines+1]=cur
   end
-  if sz<=16 or #lines*sz*1.12<=h then break end
+  if sz<=9 or #lines*sz*1.12<=h then break end
   sz=sz-2
  end
  local lh=sz*1.12
- local y0=y+(h-#lines*lh)/2
+ local y0=math.max(y,y+(h-#lines*lh)/2)
  HOME_Y0=y0
  for i,l in ipairs(lines) do
   local tw=(gfx.measurestr(l) or 0)/KX
@@ -6659,9 +6659,21 @@ function draw_shell()
  local top,bot=((TAB==1) and not TOPBAR) and 0 or TH,by
  if TAB==1 then
   local s=rows[ci]
-  local ty,th=top,H-top
+  -- текст не заезжает под нижнюю полосу с кнопками и под строку роли
+  local rsv=((s and (s.role or "")~="") and 26 or 0)
+  local ty,th=top+rsv,by-top-rsv-6
+  if th<20 then th=20 end
   if s then
    home_big(s.text or "",30,ty,W-60,th)
+   -- отсчёт перед репликой: 3-2-1 и полоска, пока играет и до начала осталось <3 с
+   if playing and cur_idx<=0 and s.start>pos and s.start-pos<=3 then
+    local dt=s.start-pos
+    local n=math.ceil(dt)
+    local bw=(W-60)*(dt/3)
+    rect(30,by-6,bw,3,{.30,.52,1,1})
+    setf(28); local nw=(gfx.measurestr(tostring(n)) or 0)/KX
+    txt(W-30-nw,by-44,tostring(n),28,{.30,.52,1})
+   end
    local r=s.role or ""
    if r~="" then setf(13); local rw=(gfx.measurestr(r) or 0)/KX; txt((W-rw)/2,math.max(ty,HOME_Y0-26),r,13,{.48,.66,1}) end
   else
