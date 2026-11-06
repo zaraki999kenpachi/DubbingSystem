@@ -1,5 +1,5 @@
 -- @description Dubbing Prompter
--- @version 8.0.25
+-- @version 8.0.31
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -267,6 +267,9 @@ I18N.en={
 ["Снята отметка у: "]="Unmarked: ",
 ["Выбор реплик снят"]="Line selection cleared",
 ["Актёр: "]="Actor: ",
+["Показывать роли"]="Show roles",
+["Роли показаны"]="Roles shown",
+["Роли скрыты"]="Roles hidden",
 ["ОКРУЖЕНИЕ DUBBING"]="DUBBING ENVIRONMENT",
 ["ReaImGui (оверлей): "]="ReaImGui (overlay): ",
 ["есть"]="found",
@@ -884,6 +887,9 @@ I18N.ja={
 ["Снята отметка у: "]="マークを解除しました: ",
 ["Выбор реплик снят"]="セリフの選択を解除しました",
 ["Актёр: "]="役者: ",
+["Показывать роли"]="役名を表示",
+["Роли показаны"]="役名を表示しました",
+["Роли скрыты"]="役名を非表示にしました",
 ["ОКРУЖЕНИЕ DUBBING"]="DUBBING 環境",
 ["ReaImGui (оверлей): "]="ReaImGui (オーバーレイ): ",
 ["есть"]="あり",
@@ -1501,6 +1507,9 @@ I18N.zh={
 ["Снята отметка у: "]="已取消标记：",
 ["Выбор реплик снят"]="已取消台词选择",
 ["Актёр: "]="演员：",
+["Показывать роли"]="显示角色",
+["Роли показаны"]="已显示角色",
+["Роли скрыты"]="已隐藏角色",
 ["ОКРУЖЕНИЕ DUBBING"]="DUBBING 环境",
 ["ReaImGui (оверлей): "]="ReaImGui（悬浮层）：",
 ["есть"]="有",
@@ -2578,6 +2587,17 @@ local function restore_overlay()
   reaper.DeleteExtState(OV_CFG,"quit",false)
   launch_overlay()
   status=T("Оверлей восстановлен с настройками по умолчанию")
+ end
+end
+
+-- «Показывать роли» для оверлея: оверлей читает настройки только при старте, поэтому пишем show_role
+-- в его настройки и, если он запущен, перезапускаем (сам файл оверлея не меняется)
+function sync_overlay_roles()
+ reaper.SetExtState(OV_CFG,"show_role",ROLES_ON and "1" or "0",true)
+ local hb=tonumber(reaper.GetExtState(OV_CFG,"hb") or "")
+ if hb and reaper.time_precise()-hb<1.0 then
+  reaper.SetExtState(OV_CFG,"quit","1",false)
+  ov_role_at=reaper.time_precise()+1.5
  end
 end
 
@@ -3761,9 +3781,39 @@ local function import_project()
 end
 
 local function native_col(role)
+ if ROLES_ON==false then return 0 end   -- роли выключены: цвета не ставим
  local c=role_rgb(role)
  if not c then return 0 end
  return reaper.ColorToNative(math.floor(c[1]*255),math.floor(c[2]*255),math.floor(c[3]*255))|0x1000000
+end
+
+-- перекрашивает уже созданные текстовые итемы и регионы по текущему состоянию «Показывать роли»
+function recolor_roles()
+ if #rows==0 then return end
+ local map={}
+ for _,r in ipairs(rows) do map[math.floor(r.start*1000+0.5)]=r end
+ reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
+ for ti=0,reaper.CountTracks(0)-1 do
+  local tr=reaper.GetTrack(0,ti)
+  local _,nm=reaper.GetSetMediaTrackInfo_String(tr,"P_NAME","",false)
+  if (nm or ""):find("^Dubbing Subtitles") then
+   for ii=0,reaper.CountTrackMediaItems(tr)-1 do
+    local it=reaper.GetTrackMediaItem(tr,ii)
+    local r=map[math.floor(reaper.GetMediaItemInfo_Value(it,"D_POSITION")*1000+0.5)]
+    if r then reaper.SetMediaItemInfo_Value(it,"I_CUSTOMCOLOR",native_col(r.role)) end
+   end
+  end
+ end
+ local _,nmk,nrg=reaper.CountProjectMarkers(0)
+ for i=0,nmk+nrg-1 do
+  local _,isrgn,pos,rend,name,idx=reaper.EnumProjectMarkers3(0,i)
+  if isrgn then
+   local r=map[math.floor(pos*1000+0.5)]
+   -- регион наш, если совпали начало и конец реплики (имя не сверяем: REAPER может менять переносы строк)
+   if r and math.abs(rend-r.finish)<0.003 then reaper.SetProjectMarker3(0,idx,true,pos,rend,name,native_col(r.role)) end
+  end
+ end
+ reaper.PreventUIRefresh(-1); reaper.UpdateArrange(); reaper.UpdateTimeline(); reaper.Undo_EndBlock("Dubbing System: recolor roles",-1)
 end
 
 local function to_regions(silent)
@@ -4760,9 +4810,12 @@ function import_from_video(video,auto)
  local t=list[pick]
  if sub_is_graphic(t.codec) then status=T("Дорожка «")..t.codec..T("» — это картинки, текст из неё не извлечь"); return end
  local pp=reaper.GetProjectPath("")
- local outp=pp.."/Dubbing_subs_"..(t.lang~="" and t.lang or ("track"..t.index))..".srt"
+ -- ASS/SSA-дорожку забираем как .ass без конвертации: так сохраняются роли (поле Actor и стиль).
+ -- Через -c:s srt роли терялись, остальные форматы по-прежнему идут в srt.
+ local isass=(t.codec=="ass" or t.codec=="ssa")
+ local outp=pp.."/Dubbing_subs_"..(t.lang~="" and t.lang or ("track"..t.index))..(isass and ".ass" or ".srt")
  os.remove(outp)
- ff_capture(ff_tool("ffmpeg").." -v error -y -i "..ffq(video).." -map 0:"..t.index.." -c:s srt "..ffq(outp))
+ ff_capture(ff_tool("ffmpeg").." -v error -y -i "..ffq(video).." -map 0:"..t.index.." -c:s "..(isass and "ass" or "srt").." "..ffq(outp))
  local f=io.open(outp,"rb")
  if not f then status=T("ffmpeg не смог извлечь дорожку (проверь, что ffmpeg.exe на месте)"); return end
  local size=f:seek("end"); f:close()
@@ -6133,7 +6186,7 @@ function draw_list(x,y,w,h,narrow,items,cur_idx,rb)
    local cps=ulen((s.text:gsub("\n","")))/math.max(dur,0.05)
    local stx=textx
    local L2=ry+ROWH-26
-   if (s.role or "")~="" then
+   if ROLES_ON and (s.role or "")~="" then
     if rc then gfx.set(rc[1],rc[2],rc[3],1); gfx.circle((stx+4)*KX,(L2+7)*KY,3.5*KX,1,1); stx=stx+12 end
     stx=sadv(stx,L2,short(s.role,12),11,rc or {.48,.66,1})
    end
@@ -6336,6 +6389,7 @@ tools_panel=false
 pending_tool=nil
 -- ---------- новый главный экран: суфлёр ----------
 HOME=true; HOME_FS=0.55
+ROLES_ON=(reaper.GetExtState("DubbingPrompter","roles")~="0")   -- показывать роли (выкл: подпись роли скрыта в суфлёре и в списке)
 function home_btn(x,y,w,h,label,fill,col,size)
  if (not ui_locked) and inside(x,y,w,h) then fill={math.min(1,fill[1]+.05),math.min(1,fill[2]+.05),math.min(1,fill[3]+.05)} end
  rect(x,y,w,h,fill)
@@ -6588,11 +6642,12 @@ function draw_shell()
    if m==1 then HOME_FS=math.min(3.2,HOME_FS+0.15) elseif m==2 then HOME_FS=math.max(0.4,HOME_FS-0.15) elseif m==3 then toggle_frames() end
   end
   if rm then
-   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),"",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文"})
+   local m=popup({T("Реплики (список)"),T("Громкость"),T("Инструменты"),"",T("Экспорт…"),T("Субтитры из видео (выбор дорожки)"),(TOPBAR and "!" or "")..T("Верхняя строка"),(ROLES_ON and "!" or "")..T("Показывать роли"),"",(LANG=="en" and "!" or "").."English",(LANG=="ru" and "!" or "").."Русский",(LANG=="ja" and "!" or "").."日本語",(LANG=="zh" and "!" or "").."中文"})
    if m==1 then TAB=2 elseif m==2 then TAB=3 elseif m==3 then TAB=4
    -- gfx.showmenu does not count the "" separators in the returned index
    elseif m==4 then act=19 elseif m==5 then act=32 elseif m==6 then TOPBAR=not TOPBAR
-   elseif m==7 then set_lang("en") elseif m==8 then set_lang("ru") elseif m==9 then set_lang("ja") elseif m==10 then set_lang("zh") end
+   elseif m==7 then ROLES_ON=not ROLES_ON; reaper.SetExtState("DubbingPrompter","roles",ROLES_ON and "1" or "0",true); recolor_roles(); sync_overlay_roles(); status=ROLES_ON and T("Роли показаны") or T("Роли скрыты")
+   elseif m==8 then set_lang("en") elseif m==9 then set_lang("ru") elseif m==10 then set_lang("ja") elseif m==11 then set_lang("zh") end
   end
  end
  end
@@ -6660,7 +6715,7 @@ function draw_shell()
  if TAB==1 then
   local s=rows[ci]
   -- текст не заезжает под нижнюю полосу с кнопками и под строку роли
-  local rsv=((s and (s.role or "")~="") and 26 or 0)
+  local rsv=((ROLES_ON and s and (s.role or "")~="") and 26 or 0)
   local ty,th=top+rsv,by-top-rsv-6
   if th<20 then th=20 end
   if s then
@@ -6675,7 +6730,7 @@ function draw_shell()
     txt(W-30-nw,by-44,tostring(n),28,{.30,.52,1})
    end
    local r=s.role or ""
-   if r~="" then setf(13); local rw=(gfx.measurestr(r) or 0)/KX; txt((W-rw)/2,math.max(ty,HOME_Y0-26),r,13,{.48,.66,1}) end
+   if ROLES_ON and r~="" then setf(13); local rw=(gfx.measurestr(r) or 0)/KX; txt((W-rw)/2,math.max(ty,HOME_Y0-26),r,13,role_rgb(r) or {.48,.66,1}) end
   else
   end
  elseif TAB==2 then
@@ -6767,6 +6822,7 @@ local function loop()
  -- map the real window onto the W x H canvas: positions stretch, text keeps its proportions
  refresh_layout()
  MX=gfx.mouse_x; MY=gfx.mouse_y
+ if ov_role_at and reaper.time_precise()>=ov_role_at then ov_role_at=nil; launch_overlay() end
  if ov_restore_at and reaper.time_precise()>=ov_restore_at then
   ov_restore_at=nil; launch_overlay(); status=T("Оверлей восстановлен с настройками по умолчанию")
  end

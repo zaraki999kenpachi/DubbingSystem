@@ -5,6 +5,12 @@
       <metadata>
         <description><![CDATA[Workstation for dubbing sound directors: prompter with the current line, subtitle import (SRT/ASS/SSA/VTT/TXT or tracks embedded in MKV/MP4 via ffmpeg), roles, recorded marks, takes, regions and text items synced with the cursor. Works together with Dubbing_SubOverlay.lua.]]></description>
       </metadata>
+      <version name="8.0.31" author="zaraki999kenpachi" time="2026-11-06T04:00:00Z">
+        <changelog><![CDATA[New: "Show roles" switch in the More menu (hides role names in the prompter and list, role colours on items/regions and the role name in the subtitle overlay). Role name colour in the prompter now matches the overlay and the timeline. Subtitles extracted from a video keep their roles (ASS/SSA tracks are no longer converted to SRT). Fix: line text no longer clipped in a low docked window; 3-2-1 countdown before the next line.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
       <version name="8.0.25" author="zaraki999kenpachi" time="2026-11-05T12:45:00Z">
         <changelog><![CDATA[Fix: line text no longer clipped at the bottom of a low docked window (auto-shrinks, keeps clear of the bottom bar and role label). New: 3-2-1 countdown before the next line while playing.]]></changelog>
         <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
