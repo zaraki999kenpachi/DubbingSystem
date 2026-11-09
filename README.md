@@ -8,7 +8,7 @@ REAPER scripts for dubbing: **Dubbing Prompter** (prompter, subtitle import, rol
 The prompter interface is available in Russian, English, Japanese and Chinese. It follows your REAPER language pack automatically; you can change it in the **More** menu (restart the script after switching). The phone/tablet prompter page uses the same language.
 
 ## Install
-**Windows installer** (scripts, fonts and optional REAPER theme: keep current / gray / black): download the `.exe` from [Releases](https://github.com/zaraki999kenpachi/DubbingSystem/releases/latest).
+Download from [Releases](https://github.com/zaraki999kenpachi/DubbingSystem/releases/latest): **Windows** `DubbingSystem_Setup.exe` (32/64 bit), **macOS** `DubbingSystem_macOS_Setup.zip` (open `Install Dubbing System.command`), **Linux** `DubbingSystem_Linux_Setup.sh` (`sh DubbingSystem_Linux_Setup.sh`). The installers put the scripts, fonts and optional REAPER plugins (ReaImGui, ReaPack, js_ReaScriptAPI) into your REAPER resource folder; every component is optional.
 
 ## Install with ReaPack
 1. Extensions → ReaPack → Import repositories…
