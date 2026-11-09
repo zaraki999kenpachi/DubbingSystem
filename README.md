@@ -18,10 +18,10 @@ The prompter interface is available in Russian, English, Japanese and Chinese. I
 Subtitles embedded in MKV/MP4 need ffmpeg and ffprobe (in `Scripts/Dubbing System` or on PATH). The video overlay needs ReaImGui and js_ReaScriptAPI.
 
 ## Windows SmartScreen note
-The installer is not yet signed with a publisher certificate, so Windows may show "Windows protected your PC". Click **More info** and then **Run anyway**. The whole source code is in this repository, and the installer only copies the scripts, fonts and optional REAPER plugins/theme into your REAPER resource folder. If you prefer not to run an installer, use ReaPack (see below).
+The Windows installer is signed with the author's own certificate (Kenpachi Zaraki). Windows does not publicly trust it yet, so it may show "Windows protected your PC". Click **More info** and then **Run anyway**. The whole source code is in this repository, and the installer only copies the scripts, fonts and optional REAPER plugins into your REAPER resource folder. You can verify the download with `SHA256SUMS.txt` from the release. If you prefer not to run an installer, use ReaPack (see below).
 
 ## Code signing policy
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org). See the full [Code signing policy](CODE_SIGNING_POLICY.md) (team roles, what is signed, privacy). The Windows installer will be signed once the application is approved.
+See the [Code signing policy](CODE_SIGNING_POLICY.md): what is signed, by whom, and privacy.
 
 ## Privacy policy
 Dubbing System does not collect, store or transmit any personal data. There is no telemetry and no account. The optional phone prompter works inside your local network (REAPER web interface) and sends nothing to the internet.
