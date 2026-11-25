@@ -1,5 +1,5 @@
 -- @description Dubbing SubOverlay
--- @version 8.0.3
+-- @version 8.0.4
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -632,79 +632,172 @@ local function file_has_cyrillic(path, face)
   return ok and res or false
 end
 
--- family names of the installed fonts that have Cyrillic; nil if the registry cannot be read
-local function installed_cyrillic_fonts()
-  if package.config:sub(1, 1) ~= "\\" or not reaper.ExecProcess then return nil end
-  local windir = os.getenv("WINDIR") or "C:\\Windows"
-  local verdict, order = {}, {}
-  local cpath = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fonts.txt"
-  local known = {}
-  local cf = io.open(cpath, "rb")
+-- Font list (families that have Cyrillic). Opening the overlay must be instant, so the list comes from a cache file;
+-- the registry is scanned later IN THE BACKGROUND (a little per frame) only when the cache is missing / old or when
+-- "Обновить список шрифтов" is pressed.
+local FLIST = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fontlist.txt"
+local function read_fontlist()
+  local f = io.open(FLIST, "rb")
+  if not f then return nil, 0 end
+  local names, stamp = {}, 0
+  for line in f:lines() do
+    line = line:gsub("\r$", "")
+    local t = line:match("^#t=(%d+)")
+    if t then stamp = tonumber(t) or 0 elseif line ~= "" and line:sub(1, 1) ~= "@" then names[#names + 1] = line end
+  end
+  f:close()
+  return names, stamp
+end
+
+local FONT_KEYS = { "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
+                    "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts" }
+local FVERD = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fonts.txt"   -- per-face verdicts (Cyrillic yes / no)
+
+-- stage 1: read the verdict cache; stage 2/3: one registry key per call (blocking, once each)
+local function fscan_new()
+  local st = { entries = {}, known = {}, fresh = {}, verdict = {}, order = {}, seen = false, key = 1, i = 1 }
+  local cf = io.open(FVERD, "rb")
   if cf then
     for line in cf:lines() do
       local k, v = line:match("^(.-)\t([01])$")
-      if k then known[k] = (v == "1") end
+      if k then st.known[k] = (v == "1") end
     end
     cf:close()
   end
-  local fresh, seen_any = {}, false
-  for _, key in ipairs({ "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
-                         "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts" }) do
-    local ok, out = pcall(reaper.ExecProcess, 'reg query "' .. key .. '"', 8000)
-    if ok and out then
-      for line in tostring(out):gmatch("[^\r\n]+") do
-        local nm, file = line:match("^%s+(.-)%s+REG_SZ%s+(.-)%s*$")
-        if nm and file then
-          seen_any = true
-          nm = nm:gsub("%s*%b()%s*$", "")
-          local path = file
-          if not (file:match("^%a:") or file:match("^[\\/]")) then path = windir .. "\\Fonts\\" .. file end
-          local ext = (file:match("%.(%w+)$") or ""):lower()
-          if ext == "ttf" or ext == "otf" or ext == "ttc" or ext == "otc" then
-            local face = 0
-            for part in (nm .. " & "):gmatch("(.-) & ") do
-              if part ~= "" then
-                local ck = part .. "|" .. face
-                local v = known[ck]
-                if v == nil then v = file_has_cyrillic(path, face); fresh[#fresh + 1] = ck .. "\t" .. (v and "1" or "0"); known[ck] = v end
-                if v and not verdict[part:lower()] then
-                  verdict[part:lower()] = part
-                  order[#order + 1] = part
-                end
-                face = face + 1
-              end
-            end
-          end
-        end
+  return st
+end
+
+-- the registry is read by `reg query` started in the BACKGROUND (negative timeout = do not wait) into a temp file;
+-- the file is picked up in later frames, so the window never waits for it
+local function fscan_launch(key, tmp)
+  os.remove(tmp)
+  local cmd = 'cmd.exe /c "reg query "' .. key .. '" > "' .. tmp .. '" 2>&1"'
+  return pcall(reaper.ExecProcess, cmd, -1)
+end
+
+local function fscan_parse(st, text)
+  local windir = os.getenv("WINDIR") or "C:\\Windows"
+  for line in text:gmatch("[^\r\n]+") do
+    local nm, file = line:match("^%s+(.-)%s+REG_SZ%s+(.-)%s*$")
+    if nm and file then
+      st.seen = true
+      local path = file
+      if not (file:match("^%a:") or file:match("^[\\/]")) then path = windir .. "\\Fonts\\" .. file end
+      local ext = (file:match("%.(%w+)$") or ""):lower()
+      if ext == "ttf" or ext == "otf" or ext == "ttc" or ext == "otc" then
+        st.entries[#st.entries + 1] = { nm = nm:gsub("%s*%b()%s*$", ""), path = path, file = file }
       end
     end
   end
-  if not seen_any then return nil end
-  if #fresh > 0 then                              -- remember the new verdicts
-    local wf = io.open(cpath, "ab")
-    if wf then for _, l in ipairs(fresh) do wf:write(l, "\n") end wf:close() end
+end
+
+-- is the temp file complete (it exists and its size has stopped growing)? returns its text or nil
+local function fscan_poll(tmp, last)
+  local f = io.open(tmp, "rb")
+  if not f then return nil end
+  local text = f:read("a") or ""
+  f:close()
+  if #text > 0 and last[tmp] == #text then return text end
+  last[tmp] = #text
+  return nil
+end
+
+-- reads the font files for at most `budget` seconds; true when everything is done
+local function fscan_step(st, budget)
+  local t0 = reaper.time_precise()
+  while st.i <= #st.entries do
+    local e = st.entries[st.i]
+    st.i = st.i + 1
+    local face = 0
+    for part in (e.nm .. " & "):gmatch("(.-) & ") do
+      if part ~= "" then
+        local ck = part .. "|" .. face
+        local v = st.known[ck]
+        if v == nil then v = file_has_cyrillic(e.path, face); st.fresh[#st.fresh + 1] = ck .. "\t" .. (v and "1" or "0"); st.known[ck] = v end
+        if v and not st.verdict[part:lower()] then
+          st.verdict[part:lower()] = part
+          st.order[#st.order + 1] = part
+        end
+        face = face + 1
+      end
+    end
+    if reaper.time_precise() - t0 > budget then return false end
   end
-  -- family names: drop the Bold / Italic variants of a family whose plain face is installed
+  return true
+end
+
+-- family names; the Bold / Italic variants of a family whose plain face is installed are dropped. Saves both caches.
+local function fscan_finish(st)
+  if not st.seen then return nil end
+  if #st.fresh > 0 then
+    local wf = io.open(FVERD, "ab")
+    if wf then for _, l in ipairs(st.fresh) do wf:write(l, "\n") end wf:close() end
+  end
   local out, seenf = {}, {}
-  for _, nm in ipairs(order) do
+  for _, nm in ipairs(st.order) do
     local low = nm:lower()
     local base = low:match("^(.-) bold italic$") or low:match("^(.-) bold oblique$") or low:match("^(.-) bold$")
       or low:match("^(.-) italic$") or low:match("^(.-) oblique$") or low:match("^(.-) regular$")
-    local is_variant = base and verdict[base] ~= nil
-    if not is_variant and not seenf[low] then seenf[low] = true; out[#out + 1] = nm end
+    local is_variant = base and st.verdict[base] ~= nil
+    if not is_variant and not seenf[low] and nm:sub(1, 1) ~= "@" then seenf[low] = true; out[#out + 1] = nm end   -- "@Name" = vertical-writing duplicates
   end
   table.sort(out, function(x, y) return x:lower() < y:lower() end)
+  local wf = io.open(FLIST, "wb")
+  if wf then wf:write("#t=", tostring(os.time()), "\n"); for _, nm in ipairs(out) do wf:write(nm, "\n") end wf:close() end
   return out
 end
 
 local FONT_NAMES = {}
 local in_base = {}
 for _, f in ipairs(BASE_FONTS) do FONT_NAMES[#FONT_NAMES + 1] = f; in_base[f:lower()] = true end
-do
-  local ok, found = pcall(installed_cyrillic_fonts)
-  if ok and found then
-    for _, nm in ipairs(found) do
-      if not in_base[nm:lower()] then FONT_NAMES[#FONT_NAMES + 1] = nm end
+local cached_fonts, cached_stamp = read_fontlist()
+for _, nm in ipairs(cached_fonts or {}) do
+  if not in_base[nm:lower()] then FONT_NAMES[#FONT_NAMES + 1] = nm; in_base[nm:lower()] = true end
+end
+-- background scan state: runs when the cache is missing or older than 30 days (Windows only)
+local fs = { done = true, wait = 0, stage = 0 }
+local function fonts_rescan(delay)
+  if package.config:sub(1, 1) ~= "\\" or not reaper.ExecProcess then return end
+  fs = { done = false, wait = delay or 0, stage = 0 }
+end
+if not cached_fonts or (os.time() - (cached_stamp or 0)) > 30 * 86400 then fonts_rescan(45) end
+-- one small step per frame: the window is already on screen, nothing waits for it
+local function font_scan_tick()
+  if fs.done then return end
+  if fs.wait > 0 then fs.wait = fs.wait - 1; return end
+  if fs.stage == 0 then
+    fs.st = fscan_new(); fs.last = {}; fs.t0 = reaper.time_precise(); fs.tmp = {}
+    local base = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_reg"
+    local started = false
+    for k, key in ipairs(FONT_KEYS) do
+      fs.tmp[k] = base .. k .. ".tmp"
+      local ok = fscan_launch(key, fs.tmp[k])
+      started = started or ok
+    end
+    if started then fs.stage = 1 else fs.done = true end
+    return
+  end
+  if fs.stage == 1 then                                  -- wait (frame by frame) for both registry dumps
+    local texts, n = {}, 0
+    for k, tmp in ipairs(fs.tmp) do
+      texts[k] = fs.got and fs.got[k] or fscan_poll(tmp, fs.last)
+      if texts[k] then n = n + 1 end
+    end
+    fs.got = texts
+    if n == #fs.tmp or reaper.time_precise() - fs.t0 > 20 then
+      for k, tmp in ipairs(fs.tmp) do
+        if texts[k] then fscan_parse(fs.st, texts[k]) end
+        os.remove(tmp)
+      end
+      fs.stage = 2
+    end
+    return
+  end
+  if fscan_step(fs.st, 0.006) then
+    local out = fscan_finish(fs.st)
+    fs.done = true; fs.st = nil
+    for _, nm in ipairs(out or {}) do
+      if not in_base[nm:lower()] then FONT_NAMES[#FONT_NAMES + 1] = nm; in_base[nm:lower()] = true end
     end
   end
 end
@@ -737,7 +830,7 @@ local function ensure_font(i)
   end)
   return fonts[i] ~= nil
 end
-for i = 1, #BASE_FONTS do ensure_font(i) end
+ensure_font(1)         -- the others are made when they are picked (opening must be fast)
 ensure_font(S.font)
 
 -- "Black" weight: the family's real Black face is used (Arial -> Arial Black, Segoe UI -> Segoe UI Black): this is what CH
@@ -764,7 +857,6 @@ local function named_font(name)
   end
   return xfonts[name] or nil
 end
-for _, nm in pairs(BLACK_OF) do named_font(nm) end   -- attached before the first frame
 local thick_off = false
 local diag = { want = 0, got = 0, h = 0, os = nil, cx = 0, cy = 0, hwnd = nil }   -- window position asked for / real (shown in the menu: it must not drift)
 local function black_face_name(i)
@@ -774,6 +866,7 @@ local function black_face_name(i)
   end
   return BLACK_OF[fam]
 end
+if S.wt == 5 then local bn = black_face_name(S.font); if bn then named_font(bn) end end   -- saved Black: ready before the first frame
 local function cur_font()
   thick_off = false
   if S.wt == 5 then
@@ -1038,7 +1131,7 @@ end
 
 local function draw_menu()
   local changed, c = false, false
-  reaper.ImGui_TextDisabled(ctx, "сборка 24.11b · ровные места EN/RU, сдвиги 2 / 2")
+  reaper.ImGui_TextDisabled(ctx, "сборка 25.11a · быстрый запуск, шрифты из кэша")
   if reaper.ImGui_Button(ctx, "Пресет: субтитры на видео") then
     S.attach = true; S.mode = 1; S.h = 170; S.size = 40; S.rel = true; S.scale = 65; S.bg = 0; S.title = false; changed = true
   end
@@ -1083,6 +1176,8 @@ local function draw_menu()
       reaper.ImGui_EndCombo(ctx)
     end
     if not fonts[S.font] then reaper.ImGui_Text(ctx, "Шрифт применится после перезапуска оверлея") end
+    if not fs.done then reaper.ImGui_TextDisabled(ctx, "Идёт поиск шрифтов в фоне…")
+    elseif reaper.ImGui_Button(ctx, "Обновить список шрифтов") then fonts_rescan(0) end
     local cf
     c, cf = reaper.ImGui_InputText(ctx, "Свой шрифт (имя, затем Enter)", S.font_custom)
     if c then S.font_custom = cf; changed = true end
@@ -1207,6 +1302,7 @@ local closing = false
 local edit_moved = false
 
 local function loop()
+  font_scan_tick()
   refresh()
   reaper.SetExtState(CFG, "hb", tostring(reaper.time_precise()), false)
   if reaper.GetExtState(CFG, "quit") == "1" then closing = true end
