@@ -1,8 +1,8 @@
 # Code signing policy
 
-The Windows installer (`DubbingSystem_Setup.exe`) is signed with the author's own code signing certificate (publisher: Kenpachi Zaraki). The certificate is self-issued, so Windows does not publicly trust it and SmartScreen may show a warning ("More info" → "Run anyway"). A publicly trusted signature may be added in the future.
+The Windows installer (`DubbingSystem_Setup.exe`) is signed with the author's own code signing certificate (publisher: zaraki999kenpachi). The certificate is self-issued, so Windows does not publicly trust it and SmartScreen may show a warning ("More info" → "Run anyway"). A publicly trusted signature may be added in the future.
 
-Windows-установщик (`DubbingSystem_Setup.exe`) подписан личным сертификатом автора (издатель: Kenpachi Zaraki). Сертификат самоподписанный, поэтому Windows не доверяет ему публично и SmartScreen может показать предупреждение («Подробнее» → «Выполнить в любом случае»).
+Windows-установщик (`DubbingSystem_Setup.exe`) подписан личным сертификатом автора (издатель: zaraki999kenpachi). Сертификат самоподписанный, поэтому Windows не доверяет ему публично и SmartScreen может показать предупреждение («Подробнее» → «Выполнить в любом случае»).
 
 ## Team / Команда
 

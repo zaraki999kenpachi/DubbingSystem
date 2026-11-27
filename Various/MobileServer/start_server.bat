@@ -1,7 +1,10 @@
 @echo off
 title Dubbing Prompter - video server
 where py >nul 2>&1
+if errorlevel 1 goto try_python
+py -3 -c "import sys" >nul 2>&1
 if not errorlevel 1 goto run_py
+:try_python
 where python >nul 2>&1
 if not errorlevel 1 goto run_python
 

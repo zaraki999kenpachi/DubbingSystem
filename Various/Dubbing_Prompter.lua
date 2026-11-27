@@ -1,7 +1,8 @@
 -- @description Dubbing Prompter
--- @version 8.0.31
+-- @version 8.0.33
 -- @author zaraki999kenpachi
 -- @license MIT
+-- Copyright (c) 2026 zaraki999kenpachi. All rights reserved under the MIT License.
 -- @about
 --   # Dubbing Prompter
 --   Sound director's workstation for dubbing: SRT/ASS/SSA/TXT import, roles, "recorded" marks,
@@ -17,6 +18,19 @@
 --        chars-per-second meter, notes, bookmarks, original-text compare, play line with pre-roll / loop,
 --        per-role and per-track ducking depth, ducking from real dub items, fit timing to takes,
 --        time shift, global replace, role rename, SRT per role, project export/import, auto versions.
+-- Защита интерфейса REAPER: PreventUIRefresh и Undo-блоки считаются. Если посреди блока случилась Lua-ошибка, главный цикл
+-- (dub_loop_guard) закрывает их, иначе REAPER остаётся «замороженным». Всё в глобальных функциях (лимит 200 локальных переменных).
+DUB_PUR=0; DUB_UNDO=0
+function dub_pur(n) DUB_PUR=DUB_PUR+n; reaper.PreventUIRefresh(n) end
+function dub_ub() DUB_UNDO=DUB_UNDO+1; reaper.Undo_BeginBlock() end
+function dub_ue(name,flags) DUB_UNDO=math.max(0,DUB_UNDO-1); reaper.Undo_EndBlock(name,flags) end
+function dub_recover()
+ if DUB_PUR>0 then pcall(reaper.PreventUIRefresh,-DUB_PUR) end
+ DUB_PUR=0
+ while DUB_UNDO>0 do pcall(reaper.Undo_EndBlock,"Dubbing System (ошибка)",-1); DUB_UNDO=DUB_UNDO-1 end
+ pcall(reaper.UpdateArrange)
+end
+
 I18N={}
 I18N.en={
 ["Пробел — play/stop · P — реплика · L — цикл · D — записано · B — закладка · N — след. закладка"]="Space — play/stop · P — line · L — loop · D — recorded · B — bookmark · N — next bookmark",
@@ -622,6 +636,7 @@ I18N.en={
 ["Суфлёр"]="Prompter",
 ["Реплики"]="Lines",
 ["Импорт…"]="Import…",
+["Телефон…"]="Phone…",
 ["Создать автоматизацию"]="Create automation",
 ["Dubbing System: добавить видео"]="Dubbing System: add video",
 ["Видео добавлено: "]="Video added: ",
@@ -1242,6 +1257,7 @@ I18N.ja={
 ["Суфлёр"]="プロンプター",
 ["Реплики"]="セリフ",
 ["Импорт…"]="インポート…",
+["Телефон…"]="スマホ…",
 ["Создать автоматизацию"]="オートメーションを作成",
 ["Dubbing System: добавить видео"]="Dubbing System: 動画を追加",
 ["Видео добавлено: "]="動画を追加しました: ",
@@ -1862,6 +1878,7 @@ I18N.zh={
 ["Суфлёр"]="提词器",
 ["Реплики"]="台词",
 ["Импорт…"]="导入…",
+["Телефон…"]="手机…",
 ["Создать автоматизацию"]="创建自动化",
 ["Dubbing System: добавить видео"]="Dubbing System: 添加视频",
 ["Видео добавлено: "]="视频已添加：",
@@ -2061,6 +2078,24 @@ local function srt_tc(x)
  if m2 then return tonumber(m2)*60+tonumber(sec2) end
 end
 
+-- кодировки и разбор субтитров: вспомогательные функции в глобальной таблице (лимит 200 локальных переменных)
+SUBP={}
+SUBP.cp1251_list={0x402,0x403,0x201A,0x453,0x201E,0x2026,0x2020,0x2021,0x20AC,0x2030,0x409,0x2039,0x40A,0x40C,0x40B,0x40F,
+ 0x452,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,0xFFFD,0x2122,0x459,0x203A,0x45A,0x45C,0x45B,0x45F,
+ 0xA0,0x40E,0x45E,0x408,0xA4,0x490,0xA6,0xA7,0x401,0xA9,0x404,0xAB,0xAC,0xAD,0xAE,0x407,
+ 0xB0,0xB1,0x406,0x456,0x491,0xB5,0xB6,0xB7,0x451,0x2116,0x454,0xBB,0x458,0x405,0x455,0x457}
+SUBP.cp1251_hi={}; for i,v in ipairs(SUBP.cp1251_list) do SUBP.cp1251_hi[0x7F+i]=v end
+function SUBP.cp1251_to_utf8(d)
+ local out={}
+ for i=1,#d do
+  local b=d:byte(i)
+  local cp
+  if b<0x80 then cp=b elseif b>=0xC0 then cp=0x410+(b-0xC0) else cp=SUBP.cp1251_hi[b] or 0xFFFD end
+  out[i]=utf8.char(cp)
+ end
+ return table.concat(out)
+end
+
 local function parse_srt(s)
  local out={}; s=s:gsub("\r\n","\n"):gsub("\r","\n")
  for block in (s.."\n\n"):gmatch("(.-)\n%s*\n") do
@@ -2073,19 +2108,29 @@ local function parse_srt(s)
  end; return out
 end
 
+-- ASS/SSA: поля берутся по строке Format секции [Events] (порядок может отличаться); без Format — стандартный порядок
 local function parse_ass(s)
  local out,in_events={},false; s=s:gsub("\r\n","\n"):gsub("\r","\n")
+ local fmt={"layer","start","end","style","name","marginl","marginr","marginv","effect","text"}
  for line in (s.."\n"):gmatch("(.-)\n") do
-  if line:match("^%[Events%]") then in_events=true elseif line:match("^%[") then in_events=false
+  if line:match("^%[Events%]") then in_events=true
+  elseif line:match("^%[") then in_events=false
+  elseif in_events and line:match("^Format:") then
+   local names={}
+   for nm in (line:gsub("^Format:%s*","")..","):gmatch("%s*([^,]-)%s*,") do names[#names+1]=nm:lower() end
+   if #names>=3 then fmt=names end
   elseif in_events and line:match("^Dialogue:") then
    local p=line:gsub("^Dialogue:%s*",""); local f,pos={},1
-   for i=1,9 do local c=p:find(",",pos,true); if not c then break end; f[i]=p:sub(pos,c-1); pos=c+1 end
-   if f[2] and f[3] and pos<=#p then
-    local st,en=tc(f[2]),tc(f[3])
-    local txt=p:sub(pos):gsub("{[^}]*}",""):gsub("\\N","\n"):gsub("\\n","\n")
-    -- role = Name field, otherwise Style (ignoring "Default")
-    local role=trim(f[5] or "")
-    if role=="" then role=trim(f[4] or "") end
+   local nf=#fmt
+   for i=1,nf-1 do local c=p:find(",",pos,true); if not c then break end; f[i]=p:sub(pos,c-1); pos=c+1 end
+   f[nf]=p:sub(pos)
+   local m={}; for i,nm in ipairs(fmt) do m[nm]=f[i] end
+   if m["start"] and m["end"] and m["text"] and (m["text"]~="") then
+    local st,en=tc(trim(m["start"])),tc(trim(m["end"]))
+    local txt=m["text"]:gsub("{[^}]*}",""):gsub("\\N","\n"):gsub("\\n","\n")
+    -- role = Name (Actor) field, otherwise Style (ignoring "Default")
+    local role=trim(m["name"] or m["actor"] or "")
+    if role=="" then role=trim(m["style"] or "") end
     if role:lower()=="default" or role=="*Default" then role="" end
     role=clean_name(role)
     if st and en and en>st and trim(txt)~="" then out[#out+1]={start=st,finish=en,text=trim(txt),role=role} end
@@ -2104,32 +2149,64 @@ local function tc_loose(x)
  return tonumber(x)
 end
 
+-- WebVTT: идентификатор cue (любая строка перед временем), настройки после времени, блоки NOTE/STYLE/REGION пропускаются
 local function parse_vtt(s)
  local out={}; s=s:gsub("\r\n","\n"):gsub("\r","\n")
  for block in (s.."\n\n"):gmatch("(.-)\n%s*\n") do
-  local a,b,rest=block:match("([%d:%.]+)%s*%-%->%s*([%d:%.]+)[^\n]*\n?(.*)")
-  if a and b then
-   local st,en=tc_loose(a),tc_loose(b)
-   local role=rest:match("<v%s+([^>]+)>") or ""
-   local text=rest:gsub("<v[^>]*>",""):gsub("</?[^>]+>",""):gsub("\n%s*"," \n"):gsub("^%s+",""):gsub("%s+$","")
-   if st and en and en>st and text~="" then out[#out+1]={start=st,finish=en,text=text,role=trim(role)} end
+  local lines={}; for l in (block.."\n"):gmatch("(.-)\n") do lines[#lines+1]=l end
+  local first=lines[1] or ""
+  if not (first:match("^NOTE") or first:match("^STYLE") or first:match("^REGION") or first:match("^WEBVTT")) then
+   local ti
+   for i,l in ipairs(lines) do if l:find("-->",1,true) then ti=i; break end end
+   if ti then
+    local a,b=lines[ti]:match("^%s*([%d:%.,]+)%s*%-%->%s*([%d:%.,]+)")
+    if a and b then
+     local st,en=tc_loose(a),tc_loose(b)
+     local body={}; for i=ti+1,#lines do body[#body+1]=lines[i] end
+     local rest=table.concat(body,"\n")
+     local role=rest:match("<v[%s%.][^>]-([^%s>][^>]*)>") or rest:match("<v%s+([^>]+)>") or ""
+     role=role:gsub("^%.[%w%.%-_]*%s+","")
+     local text=rest:gsub("<v[^>]*>",""):gsub("</?[^>]+>",""):gsub("\n%s*"," \n"):gsub("^%s+",""):gsub("%s+$","")
+     if st and en and en>st and text~="" then out[#out+1]={start=st,finish=en,text=text,role=trim(role)} end
+    end
+   end
   end
  end
  return out
 end
 
--- CSV / TSV / semicolon files: start;end;text;role (first line may be a header)
+-- CSV / TSV / ; : start;end;text;role. Кавычки, "" внутри поля и переносы строк в поле поддерживаются; разделитель определяется по первой строке
+local function csv_records(s,sep)
+ local recs,rec,fld,inq,i,n={}, {}, {}, false, 1, #s
+ local function endf() rec[#rec+1]=table.concat(fld); fld={} end
+ local function endr() endf(); local any=false; for _,v in ipairs(rec) do if trim(v)~="" then any=true end end; if any then recs[#recs+1]=rec end; rec={} end
+ while i<=n do
+  local c=s:sub(i,i)
+  if inq then
+   if c=='"' then
+    if s:sub(i+1,i+1)=='"' then fld[#fld+1]='"'; i=i+1 else inq=false end
+   else fld[#fld+1]=c end
+  else
+   if c=='"' and #fld==0 then inq=true
+   elseif c==sep then endf()
+   elseif c=="\n" then endr()
+   elseif c=="\r" then if s:sub(i+1,i+1)~="\n" then endr() end
+   else fld[#fld+1]=c end
+  end
+  i=i+1
+ end
+ if #fld>0 or #rec>0 then endr() end
+ return recs
+end
+
 local function parse_csv(s)
  local out={}
- for line in (s.."\n"):gmatch("(.-)\n") do
-  line=trim((line:gsub("\r","")))
-  if line~="" then
-   local sep=line:find(";",1,true) and ";" or (line:find("\t",1,true) and "\t" or ",")
-   local f={}
-   for part in (line..sep):gmatch("(.-)"..(sep=="\t" and "\t" or sep)) do f[#f+1]=trim(part) end
-   local st,en=tc_loose(f[1]),tc_loose(f[2])
-   if st and en and en>st and (f[3] or "")~="" then out[#out+1]={start=st,finish=en,text=f[3],role=f[4] or ""} end
-  end
+ local first=s:match("^[^\r\n]*") or ""
+ local sep=first:find(";",1,true) and ";" or (first:find("\t",1,true) and "\t" or ",")
+ for _,f in ipairs(csv_records(s,sep)) do
+  local st,en=tc_loose(f[1]),tc_loose(f[2])
+  local text=trim(f[3] or "")
+  if st and en and en>st and text~="" then out[#out+1]={start=st,finish=en,text=text,role=trim(f[4] or "")} end
  end
  return out
 end
@@ -2177,19 +2254,25 @@ local function read_subs_file(path)
   if ln:find("-->",1,true) then tcl=tcl+1; if first=="" then first=ln:sub(1,60) end end
  end
  last_sub_hint=string.format(T("bytes %d, строк со временем: %d"),#data,tcl)..(first~="" and (T(", первая: ")..first) or "")
- -- UTF-16 (Windows Notepad "Unicode"): convert to UTF-8 so the parsers can read it
+ -- UTF-16 (LE/BE, с BOM или без; суррогатные пары собираются в один символ) -> UTF-8
  local b1,b2=data:byte(1,2)
- if (b1==0xFF and b2==0xFE) or (b1==0xFE and b2==0xFF) or data:find("\0",1,true) then
-  local le=(b1==0xFF and b2==0xFE) or (b1~=0xFE and data:byte(2)==0)
-  local start=((b1==0xFF and b2==0xFE) or (b1==0xFE and b2==0xFF)) and 3 or 1
-  local out={}
+ local has_bom16=(b1==0xFF and b2==0xFE) or (b1==0xFE and b2==0xFF)
+ if has_bom16 or data:find("\0",1,true) then
+  local le=(b1==0xFF and b2==0xFE) or (not has_bom16 and data:byte(2)==0)
+  local start=has_bom16 and 3 or 1
+  local out,hi={},nil
   for i=start,#data-1,2 do
-   local lo,hi=data:byte(i,i+1)
-   local cp=le and (lo+hi*256) or (hi+lo*256)
-   if cp>=0xD800 and cp<=0xDBFF then cp=0xFFFD end -- surrogates are not needed for subtitles
-   if cp~=0 then out[#out+1]=utf8.char(cp) end
+   local x,y=data:byte(i,i+1)
+   local u=le and (x+y*256) or (y+x*256)
+   if u>=0xD800 and u<=0xDBFF then hi=u
+   elseif u>=0xDC00 and u<=0xDFFF and hi then out[#out+1]=utf8.char(0x10000+((hi-0xD800)<<10)+(u-0xDC00)); hi=nil
+   else hi=nil; if u~=0 then out[#out+1]=utf8.char(u) end end
   end
   data=table.concat(out)
+ elseif not utf8.len((data:gsub("^\239\187\191",""))) then
+  -- не UTF-8 -> считаем Windows-1251 (типичный случай для русских субтитров)
+  data=SUBP.cp1251_to_utf8(data)
+  last_sub_hint=(last_sub_hint or "").." [cp1251]"
  end
  data=data:gsub("^\239\187\191","")
  local ext=path:lower():match("%.([%w]+)$") or ""
@@ -2247,8 +2330,11 @@ end
 local function mark_dirty() rebuild_roles(); rebuild_vis(); wins_dirty=true end
 
 -- ---------- storage ----------
-local function esc(s) local t=(s or ""):gsub("\n","\\n"); t=t:gsub("[\t\r]"," "); return t end
-local function unesc(s) return ((s or ""):gsub("\\n","\n")) end
+-- обратная косая черта экранируется (\\ -> \\\\), перевод строки -> \\n; старые сохранения (где \\ не экранировалась) читаются как раньше
+local function esc(s) local t=(s or ""):gsub("\\","\\\\"):gsub("\n","\\n"); t=t:gsub("[\t\r]"," "); return t end
+local function unesc(s)
+ return ((s or ""):gsub("\\(.)",function(c) if c=="n" then return "\n" elseif c=="\\" then return "\\" else return "\\"..c end end))
+end
 
 local function serialize_rows()
  local t={}
@@ -2264,11 +2350,26 @@ local function parse_saved(raw)
   local f={}
   for part in (line.."\t"):gmatch("(.-)\t") do f[#f+1]=part end
   local st,en=tonumber(f[1]),tonumber(f[2])
-  if st and en and f[3] then
+  if st and en and f[3] and SAN.finite(st) and SAN.finite(en) and st>=0 and en>st then
    out[#out+1]={start=st,finish=en,text=unesc(f[3]),role=f[4] or "",done=(f[5]=="1"),mark=(f[6]=="1"),note=unesc(f[7]),orig=unesc(f[8]),take=tonumber(f[9] or ""),verdict=((f[10] or "")~="" and f[10]) or nil}
   end
  end
  return out
+end
+
+-- проверка настроек из ExtState, профилей и .dubproj: глубина приглушения 0..100 дБ (отрицательные значения усиливали бы звук),
+-- времена в мс 0..10000; нечисла, бесконечности и мусор отбрасываются (возвращается nil)
+SAN={max=100}
+function SAN.finite(v) return type(v)=="number" and v==v and v~=math.huge and v~=-math.huge end
+function SAN.duck(v)
+ v=tonumber(v)
+ if not SAN.finite(v) or v<0 then return nil end
+ return math.min(v,SAN.max)
+end
+function SAN.ms(v)
+ v=tonumber(v)
+ if not SAN.finite(v) or v<0 then return nil end
+ return math.min(v,10000)
 end
 
 local function save_role_duck()
@@ -2282,12 +2383,14 @@ local function load_role_duck()
  local raw=extget("role_duck","")
  for line in (raw.."\n"):gmatch("(.-)\n") do
   local r,db=line:match("^(.-)\t(.+)$")
-  if r and tonumber(db) then role_duck[r]=tonumber(db) end
+  local d=SAN.duck(db)
+  if r and d then role_duck[r]=d end
  end
 end
 
 local function save()
- reaper.SetProjExtState(0,SEC,K.subs,serialize_rows())
+ SUBRAW=serialize_rows()   -- что записали сами: по расхождению с проектом видно, что проект сменился (закрыт/открыт другой)
+ reaper.SetProjExtState(0,SEC,K.subs,SUBRAW)
  reaper.SetProjExtState(0,SEC,"subtitle_count",tostring(#rows))
  for key,val in pairs({duck=duck,pre=pre,post=post,fi=fi,fo=fo}) do reaper.SetProjExtState(0,SEC,K[key],tostring(val)) end
  reaper.SetProjExtState(0,SEC,"only_dub",only_dub and "1" or "0")
@@ -2302,9 +2405,10 @@ end
 
 local function load_saved()
  local _,raw=reaper.GetProjExtState(0,SEC,K.subs)
+ SUBRAW=raw
  rows=parse_saved(raw)
- duck=tonumber(extget(K.duck,"25")) or 25; pre=tonumber(extget(K.pre,"100")) or 100; post=tonumber(extget(K.post,"150")) or 150
- fi=tonumber(extget(K.fi,"120")) or 120; fo=tonumber(extget(K.fo,"220")) or 220
+ duck=SAN.duck(extget(K.duck,"25")) or 25; pre=SAN.ms(extget(K.pre,"100")) or 100; post=SAN.ms(extget(K.post,"150")) or 150
+ fi=SAN.ms(extget(K.fi,"120")) or 120; fo=SAN.ms(extget(K.fo,"220")) or 220
  only_dub=(extget("only_dub","0")=="1"); follow=(extget("follow_play","1")=="1")
  win_from_dub=(extget("win_from_dub","0")=="1"); preroll=tonumber(extget("preroll","3")) or 3
  frames_mode=(extget("tc_frames","0")=="1")
@@ -2431,8 +2535,9 @@ local function compute_wins()
  if win_from_dub then
   for _,it in ipairs(load_dub_items()) do intervals[#intervals+1]={start=it[1],finish=it[2],db=duck} end
  else
+  -- «только под дубляжом»: если дорожка дубляжа не назначена или на ней нет записей, окон приглушения нет
+  -- (раньше в этом случае приглушались все реплики, что противоречило выбранному режиму)
   local items=only_dub and load_dub_items() or nil
-  if items and #items==0 then items=nil end
   for _,s in ipairs(rows) do
    if (not items) or row_takes(s,items)>0 then intervals[#intervals+1]={start=s.start,finish=s.finish,db=row_db(s)} end
   end
@@ -2471,7 +2576,7 @@ local function generate_duck()
  if #wins==0 then status=T("Нет окон приглушения: на дорожке дубляжа нет звука под репликами"); return end
  local yes=reaper.ShowMessageBox(T("Создать огибающую приглушения на дорожках: ")..#ot..T(", окон: ")..#wins..T("?\n\nВНИМАНИЕ: текущие точки Volume будут заменены."),"Dubbing Prompter",1)
  if yes~=1 then return end
- reaper.Undo_BeginBlock()
+ dub_ub()
  local done=0
  for _,o in ipairs(ot) do
   local env=reaper.GetTrackEnvelopeByName(o.tr,"Volume")
@@ -2482,7 +2587,7 @@ local function generate_duck()
    -- Volume envelope may use fader scaling: convert linear gain to the envelope's own value range
    local mode=reaper.GetEnvelopeScalingMode(env)
    local top=reaper.ScaleToEnvelopeMode(mode,1)
-   local override=tonumber(extget("odb_"..o.guid,""))
+   local override=SAN.duck(extget("odb_"..o.guid,""))
    reaper.DeleteEnvelopePointRange(env,-1e9,1e9)
    if wins[1].ds>0 then reaper.InsertEnvelopePoint(env,0,top,0,0,false,true) end
    for _,w in ipairs(wins) do
@@ -2496,7 +2601,7 @@ local function generate_duck()
    reaper.Envelope_SortPoints(env); done=done+1
   end
  end
- reaper.UpdateArrange(); reaper.Undo_EndBlock("Dubbing System: generate ducking automation",-1)
+ reaper.UpdateArrange(); dub_ue("Dubbing System: generate ducking automation",-1)
  status=T("Автоматизация создана: дорожек ")..done..T(", окон ")..#wins
 end
 
@@ -2506,7 +2611,7 @@ local function edit_settings()
  if not ok then return end
  local v={}; for n in res:gmatch("[^,]+") do v[#v+1]=tonumber((n:gsub(",","."))) end
  if #v==5 and v[1] and v[2] and v[3] and v[4] and v[5] then
-  duck=math.max(0,v[1]); pre=math.max(0,v[2]); post=math.max(0,v[3]); fi=math.max(0,v[4]); fo=math.max(0,v[5])
+  duck=SAN.duck(v[1]) or 0; pre=math.max(0,v[2]); post=math.max(0,v[3]); fi=math.max(0,v[4]); fo=math.max(0,v[5])
   save(); status=T("Настройки сохранены")
  else status=T("Неверные значения настроек") end
 end
@@ -2527,7 +2632,7 @@ local function edit_role_duck()
  local f=split_csv(res)
  for i=1,n do
   local v=tonumber(((f[i] or ""):gsub(",",".")))
-  role_duck[roles[i]]=(v and v>=0) and v or nil
+  role_duck[roles[i]]=SAN.duck(v)
  end
  save(); status=T("Глубина по ролям сохранена")
 end
@@ -2542,7 +2647,7 @@ local function edit_track_duck()
  if not ok then return end
  local f=split_csv(res)
  for i=1,n do
-  local v=tonumber(((f[i] or ""):gsub(",",".")))
+  local v=SAN.duck(tonumber(((f[i] or ""):gsub(",","."))))
   reaper.SetProjExtState(0,SEC,"odb_"..ot[i].guid,v and tostring(v) or "")
  end
  status=T("Глубина по дорожкам сохранена")
@@ -2953,8 +3058,20 @@ local function cycle_best_take()
  if s.take then for i,t in ipairs(tk) do if math.abs(t.pos-s.take)<0.0005 then cur=i end end end
  local nxt=cur+1
  if nxt>#tk then nxt=0 end
+ -- исходное состояние Mute запоминаем до первого изменения и возвращаем при «лучший дубль не выбран»,
+ -- чтобы не включать дубли, которые пользователь сам отключил до использования функции
+ best_mute_orig=best_mute_orig or {}
+ local function ikey(it) local _,g=reaper.GetSetMediaItemInfo_String(it,"GUID","",false); return g end
  for i,t in ipairs(tk) do
-  reaper.SetMediaItemInfo_Value(t.item,"B_MUTE",(i==nxt) and 0 or ((nxt==0) and 0 or 1))
+  local k=ikey(t.item)
+  if best_mute_orig[k]==nil then best_mute_orig[k]=reaper.GetMediaItemInfo_Value(t.item,"B_MUTE") end
+ end
+ for i,t in ipairs(tk) do
+  local k=ikey(t.item)
+  local m
+  if nxt==0 then m=best_mute_orig[k] or 0; best_mute_orig[k]=nil
+  else m=(i==nxt) and 0 or 1 end
+  reaper.SetMediaItemInfo_Value(t.item,"B_MUTE",m)
  end
  reaper.UpdateArrange()
  if nxt==0 then s.take=nil; status=T("Лучший дубль не выбран (все дубли звучат)")
@@ -3080,13 +3197,16 @@ local function take_levels(item)
   buf.clear()
   reaper.GetAudioAccessorSamples(acc,SR,1,t,BLK,buf)
   local arr=buf.table(1,BLK)
-  for i=1,BLK do
+  -- последний блок короче BLK: считаем только сэмплы внутри аудио, нулевой «хвост» не занижает RMS
+  local n=math.min(BLK,math.floor((en-t)*SR+0.5))
+  if n<1 then break end
+  for i=1,n do
    local v=arr[i] or 0
    local a=v<0 and -v or v
    if a>peak then peak=a end
    sumsq=sumsq+v*v
   end
-  cnt=cnt+BLK
+  cnt=cnt+n
   t=t+BLK/SR
  end
  reaper.DestroyAudioAccessor(acc)
@@ -3109,8 +3229,10 @@ local function take_rms_db(item, from, to)
   buf.clear()
   reaper.GetAudioAccessorSamples(acc,SR,1,t,BLK,buf)
   local arr=buf.table(1,BLK)
-  for i=1,BLK do local v=arr[i] or 0; sumsq=sumsq+v*v end
-  cnt=cnt+BLK; t=t+BLK/SR
+  local n=math.min(BLK,math.floor((t1-t)*SR+0.5))
+  if n<1 then break end
+  for i=1,n do local v=arr[i] or 0; sumsq=sumsq+v*v end
+  cnt=cnt+n; t=t+BLK/SR
  end
  reaper.DestroyAudioAccessor(acc)
  if cnt==0 then return nil end
@@ -3236,7 +3358,13 @@ local function export_session_csv()
   local dur=s.finish-s.start
   local cps=ulen((s.text:gsub("\n","")))/math.max(dur,0.05)
   local n,over=row_takes(s,items)
-  local q=function(v) v=tostring(v or ""):gsub("[;\r\n]"," "); return v end
+  -- RFC 4180: поле с ; " или переводом строки берётся в кавычки, " удваивается; ведущие = + - @ получают апостроф (защита от формул Excel)
+  local q=function(v)
+   v=tostring(v or ""):gsub("\r\n","\n"):gsub("\r","\n")
+   if v:match("^[=+@]") or v:match("^%-%D") then v="'"..v end
+   if v:find('[;"\n]') then v='"'..v:gsub('"','""')..'"' end
+   return v
+  end
   out[#out+1]=table.concat({i,q(s.role),fmt(s.start),fmt(s.finish),num(dur),string.format("%.0f",cps),q(s.text),
     s.done and T("да") or T("нет"),n,num(math.max(0,over)),q(s.note)},";")
  end
@@ -3721,14 +3849,14 @@ function profile_load()
  role_duck={}
  for line in (data.."\n"):gmatch("(.-)\n") do
   local role,db=line:match("^role:(.-)=(.+)$")
-  if role then role_duck[role]=tonumber(db) or duck
+  if role then local d=SAN.duck(db); if d then role_duck[role]=d end
   else
    local k,v=line:match("^(%w+)=(.+)$")
    v=tonumber(v)
-   if k=="duck" and v then duck=v elseif k=="pre" and v then pre=v elseif k=="post" and v then post=v
-   elseif k=="fi" and v then fi=v elseif k=="fo" and v then fo=v elseif k=="preroll" and v then preroll=v
+   if k=="duck" and v then duck=SAN.duck(v) or duck elseif k=="pre" and v then pre=SAN.ms(v) or pre elseif k=="post" and v then post=SAN.ms(v) or post
+   elseif k=="fi" and v then fi=SAN.ms(v) or fi elseif k=="fo" and v then fo=SAN.ms(v) or fo elseif k=="preroll" and v then preroll=(SAN.finite(v) and v>=0 and v<=60) and v or preroll
    elseif k=="only_dub" then only_dub=(v==1) elseif k=="win_from_dub" then win_from_dub=(v==1)
-   elseif k=="qc_cps" and v then qc_cps=v elseif k=="qc_gap" and v then qc_gap=v elseif k=="qc_short" and v then qc_short=v
+   elseif k=="qc_cps" and SAN.finite(v) and v>0 and v<=1000 then qc_cps=v elseif k=="qc_gap" and SAN.finite(v) and v>=0 and v<=3600 then qc_gap=v elseif k=="qc_short" and SAN.finite(v) and v>=0 and v<=3600 then qc_short=v
    elseif k=="frames" then frames_mode=(v==1) end
   end
  end
@@ -3768,13 +3896,14 @@ local function import_project()
  push_undo()
  local kv={}
  for k,v in head:gmatch("([%w_]+)=([^\n]*)") do kv[k]=tonumber(v) end
- duck=kv.duck or duck; pre=kv.pre or pre; post=kv.post or post; fi=kv.fi or fi; fo=kv.fo or fo
- preroll=kv.preroll or preroll
+ duck=SAN.duck(kv.duck) or duck; pre=SAN.ms(kv.pre) or pre; post=SAN.ms(kv.post) or post; fi=SAN.ms(kv.fi) or fi; fo=SAN.ms(kv.fo) or fo
+ preroll=(SAN.finite(kv.preroll) and kv.preroll>=0 and kv.preroll<=60) and kv.preroll or preroll
  only_dub=(kv.only_dub==1); win_from_dub=(kv.win_from_dub==1)
  role_duck={}
  for line in (rd.."\n"):gmatch("(.-)\n") do
   local r,db=line:match("^(.-)\t(.+)$")
-  if r and tonumber(db) then role_duck[r]=tonumber(db) end
+  local d=SAN.duck(db)
+  if r and d then role_duck[r]=d end
  end
  rows=parse_saved(subs); selected=1; scroll=0
  save(); mark_dirty(); status=T("Проект загружен: реплик ")..#rows
@@ -3792,7 +3921,7 @@ function recolor_roles()
  if #rows==0 then return end
  local map={}
  for _,r in ipairs(rows) do map[math.floor(r.start*1000+0.5)]=r end
- reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
+ dub_ub(); dub_pur(1)
  for ti=0,reaper.CountTracks(0)-1 do
   local tr=reaper.GetTrack(0,ti)
   local _,nm=reaper.GetSetMediaTrackInfo_String(tr,"P_NAME","",false)
@@ -3813,26 +3942,121 @@ function recolor_roles()
    if r and math.abs(rend-r.finish)<0.003 then reaper.SetProjectMarker3(0,idx,true,pos,rend,name,native_col(r.role)) end
   end
  end
- reaper.PreventUIRefresh(-1); reaper.UpdateArrange(); reaper.UpdateTimeline(); reaper.Undo_EndBlock("Dubbing System: recolor roles",-1)
+ dub_pur(-1); reaper.UpdateArrange(); reaper.UpdateTimeline(); dub_ue("Dubbing System: recolor roles",-1)
+end
+
+-- ---------- реестр объектов, созданных самим Dubbing System (в проекте) ----------
+-- Регионы и дорожки удаляются только если принадлежность доказана записью в этом реестре.
+-- Регион: id + начало + конец + имя должны совпасть полностью; дорожка: по GUID.
+-- Всё хранится в Project ExtState, поэтому разные проекты друг на друга не влияют.
+function own_get(k) local _,v=reaper.GetProjExtState(0,SEC,k); return v or "" end
+function own_set(k,v) reaper.SetProjExtState(0,SEC,k,v or "") end
+function own_hash(s) local h=5381; s=tostring(s or ""):gsub("[\r\n]",""); for i=1,#s do h=(h*33+s:byte(i))%4294967296 end; return h end
+function own_rg_key(id,pos,fin,name) return string.format("%d\t%.6f\t%.6f\t%d",id,pos,fin,own_hash(name)) end
+function own_rg_set()
+ local set={}
+ for line in own_get("own_regions"):gmatch("[^\n]+") do set[line]=true end
+ return set
+end
+function own_rg_save(set)
+ local t={}
+ for k in pairs(set) do t[#t+1]=k end
+ table.sort(t); own_set("own_regions",table.concat(t,"\n"))
+end
+-- регионы проекта, принадлежность которых доказана: список {idx=индекс перечисления, key=…, text=…, pos=…, fin=…}
+function own_rg_existing()
+ local set,out=own_rg_set(),{}
+ local pre={}
+ for line in pairs(set) do local a,b,c=line:match("^(%d+)\t([^\t]+)\t([^\t]+)\t"); if a then pre[a.."\t"..b.."\t"..c]=line end end
+ local _,nm,nr=reaper.CountProjectMarkers(0)
+ for i=0,nm+nr-1 do
+  local _,isrgn,pos,fin,name,id=reaper.EnumProjectMarkers3(0,i)
+  if isrgn and id then
+   -- REAPER меняет переводы строк в имени региона при сохранении/открытии проекта: имя сравниваем без них,
+   -- старые записи узнаём по id + началу + концу
+   local k=own_rg_key(id,pos,fin,name)
+   local pk=string.format("%d\t%.6f\t%.6f",id,pos,fin)
+   local hit=(set[k] and k) or pre[pk]
+   if hit then out[#out+1]={idx=i,key=hit,text=name or "",pos=pos,fin=fin,id=id} end
+  end
+ end
+ return out
+end
+function own_rg_delete_existing()
+ local ex=own_rg_existing()
+ table.sort(ex,function(a,b) return a.idx>b.idx end)
+ local set=own_rg_set()
+ for _,e in ipairs(ex) do reaper.DeleteProjectMarkerByIndex(0,e.idx); set[e.key]=nil end
+ own_rg_save(set)
+ return #ex
+end
+function own_tr_set()
+ local set={}
+ for g in own_get("own_tracks"):gmatch("[^\n]+") do set[g]=true end
+ return set
+end
+function own_tr_add(tr)
+ local g=track_guid(tr); if g=="" then return end
+ local set=own_tr_set(); set[g]=true
+ local t={}; for k in pairs(set) do t[#t+1]=k end
+ table.sort(t); own_set("own_tracks",table.concat(t,"\n"))
+end
+function own_tr_existing()
+ local set,out=own_tr_set(),{}
+ for i=0,reaper.CountTracks(0)-1 do
+  local tr=reaper.GetTrack(0,i)
+  if set[track_guid(tr)] then out[#out+1]=tr end
+ end
+ return out
+end
+-- позиция дорожки с текстовыми итемами запоминается (Project ExtState) и используется при повторном создании
+function own_tr_pos_save()
+ local own=own_tr_set(); local pos
+ for i=0,reaper.CountTracks(0)-1 do
+  if own[track_guid(reaper.GetTrack(0,i))] then pos=i; break end
+ end
+ if pos and tostring(pos)~=own_get("tr_pos") then own_set("tr_pos",tostring(pos)) end
+end
+function own_tr_pos_get()
+ local v=tonumber(own_get("tr_pos"))
+ if not v or v<0 then return nil end
+ return math.min(math.floor(v),reaper.CountTracks(0))
+end
+-- отложенное восстановление: флаги хранятся в проекте, а не глобально
+function own_flag_set(rg,tk)
+ own_set("restore_regions",rg and "1" or "0"); own_set("restore_items",tk and "1" or "0")
 end
 
 local function to_regions(silent)
  if #rows==0 then status=T("Нет субтитров"); return end
  if not silent and reaper.ShowMessageBox(T("Создать ")..#rows..T(" регионов из субтитров?\n(существующие регионы не удаляются)"),"Dubbing Prompter",1)~=1 then return end
- reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
- for _,s in ipairs(rows) do reaper.AddProjectMarker2(0,true,s.start,s.finish,s.text,-1,native_col(s.role)) end
- reaper.PreventUIRefresh(-1); reaper.UpdateTimeline(); reaper.Undo_EndBlock("Dubbing System: subtitles to regions",-1)
- status=T("Создано регионов: ")..#rows
+ dub_ub(); dub_pur(1)
+ -- повторный запуск не плодит дубликаты: пропускаем реплики, для которых уже есть свой регион
+ local have={}
+ for _,e in ipairs(own_rg_existing()) do have[e.text:gsub("[\r\n]","").."|"..string.format("%.6f|%.6f",e.pos,e.fin)]=true end
+ local set,made=own_rg_set(),0
+ for _,s in ipairs(rows) do
+  if not have[(s.text or ""):gsub("[\r\n]","").."|"..string.format("%.6f|%.6f",s.start,s.finish)] then
+   local id=reaper.AddProjectMarker2(0,true,s.start,s.finish,s.text,-1,native_col(s.role))
+   if id and id>=0 then
+    set[own_rg_key(id,s.start,s.finish,s.text)]=true; made=made+1
+   end
+  end
+ end
+ own_rg_save(set)
+ dub_pur(-1); reaper.UpdateTimeline(); dub_ue("Dubbing System: subtitles to regions",-1)
+ status=T("Создано регионов: ")..made
 end
 
 local function to_items(silent)
  if #rows==0 then status=T("Нет субтитров"); return end
  if not silent and reaper.ShowMessageBox(T("Создать новую дорожку с ")..#rows..T(" текстовыми итемами?"),"Dubbing Prompter",1)~=1 then return end
- reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
- local idx=reaper.CountTracks(0)
+ dub_ub(); dub_pur(1)
+ local idx=own_tr_pos_get() or reaper.CountTracks(0)   -- та же позиция, что была раньше (если известна)
  reaper.InsertTrackAtIndex(idx,true)
  local tr=reaper.GetTrack(0,idx)
  reaper.GetSetMediaTrackInfo_String(tr,"P_NAME","Dubbing Subtitles (text items)",true)
+ own_tr_add(tr)
  for _,s in ipairs(rows) do
   local it=reaper.AddMediaItemToTrack(tr)
   reaper.SetMediaItemInfo_Value(it,"D_POSITION",s.start)
@@ -3840,7 +4064,7 @@ local function to_items(silent)
   reaper.GetSetMediaItemInfo_String(it,"P_NOTES",s.text,true)
   local c=native_col(s.role); if c~=0 then reaper.SetMediaItemInfo_Value(it,"I_CUSTOMCOLOR",c) end
  end
- reaper.PreventUIRefresh(-1); reaper.UpdateArrange(); reaper.Undo_EndBlock("Dubbing System: subtitles to text items",-1)
+ dub_pur(-1); reaper.UpdateArrange(); dub_ue("Dubbing System: subtitles to text items",-1)
  status=T("Создана дорожка с итемами: ")..#rows
 end
 
@@ -4459,7 +4683,7 @@ function create_anime_mix()
  if anime_mix_exists() then status=T("Структура сведения аниме уже есть в проекте, дубль не создан"); return end
  local base=reaper.CountTracks(0)
  local specs=anime_specs()
- reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
+ dub_ub(); dub_pur(1)
  local tracks={}
  local missing={}
  for k,sp in ipairs(specs) do
@@ -4479,8 +4703,8 @@ function create_anime_mix()
   reaper.CreateTrackSend(eff_v,EFF_ALL)
  end
  reaper.CreateTrackSend(EFF_ALL,VOICE_ALL)
- reaper.PreventUIRefresh(-1); reaper.TrackList_AdjustWindows(false)
- reaper.Undo_EndBlock("Dubbing System: anime mix",-1)
+ dub_pur(-1); reaper.TrackList_AdjustWindows(false)
+ dub_ue("Dubbing System: anime mix",-1)
  wins_dirty=true
  if #missing>0 then status=T("Сведение аниме создано, цепочка не записана у: ")..table.concat(missing,", ")
  else status=T("Сведение аниме создано: 20 дорожек, роутинг и цепочки из проекта") end
@@ -4488,7 +4712,7 @@ end
 
 function create_dub_track()
  local idx=reaper.CountTracks(0)
- reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
+ dub_ub(); dub_pur(1)
  reaper.InsertTrackAtIndex(idx,true)
  local tr=reaper.GetTrack(0,idx)
  reaper.GetSetMediaTrackInfo_String(tr,"P_NAME",T("Дубляж"),true)
@@ -4502,8 +4726,8 @@ function create_dub_track()
   end
  end
  reaper.SetProjExtState(0,SEC,K.dub,track_guid(tr))
- reaper.PreventUIRefresh(-1); reaper.TrackList_AdjustWindows(false)
- reaper.Undo_EndBlock("Dubbing System: dub track",-1)
+ dub_pur(-1); reaper.TrackList_AdjustWindows(false)
+ dub_ue("Dubbing System: dub track",-1)
  wins_dirty=true; dub_time=-10
  if from_tpl then status=T("Дорожка дубляжа создана, цепочка из шаблона со всеми настройками")
  elseif #missing>0 then status=T("Дорожка создана, плагины не найдены: ")..table.concat(missing,", ")
@@ -4512,11 +4736,34 @@ function create_dub_track()
 end
 
 -- эффекты дорожки дубляжа выключены во время записи и включаются после неё
+-- Перед записью запоминаем исходное состояние: общий переключатель FX дорожки и каждый плагин отдельно.
+-- После записи возвращаем именно его, а не «включить всё»: плагины, которые пользователь сам отключил, остаются отключёнными.
+dub_fx_saved=nil
 function set_dub_fx(on)
  local tr=find_track(extget(K.dub,""))
- if not tr then return end
- reaper.SetMediaTrackInfo_Value(tr,"I_FXEN",on and 1 or 0) -- кнопка FX/питание в заголовке дорожки
- for i=0,reaper.TrackFX_GetCount(tr)-1 do reaper.TrackFX_SetEnabled(tr,i,on) end
+ if not tr then dub_fx_saved=nil; return end
+ if not on then
+  if not dub_fx_saved then
+   local s={guid=track_guid(tr),fxen=reaper.GetMediaTrackInfo_Value(tr,"I_FXEN"),fx={}}
+   for i=0,reaper.TrackFX_GetCount(tr)-1 do s.fx[i]=reaper.TrackFX_GetEnabled(tr,i) end
+   dub_fx_saved=s
+  end
+  reaper.SetMediaTrackInfo_Value(tr,"I_FXEN",0) -- кнопка FX/питание в заголовке дорожки
+  for i=0,reaper.TrackFX_GetCount(tr)-1 do reaper.TrackFX_SetEnabled(tr,i,false) end
+ else
+  local s=dub_fx_saved
+  if s and s.guid==track_guid(tr) then
+   for i=0,reaper.TrackFX_GetCount(tr)-1 do
+    local was=s.fx[i]; if was==nil then was=true end -- плагин, добавленный во время записи, оставляем включённым
+    reaper.TrackFX_SetEnabled(tr,i,was)
+   end
+   reaper.SetMediaTrackInfo_Value(tr,"I_FXEN",s.fxen)
+  elseif not s then
+   -- состояние не запомнено (запись началась до запуска скрипта): ничего не меняем кроме общего переключателя
+   reaper.SetMediaTrackInfo_Value(tr,"I_FXEN",1)
+  end
+  dub_fx_saved=nil
+ end
 end
 function dub_rec_guard()
  local rec=(reaper.GetPlayState()&4)~=0
@@ -4534,25 +4781,17 @@ function dub_clean_on_close()
  dub_cleaned=true
  if reaper.GetExtState("DubbingPrompter","clean_on_close")=="0" then return end
  if not rows or #rows==0 then return end
- local want={}
- for _,r in ipairs(rows) do want[(r.text or "").."|"..string.format("%.2f",r.start or 0)]=true end
- reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
- local n,rg,tk=0,0,0
- local _,nm,nr=reaper.CountProjectMarkers(0)
- for i=nm+nr-1,0,-1 do
-  local _,isrgn,pos,_,name,idx=reaper.EnumProjectMarkers3(0,i)
-  if isrgn and want[(name or "").."|"..string.format("%.2f",pos)] then reaper.DeleteProjectMarkerByIndex(0,i); n=n+1; rg=rg+1 end
- end
- for i=reaper.CountTracks(0)-1,0,-1 do
-  local tr=reaper.GetTrack(0,i)
-  local _,tn=reaper.GetSetMediaTrackInfo_String(tr,"P_NAME","",false)
-  if tn=="Dubbing Subtitles (text items)" then reaper.DeleteTrack(tr); n=n+1; tk=tk+1 end
- end
- reaper.PreventUIRefresh(-1); reaper.UpdateArrange(); reaper.UpdateTimeline()
- reaper.Undo_EndBlock(T("Dubbing System: убрать регионы и итемы субтитров"),-1)
- -- запоминаем, что было, чтобы вернуть при следующем открытии суфлёра
- reaper.SetExtState("DubbingPrompter","restore_regions",rg>0 and "1" or "0",true)
- reaper.SetExtState("DubbingPrompter","restore_items",tk>0 and "1" or "0",true)
+ -- удаляем ТОЛЬКО то, что создал сам Dubbing System (реестр в проекте); если принадлежность не доказана, объект остаётся
+ own_tr_pos_save()
+ dub_ub(); dub_pur(1)
+ local rg=own_rg_delete_existing()
+ local tk=0
+ local own=own_tr_existing()
+ for i=#own,1,-1 do reaper.DeleteTrack(own[i]); tk=tk+1 end
+ dub_pur(-1); reaper.UpdateArrange(); reaper.UpdateTimeline()
+ dub_ue(T("Dubbing System: убрать регионы и итемы субтитров"),-1)
+ -- запоминаем, что было, чтобы вернуть при следующем открытии суфлёра (флаги хранятся в этом проекте)
+ own_flag_set(rg>0,tk>0)
 end
 function quit_loop()
  dub_clean_on_close()
@@ -4672,38 +4911,54 @@ function clear_session()
 end
 
 -- deletes the subtitles from the prompter AND from the project: regions made from them and the text-item track
-function delete_subs_everywhere()
- local want,n_rows={}, #rows
- for _,r in ipairs(rows) do want[(r.text or "").."|"..string.format("%.2f",r.start or 0)]=true end
- local trk={}
- for i=0,reaper.CountTracks(0)-1 do
-  local tr=reaper.GetTrack(0,i)
-  local _,tn=reaper.GetSetMediaTrackInfo_String(tr,"P_NAME","",false)
-  if tn=="Dubbing Subtitles (text items)" then trk[#trk+1]=tr end
- end
- local n_rg=0
+-- объекты старых версий (их нет в реестре): регион с тем же текстом, началом и концом, что у реплики, и дорожка с таким же именем.
+-- Автоматически не удаляются: только после явного подтверждения пользователя.
+function own_legacy_find()
+ local rg,tk={}, {}
+ local want={}
+ for _,r in ipairs(rows) do want[(r.text or "").."|"..string.format("%.2f|%.2f",r.start or 0,r.finish or 0)]=true end
+ local own=own_rg_set()
  local _,nm,nr=reaper.CountProjectMarkers(0)
  for i=0,nm+nr-1 do
-  local _,isrgn,pos,_,name=reaper.EnumProjectMarkers3(0,i)
-  if isrgn and want[(name or "").."|"..string.format("%.2f",pos)] then n_rg=n_rg+1 end
+  local _,isrgn,pos,fin,name,id=reaper.EnumProjectMarkers3(0,i)
+  if isrgn and not own[own_rg_key(id,pos,fin,name)] and want[(name or "").."|"..string.format("%.2f|%.2f",pos,fin)] then rg[#rg+1]={idx=i} end
  end
+ local ownt=own_tr_set()
+ for i=0,reaper.CountTracks(0)-1 do
+  local t=reaper.GetTrack(0,i)
+  local _,tn=reaper.GetSetMediaTrackInfo_String(t,"P_NAME","",false)
+  if tn=="Dubbing Subtitles (text items)" and not ownt[track_guid(t)] then tk[#tk+1]=t end
+ end
+ return rg,tk
+end
+
+function delete_subs_everywhere()
+ local n_rows=#rows
+ -- только объекты, созданные самим Dubbing System (реестр в проекте)
+ local trk=own_tr_existing()
+ local n_rg=#own_rg_existing()
  if n_rows==0 and n_rg==0 and #trk==0 then status=T("Субтитров, регионов и итемов нет"); return end
  local msg=T("Удалить субтитры, регионы и итемы?\n\nРеплик в суфлёре: ")..n_rows..T("\nРегионов: ")..n_rg..T("\nДорожек с текстовыми итемами: ")..#trk..T("\n\nМожно отменить через Ctrl+Z.")
  if reaper.ShowMessageBox(msg,T("Dubbing Prompter — удалить субтитры"),4)~=6 then status=T("Удаление отменено"); return end
- push_undo()
- reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
- _,nm,nr=reaper.CountProjectMarkers(0)
- for i=nm+nr-1,0,-1 do
-  local _,isrgn,pos,_,name=reaper.EnumProjectMarkers3(0,i)
-  if isrgn and want[(name or "").."|"..string.format("%.2f",pos)] then reaper.DeleteProjectMarkerByIndex(0,i) end
+ -- объекты, созданные старыми версиями: удаляем только если пользователь подтвердил
+ local lrg,ltk=own_legacy_find()
+ local del_legacy=false
+ if #lrg>0 or #ltk>0 then
+  del_legacy=(reaper.ShowMessageBox(T("Найдены объекты, созданные старой версией скрипта: регионов ")..#lrg..T(", дорожек ")..#ltk..T(".\nОни совпадают с репликами по имени и времени, но скрипт не может доказать, что их создал он.\n\nУдалить их тоже? Если это ваши собственные объекты, нажмите «Нет»."),T("Dubbing Prompter — старые объекты"),4)==6)
  end
+ push_undo()
+ dub_ub(); dub_pur(1)
+ own_rg_delete_existing()
  for i=#trk,1,-1 do reaper.DeleteTrack(trk[i]) end
- reaper.PreventUIRefresh(-1); reaper.UpdateArrange(); reaper.UpdateTimeline()
- reaper.Undo_EndBlock(T("Dubbing System: удалить субтитры, регионы и итемы"),-1)
+ if del_legacy then
+  for i=#lrg,1,-1 do reaper.DeleteProjectMarkerByIndex(0,lrg[i].idx) end
+  for i=#ltk,1,-1 do reaper.DeleteTrack(ltk[i]) end
+ end
+ dub_pur(-1); reaper.UpdateArrange(); reaper.UpdateTimeline()
+ dub_ue(T("Dubbing System: удалить субтитры, регионы и итемы"),-1)
  rows={}; selected=1; scroll=0; search=""; role_filter=""; status_filter=""
  vis={}; roles={}; role_idx={}
- reaper.SetExtState("DubbingPrompter","restore_regions","0",true)
- reaper.SetExtState("DubbingPrompter","restore_items","0",true)
+ own_flag_set(false,false)
  save(); mark_dirty(); rebuild_vis()
  status=T("Удалено: реплик ")..n_rows..T(", регионов ")..n_rg..T(", дорожек ")..#trk
 end
@@ -4741,9 +4996,9 @@ function ff_tool(name)
 end
 -- runs a command and returns its output. ExecProcess passes Unicode paths (Cyrillic folders)
 -- correctly; io.popen (cmd.exe) mangles them, so it is only a fallback
-function ff_capture(cmd)
+function ff_capture(cmd,tmo)
  if reaper.ExecProcess then
-  local ok,out=pcall(reaper.ExecProcess,cmd,60000)
+  local ok,out=pcall(reaper.ExecProcess,cmd,tmo or 60000)
   if ok and type(out)=="string" then return out end
  end
  local ok,p=pcall(io.popen,cmd.." 2>&1")
@@ -4752,7 +5007,7 @@ function ff_capture(cmd)
 end
 -- subtitle streams of the file: {index, codec, lang, title, default}
 function probe_subs(video)
- local out=ff_capture(ff_tool("ffprobe").." -v error -select_streams s -show_entries stream=index,codec_name:stream_tags=language,title:stream_disposition=default -of flat "..ffq(video))
+ local out=ff_capture(ff_tool("ffprobe").." -v error -select_streams s -show_entries stream=index,codec_name:stream_tags=language,title:stream_disposition=default -of flat "..ffq(video),20000)
  out=out or ""
  if not out:find("streams%.stream") then
   if out:find("not recognized") or out:find("not found") or out:find("не является") then return nil,T("Нужен ffprobe: положи ffmpeg.exe и ffprobe.exe в папку Scripts\\Dubbing System") end
@@ -4813,13 +5068,19 @@ function import_from_video(video,auto)
  -- ASS/SSA-дорожку забираем как .ass без конвертации: так сохраняются роли (поле Actor и стиль).
  -- Через -c:s srt роли терялись, остальные форматы по-прежнему идут в srt.
  local isass=(t.codec=="ass" or t.codec=="ssa")
- local outp=pp.."/Dubbing_subs_"..(t.lang~="" and t.lang or ("track"..t.index))..(isass and ".ass" or ".srt")
- os.remove(outp)
- ff_capture(ff_tool("ffmpeg").." -v error -y -i "..ffq(video).." -map 0:"..t.index.." -c:s "..(isass and "ass" or "srt").." "..ffq(outp))
- local f=io.open(outp,"rb")
+ -- тег языка/номер дорожки идут в имя файла: оставляем только буквы, цифры, «_» и «-», длина ограничена
+ local tag=(t.lang~="" and t.lang or ("track"..tostring(t.index))):gsub("[^%w_%-]","_"):sub(1,16)
+ if tag=="" then tag="track" end
+ local outp=pp.."/Dubbing_subs_"..tag..(isass and ".ass" or ".srt")
+ local tmpp=outp..".part"
+ os.remove(tmpp)   -- только наш временный файл; результат прошлого импорта заменяется лишь после успешного извлечения
+ ff_capture(ff_tool("ffmpeg").." -v error -y -i "..ffq(video).." -map 0:"..tonumber(t.index).." -f "..(isass and "ass" or "srt").." "..ffq(tmpp))
+ local f=io.open(tmpp,"rb")
  if not f then status=T("ffmpeg не смог извлечь дорожку (проверь, что ffmpeg.exe на месте)"); return end
  local size=f:seek("end"); f:close()
- if not size or size==0 then status=T("ffmpeg создал пустой файл: дорожка не извлечена"); return end
+ if not size or size==0 then os.remove(tmpp); status=T("ffmpeg создал пустой файл: дорожка не извлечена"); return end
+ os.remove(outp)
+ if not os.rename(tmpp,outp) then os.remove(tmpp); status=T("Не удалось сохранить извлечённые субтитры в папку проекта"); return end
  load_subs_path(outp,T("Из видео, дорожка ")..t.index.." ("..(t.lang~="" and t.lang or "?")..")")
 end
 
@@ -4840,13 +5101,13 @@ end
 -- Prompter кладёт prompter.html с репликами в <папка ресурсов REAPER>/reaper_www_root.
 -- Страница сама читает позицию с http://IP:ПОРТ/_/TRANSPORT. Всё в одной таблице Mobile,
 -- чтобы не тратить локальные переменные главного блока (лимит Lua: 200).
-Mobile={on=false,last=0,sport=8765,dir="",cfgSig=nil,sig=nil,voff=0,vname="",vpath="",vlen=0,enc=nil,ver="",url=nil,roles=true}
+Mobile={token="",on=false,last=0,sport=8765,dir="",cfgSig=nil,sig=nil,voff=0,vname="",vpath="",vlen=0,enc=nil,ver="",url=nil,roles=true}
 Mobile.TEMPLATE=[==[<!doctype html>
 <html lang="ru" id="html"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0f141c">
 <title>Суфлёр</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- шрифты берутся из системы (без загрузки с внешних серверов): страница работает офлайн и не передаёт IP телефона третьим лицам -->
 <!--VER:@@VER@@-->
 <style>
 :root{color-scheme:dark;--fs:1;--bg:#0b0d12;--tx:#8b93a1;--cur:#3a3d44}
@@ -4950,9 +5211,9 @@ body.single .cue.nb .t{display:inline}
 .cue .r{display:inline-block;padding:2px 9px;border:1px solid currentColor;border-radius:99px;font:600 .66em var(--cond);letter-spacing:.14em;margin-bottom:6px;text-transform:uppercase;opacity:.95}
 body.single .cue.cur .r{display:block;width:max-content;max-width:100%;margin:0 auto 1.1em;font-size:.24em;padding:.25em .9em}
 body:not(.single) .cue .r{display:block;width:max-content}
-body.single .cue.cur.oth{opacity:.5}
-body.my:not(.single) .cue.oth:not(.cur){display:none}
-body.my:not(.single) .cue.oth.cur{opacity:.5}
+body.single .cue.cur.oth{visibility:hidden}
+body.wait #list{visibility:hidden}
+body.my:not(.single) .cue.oth{display:none}
 body.single .cue.cur .t{text-shadow:0 2px 24px rgba(76,92,255,.25)}
 #hud{position:fixed;left:0;right:0;bottom:46px;z-index:40;display:none;align-items:center;gap:12px;padding:0 20px;font:600 14px var(--cond);letter-spacing:.08em;color:#8a94a6;pointer-events:none}
 #hud b{font-weight:600;min-width:52px;font-variant-numeric:tabular-nums}#hud #h2{text-align:right}
@@ -4960,12 +5221,23 @@ body.single .cue.cur .t{text-shadow:0 2px 24px rgba(76,92,255,.25)}
 #hud .pb i{display:block;height:100%;width:0;background:#4c5cff;transition:width .08s linear}
 body.single #hud{display:flex}
 body.showbar #hud{bottom:122px}
-#hint{position:fixed;left:0;right:0;bottom:70px;z-index:40;text-align:center;font:600 13px "Golos Text",system-ui,sans-serif;color:#7aa8ff;pointer-events:none;min-height:1em}
-body.showbar #hint{bottom:146px}
+#hint{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:40;text-align:center;font:600 13px "Golos Text",system-ui,sans-serif;color:#7aa8ff;pointer-events:none;min-height:1em}
+body.showbar #hint{bottom:calc(134px + env(safe-area-inset-bottom,0px))}
 #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:60;background:rgba(20,26,40,.95);border:1px solid #2c3544;color:#e6edf3;padding:8px 16px;border-radius:99px;font:600 14px "Golos Text",system-ui,sans-serif;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 @media(orientation:landscape){body.hasvid #hud,body.hasvid #hint{left:56%}}
 body.single .cue.cur{background:none}
 #dots button.tx#d6{font-size:17px;opacity:.8}
+#rp{position:fixed;left:0;right:0;top:0;bottom:0;z-index:200;background:rgba(5,8,12,.78);display:none;align-items:flex-end;justify-content:center}
+#rp.on{display:flex}
+#rp .sh{width:100%;max-width:520px;max-height:78%;overflow-y:auto;background:#12171f;border-radius:18px 18px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(0,0,0,.6)}
+#rp h3{margin:0 0 10px;font:700 16px system-ui,sans-serif;color:#e6edf3}
+#rp button{display:flex;width:100%;justify-content:space-between;align-items:center;min-height:48px;margin:0 0 8px;padding:0 16px;border:1px solid #2c3544;border-radius:12px;background:#1b2330;color:#e6edf3;font:600 17px system-ui,sans-serif;text-align:left}
+#rp button.cur{background:#3446e0;border-color:#5b6cff}
+#rp button.tk{opacity:.45}
+#rp small{font-weight:500;color:#9aa6b8;margin-left:10px}
+#d7{display:none!important}
+#dots button#d7{font-size:30px;line-height:1;font-weight:700;color:#e6edf3;opacity:.95;margin-left:10px;margin-right:-8px;padding-bottom:3px}
+@media(max-width:400px){#dots{gap:2px}#dots button{width:38px}}
 #dots button#dm,#dots button#dp{width:52px;height:38px;margin:0 2px;font:700 17px "Golos Text",system-ui,sans-serif;color:#e6edf3;opacity:.95;background:#1b2330;border:1px solid #2c3544;border-radius:10px}
 #dots button#dm:active,#dots button#dp:active{background:#2c3a52}
 @media(min-width:800px){body.single .cue.cur{font-size:calc(5.2rem*var(--fs))!important}body.hasvid.single .cue.cur{font-size:calc(3.6rem*var(--fs))!important}}
@@ -4976,6 +5248,22 @@ body.hasvid #bar button{height:46px}
 body.hasvid.showbar #dots{bottom:92px}
 body.hasvid #list{padding-bottom:10px}
 }
+/* узкие экраны: таймер не налезает на кнопки, кружки на мягкой подложке */
+#dot,#tm{flex:none}
+/* кнопка «Роли» должна скрывать метки ролей во всех режимах */
+body.noroles .cue .r{display:none!important}
+/* подсказка «Твоя реплика через …» — на тёмной плашке, чтобы не сливалась с текстом реплик */
+#hint,body.showbar #hint{bottom:max(calc(58px + env(safe-area-inset-bottom,0px)),calc(var(--db,0px) + 8px))}
+#hint:not(:empty){width:max-content;max-width:92%;margin:0 auto;padding:6px 16px;background:rgba(15,20,28,.96);border:1px solid #2c3544;border-radius:99px;box-shadow:0 2px 14px rgba(0,0,0,.5)}
+/* выбрана роль: подсказка «Твоя реплика через…» и кружки больше не лежат поверх текста — список заканчивается выше них */
+@media(orientation:portrait){
+body:not(.single) #list{margin-bottom:calc(98px + env(safe-area-inset-bottom))}
+body.showbar:not(.single) #list{margin-bottom:94px}
+}
+#tm{white-space:nowrap}
+@media(max-width:430px){#top{gap:3px;padding:0 6px}.tb{padding:0 2px}#tm{font-size:15px;min-width:0;letter-spacing:0}}
+#top>*{flex-shrink:0}
+#dots{background:linear-gradient(to bottom,rgba(15,20,28,0),rgba(15,20,28,.92) 60%)}
 </style></head><body>
 <div id="vwrap"><video id="vid" muted playsinline preload="auto"></video>
 <div id="vph"><div id="vmsg">Видео не выбрано</div><button id="pcv" style="display:none">Повторить</button><button id="pick">Выбрать файл на телефоне</button></div>
@@ -4986,7 +5274,7 @@ body.hasvid #list{padding-bottom:10px}
 <button class="tb" id="rl" title="Имена ролей">Роли</button><button class="tb" id="vw" title="Одна реплика / список">▭</button><button class="tb" id="vb" title="Видео">🎬</button><button class="tb" id="bt" title="Кнопки Назад / Следующая">◀▶</button><button class="tb" id="fm">A−</button><button class="tb" id="fp">A+</button><button class="tb" id="lk">🔒</button></div>
 <div id="diag"></div>
 <div id="list"></div>
-<div id="hint"></div><div id="hud"><b id="h1">00:00.0</b><span class="pb"><i id="hp"></i></span><b id="h2"></b></div><div id="toast"></div>
+<div id="hint"></div><div id="hud"><b id="h1">00:00.0</b><span class="pb"><i id="hp"></i></span><b id="h2"></b></div><div id="toast"></div><div id="rp"><div class="sh" id="rps"></div></div>
 <div id="bar"><button id="pv">◀ Назад</button><button id="nx">Следующая ▶</button></div>
 <script>
 "use strict";
@@ -4997,24 +5285,25 @@ var ROLES=/*@@ROLES@@*/true;
 var LANGP=/*@@LANG@@*/"ru";
 var CLIPS=/*@@CLIPS@@*/[];
 var VSRC=/*@@VSRC@@*/"";
+var VTOK=/*@@VTOK@@*/"";
 var vbase="",vtag="";
 var VURL=/*@@VURL@@*/"";
 var $=function(s){return document.querySelector(s)};
-var I18={"en": {"Суфлёр": "Prompter", "Видео не выбрано": "No video selected", "Повторить": "Retry", "Выбрать файл на телефоне": "Choose a file on the phone", "Звук": "Sound", "Другой файл": "Another file", "Сдвиг видео, мс": "Video offset, ms", "Имена ролей": "Role names", "Роли": "Roles", "Одна реплика / список": "One line / list", "Видео": "Video", "Кнопки Назад / Следующая": "Back / Next buttons", "◀ Назад": "◀ Back", "Следующая ▶": "Next ▶", "Нет видео в этой точке проекта": "No video at this point of the project", "Для клипа «": "No copy for clip “", "» нет копии": "”", " · клип ": " · clip ", "в файле нет звука": "no sound in the file", "формат звука ": "sound format ", " может не играть на телефоне": " may not play on the phone", " · нажмите 🔊": " · tap 🔊", "сервер · копия": "server · copy", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\nOn the PC: Prompter → “Prompter: video server”.", "сервер": "server", "Сервер ответил без видео.": "The server replied without video.", "Сервер видео не найден (": "Video server not found (", "копия": "copy", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "No video copy on the PC (404). In Prompter choose “Prompter: video for phone”.", "Копия видео недоступна (HTTP ": "Video copy unavailable (HTTP ", "копия · в памяти": "copy · in memory", "копия: ": "copy: ", " МБ": " MB", "Не удалось получить копию видео с ПК.": "Could not get the video copy from the PC.", "В проекте нет видео": "No video in the project", "Видео проекта: ": "Project video: ", "звук не воспроизводится (формат не поддерживается телефоном)": "sound does not play (format not supported by the phone)", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "No lines. In Dubbing Prompter import subtitles and choose “Prompter on phone” again.", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "The page was opened as a file. Open it via the REAPER address, e.g. http://IP:8080/prompter.html", "Нет связи с REAPER (": "No connection to REAPER (", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "). Check: 1) REAPER is running, 2) the web interface is on (Preferences → Control/OSC/web → Web browser interface), 3) the port in the address matches the port in settings, 4) phone and PC are on the same Wi-Fi network, 5) Windows Firewall allows reaper.exe on private networks.", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER responds, but the /_/TRANSPORT command was not found (HTTP 404). The web interface setting must be “Web browser interface”, not OSC.", "REAPER требует пароль (HTTP ": "REAPER requires a password (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "). Remove the web interface password in REAPER settings.", "REAPER ответил, но не в ожидаемом формате: ": "REAPER replied, but not in the expected format: ", "Ошибка: ": "Error: ", "файл": "file", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "The phone could not play the original file (format or codec). Make a light copy: Prompter → “Prompter: video for phone”.", "Сервер видео недоступен.": "The video server is unavailable.", "Телефон не смог воспроизвести копию видео (HTTP ": "The phone could not play the video copy (HTTP ", "Нет связи с ПК для получения копии видео.": "No connection to the PC to get the video copy.", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "Could not play the video. An mp4 (H.264) or webm is needed.", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\nOn the PC: Prompter → “Prompter: video server” (original, no copies). Or choose a file on the phone.", "Список": "List", "Назад / Следующая": "Back / Next", "Верхняя строка": "Top bar", "Меньше": "Smaller", "Больше": "Larger", "Все роли": "All roles", "Моя роль": "My role", "Твоя реплика": "Your line", "Твоя реплика через ": "Your line in ", " с": " s"}, "ja": {"Суфлёр": "プロンプター", "Видео не выбрано": "動画が選択されていません", "Повторить": "再試行", "Выбрать файл на телефоне": "スマホ内のファイルを選ぶ", "Звук": "音声", "Другой файл": "別のファイル", "Сдвиг видео, мс": "動画のずれ (ms)", "Имена ролей": "役名", "Роли": "役", "Одна реплика / список": "1セリフ / 一覧", "Видео": "動画", "Кнопки Назад / Следующая": "戻る / 次へボタン", "◀ Назад": "◀ 戻る", "Следующая ▶": "次へ ▶", "Нет видео в этой точке проекта": "プロジェクトのこの位置に動画がありません", "Для клипа «": "クリップ「", "» нет копии": "」のコピーがありません", " · клип ": " · クリップ ", "в файле нет звука": "ファイルに音声がありません", "формат звука ": "音声形式 ", " может не играть на телефоне": " はスマホで再生できない場合があります", " · нажмите 🔊": " · 🔊 をタップ", "сервер · копия": "サーバー · コピー", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\nPCで: Prompter →「プロンプター: 動画サーバー」。", "сервер": "サーバー", "Сервер ответил без видео.": "サーバーから動画が返されませんでした。", "Сервер видео не найден (": "動画サーバーが見つかりません (", "копия": "コピー", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "PCに動画のコピーがありません (404)。Prompter で「プロンプター: スマホ用動画」を選んでください。", "Копия видео недоступна (HTTP ": "動画コピーを利用できません (HTTP ", "копия · в памяти": "コピー · メモリ内", "копия: ": "コピー: ", " МБ": " MB", "Не удалось получить копию видео с ПК.": "PCから動画のコピーを取得できませんでした。", "В проекте нет видео": "プロジェクトに動画がありません", "Видео проекта: ": "プロジェクトの動画: ", "звук не воспроизводится (формат не поддерживается телефоном)": "音声が再生されません (スマホ非対応の形式)", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "セリフがありません。Dubbing Prompter で字幕をインポートし、もう一度「スマホ用プロンプター」を選んでください。", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "ページがファイルとして開かれています。REAPER のアドレス (例: http://IP:8080/prompter.html) で開いてください。", "Нет связи с REAPER (": "REAPER に接続できません (", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "）。確認してください: 1) REAPER が起動している、2) Web インターフェースが有効 (Preferences → Control/OSC/web → Web browser interface)、3) アドレスのポートが設定と一致している、4) スマホと PC が同じ Wi-Fi にある、5) Windows ファイアウォールがプライベートネットワークで reaper.exe を許可している。", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER は応答しますが、/_/TRANSPORT コマンドが見つかりません (HTTP 404)。Web インターフェースの設定は OSC ではなく「Web browser interface」にしてください。", "REAPER требует пароль (HTTP ": "REAPER がパスワードを要求しています (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "）。REAPER の設定で Web インターフェースのパスワードを外してください。", "REAPER ответил, но не в ожидаемом формате: ": "REAPER は応答しましたが、想定外の形式です: ", "Ошибка: ": "エラー: ", "файл": "ファイル", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "スマホで元のファイルを再生できませんでした (形式またはコーデック)。軽量コピーを作成してください: Prompter →「プロンプター: スマホ用動画」。", "Сервер видео недоступен.": "動画サーバーを利用できません。", "Телефон не смог воспроизвести копию видео (HTTP ": "スマホで動画コピーを再生できませんでした (HTTP ", "Нет связи с ПК для получения копии видео.": "動画コピーを取得するための PC との接続がありません。", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "動画を再生できませんでした。mp4 (H.264) または webm が必要です。", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\nPCで: Prompter →「プロンプター: 動画サーバー」(コピーなしの元動画)。またはスマホ内のファイルを選んでください。", "Список": "一覧", "Назад / Следующая": "戻る / 次へ", "Верхняя строка": "上部バー", "Меньше": "小さく", "Больше": "大きく", "Все роли": "全役", "Моя роль": "自分の役", "Твоя реплика": "あなたのセリフ", "Твоя реплика через ": "あなたのセリフまで ", " с": " 秒"}, "zh": {"Суфлёр": "提词器", "Видео не выбрано": "未选择视频", "Повторить": "重试", "Выбрать файл на телефоне": "在手机上选择文件", "Звук": "声音", "Другой файл": "其他文件", "Сдвиг видео, мс": "视频偏移（毫秒）", "Имена ролей": "角色名", "Роли": "角色", "Одна реплика / список": "单句 / 列表", "Видео": "视频", "Кнопки Назад / Следующая": "上一句 / 下一句按钮", "◀ Назад": "◀ 上一句", "Следующая ▶": "下一句 ▶", "Нет видео в этой точке проекта": "项目此位置没有视频", "Для клипа «": "片段「", "» нет копии": "」没有副本", " · клип ": " · 片段 ", "в файле нет звука": "文件中没有声音", "формат звука ": "音频格式 ", " может не играть на телефоне": " 可能无法在手机上播放", " · нажмите 🔊": " · 点击 🔊", "сервер · копия": "服务器 · 副本", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\n在电脑上：Prompter →“提词器：视频服务器”。", "сервер": "服务器", "Сервер ответил без видео.": "服务器没有返回视频。", "Сервер видео не найден (": "未找到视频服务器（", "копия": "副本", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "电脑上没有视频副本 (404)。请在 Prompter 中选择“提词器：手机视频”。", "Копия видео недоступна (HTTP ": "视频副本不可用 (HTTP ", "копия · в памяти": "副本 · 内存中", "копия: ": "副本：", " МБ": " MB", "Не удалось получить копию видео с ПК.": "无法从电脑获取视频副本。", "В проекте нет видео": "项目中没有视频", "Видео проекта: ": "项目视频：", "звук не воспроизводится (формат не поддерживается телефоном)": "声音无法播放（手机不支持该格式）", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "没有台词。请在 Dubbing Prompter 中导入字幕，然后再次选择“手机提词器”。", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "页面是作为文件打开的。请通过 REAPER 的地址打开，例如 http://IP:8080/prompter.html", "Нет связи с REAPER (": "无法连接到 REAPER（", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "）。请检查：1) REAPER 已运行，2) 已启用网页界面 (Preferences → Control/OSC/web → Web browser interface)，3) 地址中的端口与设置一致，4) 手机和电脑在同一 Wi-Fi 网络，5) Windows 防火墙允许 reaper.exe 在专用网络中通信。", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER 有响应，但找不到 /_/TRANSPORT 命令 (HTTP 404)。网页界面设置必须是“Web browser interface”，而不是 OSC。", "REAPER требует пароль (HTTP ": "REAPER 需要密码 (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "）。请在 REAPER 设置中取消网页界面的密码。", "REAPER ответил, но не в ожидаемом формате: ": "REAPER 有响应，但格式不符合预期：", "Ошибка: ": "错误：", "файл": "文件", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "手机无法播放原始文件（格式或编码）。请制作轻量副本：Prompter →“提词器：手机视频”。", "Сервер видео недоступен.": "视频服务器不可用。", "Телефон не смог воспроизвести копию видео (HTTP ": "手机无法播放视频副本 (HTTP ", "Нет связи с ПК для получения копии видео.": "无法连接电脑以获取视频副本。", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "无法播放视频。需要 mp4 (H.264) 或 webm。", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\n在电脑上：Prompter →“提词器：视频服务器”（原始视频，无副本）。或在手机上选择文件。", "Список": "列表", "Назад / Следующая": "上一句 / 下一句", "Верхняя строка": "顶栏", "Меньше": "缩小", "Больше": "放大", "Все роли": "全部角色", "Моя роль": "我的角色", "Твоя реплика": "你的台词", "Твоя реплика через ": "你的台词还有 ", " с": " 秒"}};
+var I18={"en": {"Суфлёр": "Prompter", "Видео не выбрано": "No video selected", "Повторить": "Retry", "Выбрать файл на телефоне": "Choose a file on the phone", "Звук": "Sound", "Другой файл": "Another file", "Сдвиг видео, мс": "Video offset, ms", "Имена ролей": "Role names", "Роли": "Roles", "Одна реплика / список": "One line / list", "Видео": "Video", "Кнопки Назад / Следующая": "Back / Next buttons", "◀ Назад": "◀ Back", "Следующая ▶": "Next ▶", "Нет видео в этой точке проекта": "No video at this point of the project", "Для клипа «": "No copy for clip “", "» нет копии": "”", " · клип ": " · clip ", "в файле нет звука": "no sound in the file", "формат звука ": "sound format ", " может не играть на телефоне": " may not play on the phone", " · нажмите 🔊": " · tap 🔊", "сервер · копия": "server · copy", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\nOn the PC: Prompter → “Prompter: video server”.", "сервер": "server", "Сервер ответил без видео.": "The server replied without video.", "Сервер видео не найден (": "Video server not found (", "копия": "copy", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "No video copy on the PC (404). In Prompter choose “Prompter: video for phone”.", "Копия видео недоступна (HTTP ": "Video copy unavailable (HTTP ", "копия · в памяти": "copy · in memory", "копия: ": "copy: ", " МБ": " MB", "Не удалось получить копию видео с ПК.": "Could not get the video copy from the PC.", "В проекте нет видео": "No video in the project", "Видео проекта: ": "Project video: ", "звук не воспроизводится (формат не поддерживается телефоном)": "sound does not play (format not supported by the phone)", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "No lines. In Dubbing Prompter import subtitles and choose “Prompter on phone” again.", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "The page was opened as a file. Open it via the REAPER address, e.g. http://IP:8080/prompter.html", "Нет связи с REAPER (": "No connection to REAPER (", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "). Check: 1) REAPER is running, 2) the web interface is on (Preferences → Control/OSC/web → Web browser interface), 3) the port in the address matches the port in settings, 4) phone and PC are on the same Wi-Fi network, 5) Windows Firewall allows reaper.exe on private networks.", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER responds, but the /_/TRANSPORT command was not found (HTTP 404). The web interface setting must be “Web browser interface”, not OSC.", "REAPER требует пароль (HTTP ": "REAPER requires a password (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "). Remove the web interface password in REAPER settings.", "REAPER ответил, но не в ожидаемом формате: ": "REAPER replied, but not in the expected format: ", "Ошибка: ": "Error: ", "файл": "file", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "The phone could not play the original file (format or codec). Make a light copy: Prompter → “Prompter: video for phone”.", "Сервер видео недоступен.": "The video server is unavailable.", "Телефон не смог воспроизвести копию видео (HTTP ": "The phone could not play the video copy (HTTP ", "Нет связи с ПК для получения копии видео.": "No connection to the PC to get the video copy.", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "Could not play the video. An mp4 (H.264) or webm is needed.", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\nOn the PC: Prompter → “Prompter: video server” (original, no copies). Or choose a file on the phone.", "Список": "List", "Назад / Следующая": "Back / Next", "Верхняя строка": "Top bar", "Меньше": "Smaller", "Больше": "Larger", "Все роли": "All roles", "Моя роль": "My role", "Роль занята: ": "Role is taken: ", "Твоя реплика": "Your line", "Твоя реплика через ": "Your line in ", " с": " s"}, "ja": {"Суфлёр": "プロンプター", "Видео не выбрано": "動画が選択されていません", "Повторить": "再試行", "Выбрать файл на телефоне": "スマホ内のファイルを選ぶ", "Звук": "音声", "Другой файл": "別のファイル", "Сдвиг видео, мс": "動画のずれ (ms)", "Имена ролей": "役名", "Роли": "役", "Одна реплика / список": "1セリフ / 一覧", "Видео": "動画", "Кнопки Назад / Следующая": "戻る / 次へボタン", "◀ Назад": "◀ 戻る", "Следующая ▶": "次へ ▶", "Нет видео в этой точке проекта": "プロジェクトのこの位置に動画がありません", "Для клипа «": "クリップ「", "» нет копии": "」のコピーがありません", " · клип ": " · クリップ ", "в файле нет звука": "ファイルに音声がありません", "формат звука ": "音声形式 ", " может не играть на телефоне": " はスマホで再生できない場合があります", " · нажмите 🔊": " · 🔊 をタップ", "сервер · копия": "サーバー · コピー", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\nPCで: Prompter →「プロンプター: 動画サーバー」。", "сервер": "サーバー", "Сервер ответил без видео.": "サーバーから動画が返されませんでした。", "Сервер видео не найден (": "動画サーバーが見つかりません (", "копия": "コピー", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "PCに動画のコピーがありません (404)。Prompter で「プロンプター: スマホ用動画」を選んでください。", "Копия видео недоступна (HTTP ": "動画コピーを利用できません (HTTP ", "копия · в памяти": "コピー · メモリ内", "копия: ": "コピー: ", " МБ": " MB", "Не удалось получить копию видео с ПК.": "PCから動画のコピーを取得できませんでした。", "В проекте нет видео": "プロジェクトに動画がありません", "Видео проекта: ": "プロジェクトの動画: ", "звук не воспроизводится (формат не поддерживается телефоном)": "音声が再生されません (スマホ非対応の形式)", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "セリフがありません。Dubbing Prompter で字幕をインポートし、もう一度「スマホ用プロンプター」を選んでください。", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "ページがファイルとして開かれています。REAPER のアドレス (例: http://IP:8080/prompter.html) で開いてください。", "Нет связи с REAPER (": "REAPER に接続できません (", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "）。確認してください: 1) REAPER が起動している、2) Web インターフェースが有効 (Preferences → Control/OSC/web → Web browser interface)、3) アドレスのポートが設定と一致している、4) スマホと PC が同じ Wi-Fi にある、5) Windows ファイアウォールがプライベートネットワークで reaper.exe を許可している。", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER は応答しますが、/_/TRANSPORT コマンドが見つかりません (HTTP 404)。Web インターフェースの設定は OSC ではなく「Web browser interface」にしてください。", "REAPER требует пароль (HTTP ": "REAPER がパスワードを要求しています (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "）。REAPER の設定で Web インターフェースのパスワードを外してください。", "REAPER ответил, но не в ожидаемом формате: ": "REAPER は応答しましたが、想定外の形式です: ", "Ошибка: ": "エラー: ", "файл": "ファイル", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "スマホで元のファイルを再生できませんでした (形式またはコーデック)。軽量コピーを作成してください: Prompter →「プロンプター: スマホ用動画」。", "Сервер видео недоступен.": "動画サーバーを利用できません。", "Телефон не смог воспроизвести копию видео (HTTP ": "スマホで動画コピーを再生できませんでした (HTTP ", "Нет связи с ПК для получения копии видео.": "動画コピーを取得するための PC との接続がありません。", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "動画を再生できませんでした。mp4 (H.264) または webm が必要です。", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\nPCで: Prompter →「プロンプター: 動画サーバー」(コピーなしの元動画)。またはスマホ内のファイルを選んでください。", "Список": "一覧", "Назад / Следующая": "戻る / 次へ", "Верхняя строка": "上部バー", "Меньше": "小さく", "Больше": "大きく", "Все роли": "全役", "Моя роль": "自分の役", "Роль занята: ": "役は使用中: ", "Твоя реплика": "あなたのセリフ", "Твоя реплика через ": "あなたのセリフまで ", " с": " 秒"}, "zh": {"Суфлёр": "提词器", "Видео не выбрано": "未选择视频", "Повторить": "重试", "Выбрать файл на телефоне": "在手机上选择文件", "Звук": "声音", "Другой файл": "其他文件", "Сдвиг видео, мс": "视频偏移（毫秒）", "Имена ролей": "角色名", "Роли": "角色", "Одна реплика / список": "单句 / 列表", "Видео": "视频", "Кнопки Назад / Следующая": "上一句 / 下一句按钮", "◀ Назад": "◀ 上一句", "Следующая ▶": "下一句 ▶", "Нет видео в этой точке проекта": "项目此位置没有视频", "Для клипа «": "片段「", "» нет копии": "」没有副本", " · клип ": " · 片段 ", "в файле нет звука": "文件中没有声音", "формат звука ": "音频格式 ", " может не играть на телефоне": " 可能无法在手机上播放", " · нажмите 🔊": " · 点击 🔊", "сервер · копия": "服务器 · 副本", "\nНа ПК: Prompter → «Суфлёр: сервер видео».": "\n在电脑上：Prompter →“提词器：视频服务器”。", "сервер": "服务器", "Сервер ответил без видео.": "服务器没有返回视频。", "Сервер видео не найден (": "未找到视频服务器（", "копия": "副本", "Копии видео нет на ПК (404). В Prompter выберите «Суфлёр: видео для телефона».": "电脑上没有视频副本 (404)。请在 Prompter 中选择“提词器：手机视频”。", "Копия видео недоступна (HTTP ": "视频副本不可用 (HTTP ", "копия · в памяти": "副本 · 内存中", "копия: ": "副本：", " МБ": " MB", "Не удалось получить копию видео с ПК.": "无法从电脑获取视频副本。", "В проекте нет видео": "项目中没有视频", "Видео проекта: ": "项目视频：", "звук не воспроизводится (формат не поддерживается телефоном)": "声音无法播放（手机不支持该格式）", "Нет реплик. В Dubbing Prompter импортируйте субтитры и снова выберите «Суфлёр на телефон».": "没有台词。请在 Dubbing Prompter 中导入字幕，然后再次选择“手机提词器”。", "Страница открыта как файл. Откройте её по адресу REAPER, например http://IP:8080/prompter.html": "页面是作为文件打开的。请通过 REAPER 的地址打开，例如 http://IP:8080/prompter.html", "Нет связи с REAPER (": "无法连接到 REAPER（", "). Проверьте: 1) REAPER запущен, 2) включён веб-интерфейс (Preferences → Control/OSC/web → Web browser interface), 3) порт в адресе совпадает с портом в настройках, 4) телефон и ПК в одной Wi-Fi сети, 5) брандмауэр Windows разрешает reaper.exe в частной сети.": "）。请检查：1) REAPER 已运行，2) 已启用网页界面 (Preferences → Control/OSC/web → Web browser interface)，3) 地址中的端口与设置一致，4) 手机和电脑在同一 Wi-Fi 网络，5) Windows 防火墙允许 reaper.exe 在专用网络中通信。", "REAPER отвечает, но команда /_/TRANSPORT не найдена (HTTP 404). В настройках веб-интерфейса должен стоять именно «Web browser interface», а не OSC.": "REAPER 有响应，但找不到 /_/TRANSPORT 命令 (HTTP 404)。网页界面设置必须是“Web browser interface”，而不是 OSC。", "REAPER требует пароль (HTTP ": "REAPER 需要密码 (HTTP ", "). Уберите пароль веб-интерфейса в настройках REAPER.": "）。请在 REAPER 设置中取消网页界面的密码。", "REAPER ответил, но не в ожидаемом формате: ": "REAPER 有响应，但格式不符合预期：", "Ошибка: ": "错误：", "файл": "文件", "Телефон не смог воспроизвести оригинальный файл (формат или кодек). Сделайте лёгкую копию: Prompter → «Суфлёр: видео для телефона».": "手机无法播放原始文件（格式或编码）。请制作轻量副本：Prompter →“提词器：手机视频”。", "Сервер видео недоступен.": "视频服务器不可用。", "Телефон не смог воспроизвести копию видео (HTTP ": "手机无法播放视频副本 (HTTP ", "Нет связи с ПК для получения копии видео.": "无法连接电脑以获取视频副本。", "Не удалось воспроизвести видео. Нужен mp4 (H.264) или webm.": "无法播放视频。需要 mp4 (H.264) 或 webm。", "\n\nНа ПК: Prompter → «Суфлёр: сервер видео» (оригинал без копий). Или выберите файл на телефоне.": "\n\n在电脑上：Prompter →“提词器：视频服务器”（原始视频，无副本）。或在手机上选择文件。", "Список": "列表", "Назад / Следующая": "上一句 / 下一句", "Верхняя строка": "顶栏", "Меньше": "缩小", "Больше": "放大", "Все роли": "全部角色", "Моя роль": "我的角色", "Роль занята: ": "角色已被占用：", "Твоя реплика": "你的台词", "Твоя реплика через ": "你的台词还有 ", " с": " 秒"}};
 function tr(s){var d=I18[LANGP];return(d&&d[s])||s}
 
-var myRole="",idx=-1,pos=0,fails=0,els=[],fs=1,lock=false,okOnce=false,showRoles=ROLES,single=false,bar=true,showVid=true,vshift=0,vready=false,tFetch=0,playing=false,vurl=null;
+var myRole="",manual=false,autoSet=[],lineM=0,linePos=0,idx=-1,pos=0,fails=0,els=[],fs=1,lock=false,okOnce=false,showRoles=ROLES,single=false,bar=true,showVid=true,vshift=0,vready=false,tFetch=0,playing=false,vurl=null;
 var vid=document.getElementById("vid");
 var loadedName="",vgone=false,audioOn=true,soundBlocked=false;
 var srvInfo=null,audioMsg="",audioDead=false,usingProxy=false,aTick=0;
-try{myRole=localStorage.getItem("dp_myrole")||"";fs=parseFloat(localStorage.getItem("dp_fs"))||1;lock=localStorage.getItem("dp_lock")==="1";single=localStorage.getItem("dp_view")!=="0";bar=true;showVid=localStorage.getItem("dp_video")!=="0";vshift=parseFloat(localStorage.getItem("dp_vshift"))||0;audioOn=localStorage.getItem("dp_audio")!=="0";
+try{manual=localStorage.getItem("dp_manual")==="1";myRole=manual?(localStorage.getItem("dp_myrole")||""):"";fs=parseFloat(localStorage.getItem("dp_fs"))||1;lock=localStorage.getItem("dp_lock")==="1";single=localStorage.getItem("dp_view")!=="0";bar=true;showVid=localStorage.getItem("dp_video")!=="0";vshift=parseFloat(localStorage.getItem("dp_vshift"))||0;audioOn=localStorage.getItem("dp_audio")!=="0";
   var ro=localStorage.getItem("dp_roles"),rb=localStorage.getItem("dp_roles_base");
   if(ro!==null&&rb===(ROLES?"1":"0"))showRoles=(ro==="1")}catch(e){}
 function applyLang(){
   document.documentElement.lang=LANGP;document.title=tr("Суфлёр");
   var m={"#pcv":["Повторить"],"#pick":["Выбрать файл на телефоне"],"#rl":["Роли","Имена ролей"],"#pv":["◀ Назад"],"#nx":["Следующая ▶"]};
   for(var s in m){var e=$(s);if(!e)continue;e.textContent=tr(m[s][0]);if(m[s][1])e.title=tr(m[s][1])}
-  var ti={"#au":"Звук","#vre":"Другой файл","#vs":"Сдвиг видео, мс","#vw":"Одна реплика / список","#vb":"Видео","#bt":"Кнопки Назад / Следующая","#d1":"Суфлёр","#d2":"Список","#d3":"Видео","#d4":"Назад / Следующая","#d5":"Верхняя строка","#dm":"Меньше","#dp":"Больше","#d6":"Моя роль"};
+  var ti={"#au":"Звук","#vre":"Другой файл","#vs":"Сдвиг видео, мс","#vw":"Одна реплика / список","#vb":"Видео","#bt":"Кнопки Назад / Следующая","#d1":"Суфлёр","#d2":"Список","#d3":"Видео","#d4":"Назад / Следующая","#d5":"Верхняя строка","#dm":"Меньше","#dp":"Больше","#d6":"Выбрать роль","#d7":"Предыдущая роль"};
   for(var q in ti){var x=$(q);if(x)x.title=tr(ti[q])}
 }
 function applyFs(){document.documentElement.style.setProperty("--fs",fs);try{localStorage.setItem("dp_fs",fs)}catch(e){}}
@@ -5101,12 +5390,13 @@ function audioFromInfo(j){
 function vinfoText(){return vbase+vtag+((audioMsg&&audioOn)?" · "+audioMsg:"")+(soundBlocked?tr(" · нажмите 🔊"):"")}
 function switchProxy(){
   usingProxy=true;
-  setSrc(srvBase()+"/video?src=proxy",tr("сервер · копия"),"server")
+  setSrc(srvUrl("/video","src=proxy"),tr("сервер · копия"),"server")
 }
 function vfail(t){$("#vph").style.display="flex";$("#vsh").style.display="none";$("#vmsg").textContent=t}
 var SPORT=/*@@SPORT@@*/8765,sKind="",srvBad=false,srvMsg="",vbaseMsg="",probeFails=0,probeTimer=0,probeBusy=false,lastTm="";
 var BACKOFF=[1500,3000,5000,10000,20000,30000];
 function srvBase(){return location.protocol+"//"+location.hostname+":"+SPORT}
+function srvUrl(p,q){var t=VTOK?"t="+encodeURIComponent(VTOK):"";var x=[];if(q)x.push(q);if(t)x.push(t);return srvBase()+p+(x.length?"?"+x.join("&"):"")}
 function srvHint(){
   if(vready||vurl||sKind)return;
   $("#vph").style.display="flex";$("#vsh").style.display="none";
@@ -5116,7 +5406,7 @@ function srvHint(){
 function schedProbe(ms){clearTimeout(probeTimer);probeTimer=setTimeout(function(){ensureSource()},ms)}
 function infoFetch(ms){
   var ctl=window.AbortController?new AbortController():null,to=ctl?setTimeout(function(){ctl.abort()},ms):0;
-  return fetch(srvBase()+"/info",{cache:"no-store",signal:ctl?ctl.signal:undefined}).then(function(r){clearTimeout(to);return r.json()},function(e){clearTimeout(to);throw e})
+  return fetch(srvUrl("/info"),{cache:"no-store",signal:ctl?ctl.signal:undefined}).then(function(r){clearTimeout(to);return r.json()},function(e){clearTimeout(to);throw e})
 }
 // Единственная точка выбора источника: сервер на ПК -> копия напрямую из REAPER. Никаких «загрузок» на экране.
 function ensureSource(force){
@@ -5137,7 +5427,7 @@ function ensureSource(force){
       }
       if(sKind==="server"&&loadedName===VSRC)return;
       usingProxy=false;
-      setSrc(srvBase()+"/video"+(sKind==="server"?"?n="+encodeURIComponent(VSRC):""),tr("сервер"),"server");
+      setSrc(srvUrl("/video",sKind==="server"?"n="+encodeURIComponent(VSRC):""),tr("сервер"),"server");
       if(j.audio===null&&j.audio_ready===false)setTimeout(refreshInfo,2500)
     }else{
       srvMsg=(j&&j.error)||tr("Сервер ответил без видео.");
@@ -5206,7 +5496,7 @@ function projVideoState(){
     if(vready&&loadedName===VSRC){$("#vph").style.display="none";$("#vsh").style.display="flex";vsync();return}
     sKind="";srvBad=false;vready=false;ensureSource();return
   }
-  if(sKind==="server"&&VSRC&&loadedName!==VSRC){usingProxy=false;setSrc(srvBase()+"/video?n="+encodeURIComponent(VSRC),tr("сервер"),"server");return}
+  if(sKind==="server"&&VSRC&&loadedName!==VSRC){usingProxy=false;setSrc(srvUrl("/video","n="+encodeURIComponent(VSRC)),tr("сервер"),"server");return}
   if(!sKind)ensureSource()
 }
 function grab(re,t){var m=re.exec(t);return m?m[1]:null}
@@ -5252,29 +5542,92 @@ function build(){
     d.onclick=function(){go(c[0])};
     fr.appendChild(d);els.push(d)
   });
-  L.appendChild(fr);if(myRole&&roleList().indexOf(myRole)<0){myRole="";try{localStorage.removeItem("dp_myrole")}catch(e){}}
+  L.appendChild(fr);if(myRole&&roleList().indexOf(myRole)<0){myRole="";manual=false;try{localStorage.removeItem("dp_myrole");localStorage.setItem("dp_manual","0")}catch(e){}}   // субтитры сменились, роли такой больше нет — снова автомат
+  autoSet=[];setTimeout(function(){roleBeat()},300);
   allClasses()
 }
 function find(p){var lo=0,hi=CUES.length-1,r=-1;while(lo<=hi){var m=(lo+hi)>>1;if(CUES[m][0]<=p+0.02){r=m;lo=m+1}else hi=m-1}return r}
-function cueClass(k,i){var s=k<i?"cue past":(k>i?"cue":"cue cur");if(k===i-1||k===i+1)s+=" nb";if(myRole&&CUES[k]&&CUES[k][2]!==myRole)s+=" oth";return s}
-function allClasses(){for(var k=0;k<els.length;k++)els[k].className=cueClass(k,idx);document.body.classList.toggle("my",!!myRole)}
+function cueClass(k,i){var s=k<i?"cue past":(k>i?"cue":"cue cur");if(k===i-1||k===i+1)s+=" nb";if(filt()&&CUES[k]&&!isMineK(k))s+=" oth";return s}
+function filt(){return (manual&&!!myRole)||(!manual&&(autoSet.length>0||lineM>0))}
+var TURN=null;function turnOf(k){if(!TURN||TURN.length!==CUES.length){TURN=[];var t=0;for(var i=0;i<CUES.length;i++){if(i>0&&CUES[i][2]!==CUES[i-1][2])t++;TURN.push(t)}}return TURN[k]}   // номер «хода»: пока говорит одна роль подряд — тот же ход
+function isMineK(k){var c=CUES[k];if(!c)return false;return manual?c[2]===myRole:(lineM>0?turnOf(k)%lineM===linePos:autoSet.indexOf(c[2])>=0)}
+function waitCls(){document.body.classList.toggle("wait",filt()&&!(idx>=0&&isMineK(idx)))}
+function allClasses(){for(var k=0;k<els.length;k++)els[k].className=cueClass(k,idx);document.body.classList.toggle("my",filt());waitCls()}
 function roleList(){var r=[];CUES.forEach(function(c){if(c[2]&&r.indexOf(c[2])<0)r.push(c[2])});return r}
 function toast(m){var e=$("#toast");e.textContent=m;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(function(){e.style.opacity=0},1600)}
-function nextRole(){
-  var r=roleList();if(!r.length){toast(tr("Все роли"));return}
-  var i=r.indexOf(myRole);myRole=(i<0)?r[0]:(i+1<r.length?r[i+1]:"");
-  try{localStorage.setItem("dp_myrole",myRole)}catch(e){}
-  allClasses();toast(tr("Моя роль")+": "+(myRole||tr("Все роли")));hud()
+/* ---- роли нескольких телефонов: одну роль берёт только один телефон (нужен запущенный сервер видео) ---- */
+var DEV=(function(){var d="";try{d=localStorage.getItem("dp_dev")||""}catch(e){}
+ if(!d){d=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);try{localStorage.setItem("dp_dev",d)}catch(e){}}return d})();
+var taken=[];                                   // роли, занятые другими телефонами
+function claim(role,cb){                        // role: строка — занять, "" — освободить, null — только сигнал и список
+ var q="dev="+encodeURIComponent(DEV);if(role!==null&&role!==undefined)q+="&role="+encodeURIComponent(role);
+ var ac=null,to=0;try{ac=new AbortController();to=setTimeout(function(){ac.abort()},2500)}catch(e){}
+ fetch(srvUrl("/roles",q),{cache:"no-store",signal:ac?ac.signal:undefined}).then(function(r){return r.json()}).then(function(j){
+  clearTimeout(to);taken=(j&&j.taken)||[];if(cb)cb(j)
+ }).catch(function(){clearTimeout(to);taken=[];if(cb)cb(null)})   // сервера нет: роли работают как раньше, без запрета повторов
 }
+function setRole(x){myRole=x;try{localStorage.setItem("dp_myrole",myRole)}catch(e){}allClasses();hud()}
+function nextRole(dir){dir=dir||1;
+  var r=roleList();if(!r.length){toast(tr("Все роли"));return}
+  claim(null,function(){                        // свежий список занятых ролей
+    var n=r.length+1,p=myRole?r.indexOf(myRole):-1;if(p<0)p=r.length;
+    function tryNext(step){
+      if(step>n)return;
+      var q=((p+dir*step)%n+n)%n;
+      if(q===r.length){setManual(false);toast(tr("Моя роль")+": Авто");return}
+      var cand=r[q];
+      if(taken.indexOf(cand)>=0){tryNext(step+1);return}                    // занята другим телефоном — пропускаем
+      claim(cand,function(j){
+        if(j&&j.conflict){tryNext(step+1);return}
+        manual=true;try{localStorage.setItem("dp_manual","1")}catch(e){}setRole(cand);toast(tr("Моя роль")+": "+cand)
+      })
+    }
+    tryNext(1)
+  })
+}
+function recalcAuto(devs,taken){                     // автомат: роли (а если ролей меньше, чем телефонов — реплики) по кругу между включёнными телефонами
+  var r=roleList().filter(function(x){return !taken||taken.indexOf(x)<0}),M=devs?devs.length:0,pos=devs?devs.indexOf(DEV):-1,a=[],lm=0,lp=0;
+  if(M>=2&&pos>=0)r.forEach(function(x,i){if(i%M===pos)a.push(x)})   // роли по порядку появления: 1-я роль — 1-й телефон, 2-я — 2-й, ... (если телефонов меньше, чем ролей — по кругу)
+  if(a.join("\u0001")!==autoSet.join("\u0001")||lm!==lineM||lp!==linePos){autoSet=a;lineM=lm;linePos=lp;allClasses();hud()}
+}
+function closeRoles(){$("#rp").classList.remove("on")}
+function pickRole(x){
+  closeRoles();
+  if(x===null){setManual(false);toast(tr("Моя роль")+": Авто");return}
+  claim(x,function(j){
+    if(j&&j.conflict){toast(tr("Роль занята: ")+x);return}
+    manual=true;try{localStorage.setItem("dp_manual","1")}catch(e){}
+    setRole(x);toast(tr("Моя роль")+": "+x)
+  })
+}
+function openRoles(){
+  var r=roleList();if(!r.length){toast(tr("Все роли"));return}
+  claim(null,function(){
+    var cnt={};CUES.forEach(function(c){cnt[c[2]]=(cnt[c[2]]||0)+1});
+    var b=$("#rps");b.innerHTML="";
+    var h=document.createElement("h3");h.textContent=tr("Моя роль");b.appendChild(h);
+    function add(label,note,cls,fn){var e=document.createElement("button");e.className=cls||"";var s=document.createElement("span");s.textContent=label;e.appendChild(s);if(note){var m=document.createElement("small");m.textContent=note;e.appendChild(m)}e.onclick=fn;b.appendChild(e)}
+    add("Авто","",(!manual||!myRole)?"cur":"",function(){pickRole(null)});
+    r.forEach(function(x){add(x,String(cnt[x]||""),(manual&&myRole===x?"cur":"")+(taken.indexOf(x)>=0?" tk":""),function(){pickRole(x)})});
+    $("#rp").classList.add("on")
+  })
+}
+function setManual(on){manual=!!on;try{localStorage.setItem("dp_manual",manual?"1":"0")}catch(e){}if(!manual){myRole="";claim("");autoSet=[];lineM=0;allClasses();hud();roleBeat()}}
+function roleBeat(){claim(manual&&myRole?myRole:null,function(j){
+  if(!j)return;
+  if(manual&&myRole&&j.conflict){var x=myRole;toast(tr("Роль занята: ")+x);setManual(false);return}
+  if(!manual)recalcAuto(j.devs,j.taken)
+})}
+setTimeout(roleBeat,800);setInterval(roleBeat,4000);
 function hud(){
   var P=posNow(),c=idx>=0?CUES[idx]:null;
   $("#h1").textContent=fmt(P);
   if(c&&c[1]>c[0]){var f=Math.min(1,Math.max(0,(P-c[0])/(c[1]-c[0])));$("#hp").style.width=(f*100).toFixed(1)+"%";$("#h2").textContent="−"+Math.max(0,c[1]-P).toFixed(1)}
   else{$("#hp").style.width="0";$("#h2").textContent=""}
   var h="";
-  if(myRole){
-    if(c&&c[2]===myRole&&P<c[1])h=tr("Твоя реплика");
-    else{for(var k=Math.max(0,idx+1);k<CUES.length;k++)if(CUES[k][2]===myRole){var d=CUES[k][0]-P;if(d>=0)h=tr("Твоя реплика через ")+d.toFixed(1)+tr(" с");break}}
+  if(filt()){
+    if(c&&isMineK(idx)&&P<c[1])h=tr("Твоя реплика");
+    else{for(var k=Math.max(0,idx+1);k<CUES.length;k++)if(isMineK(k)){var d=CUES[k][0]-P;if(d>=0)h=tr("Твоя реплика через ")+d.toFixed(1)+tr(" с");break}}
   }
   var H=$("#hint");if(H.textContent!==h)H.textContent=h
 }
@@ -5283,6 +5636,7 @@ function show(i){
   var o=idx;idx=i;
   var from=Math.max(0,(o<0?0:Math.min(o,i))-1),to=Math.min(els.length-1,(o<0?i:Math.max(o,i))+1);
   for(var k=from;k<=to;k++)els[k].className=cueClass(k,i);
+  waitCls();
   if(i>=0&&els[i])els[i].scrollIntoView({block:"center",behavior:(o<0||Math.abs(i-o)>4)?"instant":"smooth"});
   $("#cnt").textContent=(i>=0?(i+1):"–")+" / "+CUES.length
 }
@@ -5310,7 +5664,7 @@ function poll(){
     pos=parseFloat(f[2]);fails=0;okOnce=true;
     $("#dot").className="ok";diag("");
     var st=parseInt(f[1],10)||0,was=playing;
-    stIcon=(st&1?"▶ ":(st&2?"❚❚ ":""));
+    stIcon=(st&1?"▶":(st&2?"❚❚":""));
     playing=!!(st&1);
     if(playing){
       // часы REAPER относительно часов телефона; берём только замеры с малой задержкой сети
@@ -5423,7 +5777,7 @@ show(-1);
 setInterval(tick,40);
 if(location.protocol!=="file:"){poll();setTimeout(checkVer,3000)}else diag(explain("net"));
 </script>
-<div id="dots"><button id="d1" title="Суфлёр"><i style="background:#3fb950"></i></button><button id="d2" title="Список"><i style="background:#eab339"></i></button><button id="d3" title="Видео"><i style="background:#e5534b"></i></button><button id="d4" title="Назад / Следующая"><i style="background:#4c8dff"></i></button><button id="d5" title="Верхняя строка"><i style="background:#fff"></i></button><button id="d6" class="tx">👤</button></div>
+<div id="dots"><button id="d1" title="Суфлёр"><i style="background:#3fb950"></i></button><button id="d2" title="Список"><i style="background:#eab339"></i></button><button id="d3" title="Видео"><i style="background:#e5534b"></i></button><button id="d4" title="Назад / Следующая"><i style="background:#4c8dff"></i></button><button id="d5" title="Верхняя строка"><i style="background:#fff"></i></button><button id="d7" class="tx" title="Предыдущая роль">‹</button><button id="d6" class="tx" title="Выбрать роль">👤</button></div>
 <script>
 (function(){
 var b=document.body,$=function(i){return document.getElementById(i)};
@@ -5433,7 +5787,7 @@ $("d2").onclick=function(){if(b.classList.contains("single"))$("vw").click();syn
 $("d3").onclick=function(){$("vb").click();setTimeout(sync,50)};
 $("d4").onclick=function(){b.classList.toggle("showbar");sync()};$("bt").onclick=function(){b.classList.toggle("showbar");sync()};sync();
 $("d5").onclick=function(){b.classList.toggle("showtop");sync()};
-$("d6").onclick=function(){nextRole()};function hold(id,target){var el=$(id),tm=0,iv=0;
+$("d6").onclick=function(){openRoles()};$("rp").onclick=function(e){if(e.target===this)closeRoles()};$("d7").onclick=function(){nextRole(-1)};function hold(id,target){var el=$(id),tm=0,iv=0;
   function stop(){clearTimeout(tm);clearInterval(iv);tm=iv=0}
   el.addEventListener("pointerdown",function(e){e.preventDefault();$(target).click();stop();tm=setTimeout(function(){iv=setInterval(function(){$(target).click()},70)},350)});
   ["pointerup","pointerleave","pointercancel"].forEach(function(n){el.addEventListener(n,stop)});
@@ -5445,6 +5799,40 @@ function hold2(id){var el=document.getElementById(id),tm=0,iv=0;
 hold2("fm");hold2("fp");
 setInterval(sync,500);sync();
 })();
+
+/* автоподгонка: длинная реплика в режиме «одна реплика» всегда помещается на экран */
+(function(){
+ var busy=false,tm=0;
+ function fit(){
+  if(busy)return;busy=true;
+  try{
+   var L=document.getElementById("list");if(!L)return;
+   var cs=L.querySelectorAll(".cue");
+   for(var i=0;i<cs.length;i++){if(cs[i].style.fontSize)cs[i].style.removeProperty("font-size");var tt=cs[i].querySelector(".t");if(tt){tt.style.removeProperty("overflow-wrap");tt.style.removeProperty("word-break")}}
+   if(!document.body.classList.contains("single"))return;
+   var el=L.querySelector(".cue.cur");if(!el)return;
+   var lc=getComputedStyle(L),ec=getComputedStyle(el);
+   var avail=L.clientHeight-parseFloat(lc.paddingTop)-parseFloat(lc.paddingBottom);
+   var tx=el.querySelector(".t");if(tx){tx.style.setProperty("overflow-wrap","normal","important");tx.style.setProperty("word-break","normal","important")}
+   var base=parseFloat(ec.fontSize),sz=base,min=Math.min(base,12);
+   function wide(){return tx&&el.scrollWidth>el.clientWidth+1}
+   function need(){return el.offsetHeight+parseFloat(ec.marginTop)+parseFloat(ec.marginBottom)}
+   while(avail>0&&(need()>avail||wide())&&sz>min){sz*=.94;el.style.setProperty("font-size",sz+"px","important")}
+   if(wide()&&tx){tx.style.removeProperty("overflow-wrap");tx.style.removeProperty("word-break")}
+  }catch(e){}finally{busy=false}
+ }
+ function sched(){clearTimeout(tm);tm=setTimeout(fit,30)}
+ try{
+  var L=document.getElementById("list");
+  new MutationObserver(sched).observe(L,{subtree:true,childList:true,attributes:true,attributeFilter:["class"]});
+  new MutationObserver(sched).observe(document.body,{attributes:true,attributeFilter:["class"]});
+  new MutationObserver(sched).observe(document.documentElement,{attributes:true,attributeFilter:["style"]});
+  if(window.ResizeObserver)new ResizeObserver(sched).observe(L);
+ }catch(e){}
+ window.addEventListener("resize",sched);window.addEventListener("orientationchange",sched);
+ sched();
+})();
+(function(){var d=document.getElementById("dots");function p(){if(!d)return;var r=d.getBoundingClientRect();if(r.height)document.documentElement.style.setProperty("--db",Math.max(0,innerHeight-r.top)+"px")}p();setInterval(p,400);addEventListener("resize",p);addEventListener("orientationchange",p)})();
 </script></body></html>
 ]==]
 
@@ -5457,7 +5845,20 @@ function Mobile.js(s)
   return string.format("\\u%04x",c:byte())
  end)
  s=s:gsub("</","<\\/")
+ s=s:gsub("\226\128([\168\169])",function(c) return c=="\168" and "\\u2028" or "\\u2029" end)   -- U+2028/2029 ломают строки JS
  return '"'..s..'"'
+end
+
+-- случайный токен доступа к серверу видео: хранится в ExtState, кладётся в страницу телефона и в prompter_server.json
+function Mobile.get_token()
+ if Mobile.token~="" then return Mobile.token end
+ local t=reaper.GetExtState(SEC,"mobile_token") or ""
+ if #t<16 then
+  math.randomseed(os.time()+math.floor(reaper.time_precise()*1000003))
+  local a={}; for i=1,24 do a[i]=string.format("%x",math.random(0,15)) end
+  t=table.concat(a); reaper.SetExtState(SEC,"mobile_token",t,true)
+ end
+ Mobile.token=t; return t
 end
 
 function Mobile.www() return reaper.GetResourcePath().."/reaper_www_root/" end
@@ -5486,6 +5887,7 @@ function Mobile.write(json,ver)
  tail=put(tail,"/*@@CLIPS@@*/[]",Mobile.clipsJson or "[]")
  tail=put(tail,"/*@@SPORT@@*/8765",tostring(Mobile.sport))
  tail=put(tail,'/*@@VSRC@@*/""',Mobile.js(Mobile.vname or ""))
+ tail=put(tail,'/*@@VTOK@@*/""',Mobile.js(Mobile.get_token()))
  tail=put(tail,'/*@@VURL@@*/""',Mobile.js(Mobile.vexists() and "prompter_video.mp4" or ""))
  local html=head..json..tail
  local dir=Mobile.www()
@@ -5494,12 +5896,14 @@ function Mobile.write(json,ver)
  local tmp=dir.."prompter.tmp"
  local f=io.open(tmp,"wb")
  if not f then return false,T("не могу писать в ")..dir end
- f:write(html); f:close()
+ local w1=f:write(html); local c1=f:close()
+ if not w1 or not c1 then os.remove(tmp); return false,T("ошибка записи ")..tmp end
  os.remove(path)
  if not os.rename(tmp,path) then
   local g=io.open(path,"wb")
   if not g then return false,T("не могу записать ")..path end
-  g:write(html); g:close(); os.remove(tmp)
+  local w2=g:write(html); local c2=g:close(); os.remove(tmp)
+  if not w2 or not c2 then return false,T("ошибка записи ")..path end
  end
  return true,path
 end
@@ -5524,16 +5928,18 @@ function Mobile.meta(force)
     if not rate or rate<=0 then rate=1 end
     clips[#clips+1]={pos=reaper.GetMediaItemInfo_Value(it,"D_POSITION"),len=ilen,
      so=reaper.GetMediaItemTakeInfo_Value(tk,"D_STARTOFFS"),rate=rate,name=name}
-    total[name]=(total[name] or 0)+ilen
-    path[name]=fn
-    slen[name]=reaper.GetMediaSourceLength(src) or 0
+    -- файлы с одинаковым именем из разных папок считаются разными источниками (группировка по полному пути)
+    total[fn]=(total[fn] or 0)+ilen
+    path[fn]=fn
+    slen[fn]=reaper.GetMediaSourceLength(src) or 0
+    clips[#clips].fn=fn
    end
   end
  end
  table.sort(clips,function(a,b) return a.pos<b.pos end)
  local main,best="",-1
  for _,c in ipairs(clips) do
-  if total[c.name]>best then main,best=c.name,total[c.name] end
+  if total[c.fn]>best then main,best=c.fn,total[c.fn] end
  end
  local nsrc=0
  for _ in pairs(total) do nsrc=nsrc+1 end
@@ -5543,7 +5949,7 @@ function Mobile.meta(force)
  end
  Mobile.metaT=now
  Mobile.clipsJson="["..table.concat(parts,",").."]"
- Mobile.vname,Mobile.vpath,Mobile.vlen=main,path[main] or "",slen[main] or 0
+ Mobile.vname,Mobile.vpath,Mobile.vlen=(main:match("([^\\/]+)$") or main),path[main] or "",slen[main] or 0
  Mobile.nclips,Mobile.nsrc=#clips,nsrc
  Mobile.metaS=Mobile.clipsJson.."\1"..main
  return Mobile.metaS
@@ -5572,18 +5978,20 @@ function Mobile.makevideo()
  reaper.RecursiveCreateDirectory(www,0)
  local res=reaper.GetResourcePath().."/"
  local function W(p) return (p:gsub("/","\\")) end
+ local function BQ(p) return (ffq(p):gsub("%%","%%%%")) end   -- в .bat знак % внутри пути удваивается
  local e={out=W(www.."prompter_video.mp4"),tmp=W(www.."prompter_video.tmp.mp4"),
   prog=W(res.."prompter_video.progress"),fail=W(res.."prompter_video.fail"),
-  log=W(res.."prompter_video.log"),bat=W(res.."prompter_video.bat"),len=Mobile.vlen}
- os.remove(e.out); os.remove(e.tmp); os.remove(e.fail); os.remove(e.prog)
+  log=W(res.."prompter_video.log"),bat=W(res.."prompter_video.bat"),done=W(res.."prompter_video.done"),len=Mobile.vlen}
+ os.remove(e.tmp); os.remove(e.fail); os.remove(e.prog); os.remove(e.done)   -- старый prompter_video.mp4 остаётся, пока новый не готов
  local lines={
   "@echo off","chcp 65001 >nul",
-  ff_tool("ffmpeg").." -v error -y -i "..ffq(W(Mobile.vpath)).." -vf \"scale=-2:'min(480,ih)'\" -c:v libx264 -profile:v main -preset veryfast -crf 28 -pix_fmt yuv420p -c:a aac -b:a 96k -ac 2 -movflags +faststart -progress "..ffq(e.prog).." -nostats "..ffq(e.tmp).." > "..ffq(e.log).." 2>&1",
+  (ff_tool("ffmpeg"):gsub("%%","%%%%")).." -v error -y -i "..BQ(W(Mobile.vpath)).." -vf \"scale=-2:'min(480,ih)'\" -c:v libx264 -profile:v main -preset veryfast -crf 28 -force_key_frames \"expr:gte(t,n_forced*1)\" -pix_fmt yuv420p -c:a aac -b:a 96k -ac 2 -movflags +faststart -progress "..BQ(e.prog).." -nostats "..BQ(e.tmp).." > "..BQ(e.log).." 2>&1",
   "if %errorlevel% neq 0 (",
-  " echo fail> "..ffq(e.fail),
-  " del "..ffq(e.tmp).." 2>nul",
+  " echo fail> "..BQ(e.fail),
+  " del "..BQ(e.tmp).." 2>nul",
   ") else (",
-  " move /y "..ffq(e.tmp).." "..ffq(e.out).." >nul",
+  " move /y "..BQ(e.tmp).." "..BQ(e.out).." >nul",
+  " echo ok> "..BQ(e.done),
   ")"}
  local f=io.open(e.bat,"wb")
  if not f then reaper.ShowMessageBox(T("Не могу записать ")..e.bat,TTL,0); return end
@@ -5601,7 +6009,7 @@ function Mobile.check_enc()
  local e=Mobile.enc
  if not e then return end
  local function has(p) local f=io.open(p,"rb"); if f then f:close(); return true end return false end
- if has(e.out) then
+ if has(e.done) then
   Mobile.enc=nil; status=T("Видео для телефона готово: страница сама подхватит его"); Mobile.refresh(true); return
  end
  if has(e.fail) then
@@ -5628,20 +6036,23 @@ function Mobile.cfgfiles()
 end
 
 function Mobile.writecfg()
- local sig=Mobile.vpath or ""
- if sig==Mobile.cfgSig then return end
- local body='{"video":'..Mobile.js(Mobile.vpath or "")..',"name":'..Mobile.js(Mobile.vname or "")..',"proxy":'..Mobile.js(Mobile.vfile())..',"updated":'..os.time()..'}'
+ local body='{"video":'..Mobile.js(Mobile.vpath or "")..',"name":'..Mobile.js(Mobile.vname or "")..',"proxy":'..Mobile.js(Mobile.vfile())..',"token":'..Mobile.js(Mobile.get_token())..',"updated":'..os.time()..'}'
+ local sig=(Mobile.vpath or "").."\1"..(Mobile.vname or "").."\1"..Mobile.vfile().."\1"..Mobile.get_token()
+ if sig==Mobile.cfgSig then return true end
+ local okall=true
  for _,p in ipairs(Mobile.cfgfiles()) do
   local f=io.open(p,"wb")
-  if f then f:write(body); f:close() end
+  if f then local okw=f:write(body); f:close(); if not okw then okall=false end else okall=false end
  end
- Mobile.cfgSig=sig
+ if okall then Mobile.cfgSig=sig end   -- при ошибке записи подпись не запоминается: следующий refresh повторит попытку
+ return okall
 end
 
 -- открыть .bat как двойным щелчком (отдельное окно, REAPER не блокируется, Unicode-пути работают)
 function Mobile.launch(path)
  if reaper.CF_ShellExecute then
-  if pcall(reaper.CF_ShellExecute,path) then return true end
+  local ok,r=pcall(reaper.CF_ShellExecute,path)
+  if ok and r~=false then return true end
  end
  if reaper.ExecProcess then
   local ok,res=pcall(reaper.ExecProcess,'explorer.exe "'..path..'"',3000)
@@ -5653,10 +6064,6 @@ end
 -- запуск сервера видео (Python) в отдельном окне; сервер отдаёт на телефон оригинальный файл
 function Mobile.server_start()
  local TTL=T("Сервер видео")
- Mobile.on=true
- reaper.SetExtState(SEC,"mobile_on","1",true)
- Mobile.cfgSig=nil
- Mobile.refresh(true)
  local bat=(Mobile.dir or "").."/MobileServer/start_server.bat"
  local f=io.open(bat,"rb")
  if not f then
@@ -5664,6 +6071,10 @@ function Mobile.server_start()
   return
  end
  f:close()
+ Mobile.on=true
+ reaper.SetExtState(SEC,"mobile_on","1",true)
+ Mobile.cfgSig=nil
+ Mobile.refresh(true)
  local function W(p) return (p:gsub("/","\\")) end
  local started=Mobile.launch(W(bat))
  local ips=Mobile.ips()
@@ -5682,7 +6093,7 @@ function Mobile.server_start()
  if not started then
   msg=msg..T("\n\nОкно сервера открыть не удалось. Запустите вручную двойным щелчком:\n")..W(bat)
  end
- status=T("Сервер видео: ")..(addr[1] or (T("порт ")..Mobile.sport))
+ status=started and (T("Сервер видео: ")..(addr[1] or (T("порт ")..Mobile.sport))) or T("Сервер видео: окно не открылось, запустите start_server.bat вручную")
  reaper.ShowMessageBox(msg,TTL,0)
 end
 
@@ -5717,6 +6128,7 @@ function Mobile.port()
 end
 
 function Mobile.ips()
+ if Mobile.ips_c and os.time()-(Mobile.ips_t or 0)<30 then return Mobile.ips_c end   -- ipconfig is slow: not more often than every 30 s
  local seen,res={},{}
  if reaper.ExecProcess and (reaper.GetOS() or ""):match("Win") then
   local ok,txt=pcall(reaper.ExecProcess,"cmd.exe /c ipconfig",5000)
@@ -5731,7 +6143,271 @@ function Mobile.ips()
    end
   end
  end
+ Mobile.ips_c=res; Mobile.ips_t=os.time()
  return res
+end
+
+-- ===== QR-код (чистый Lua, без библиотек): байтовый режим, коррекция M, версии 1–10 =====
+Mobile.QR={}
+do
+ local Q=Mobile.QR
+ -- {всего кодовых слов данных, ecc на блок, блоков короткой длины, блоков на 1 длиннее}
+ local VER={
+  {16,10,1,0},{28,16,1,0},{44,26,1,0},{64,18,2,0},{86,24,2,0},
+  {108,16,4,0},{124,18,4,0},{154,22,2,2},{182,22,3,2},{216,26,4,1}}
+ local ALIGN={{},{6,18},{6,22},{6,26},{6,30},{6,34},{6,22,38},{6,24,42},{6,26,46},{6,28,50}}
+ local EXP,LOG={},{}
+ do local x=1
+  for i=0,254 do EXP[i]=x; LOG[x]=i; x=x<<1; if x>=256 then x=x~0x11D end end
+  for i=255,509 do EXP[i]=EXP[i-255] end
+ end
+ local function gmul(a,b) if a==0 or b==0 then return 0 end return EXP[LOG[a]+LOG[b]] end
+ local function rsgen(n)
+  local g={1}
+  for i=0,n-1 do
+   local ng={}
+   for k=1,#g+1 do ng[k]=0 end
+   for k=1,#g do
+    ng[k]=ng[k]~g[k]
+    ng[k+1]=ng[k+1]~gmul(g[k],EXP[i])
+   end
+   g=ng
+  end
+  return g   -- g[1] — старший коэффициент (=1)
+ end
+ local function rsrem(data,n)
+  local g=rsgen(n)
+  local r={}
+  for i=1,n do r[i]=0 end
+  for _,b in ipairs(data) do
+   local f=b~r[1]
+   table.remove(r,1); r[n]=0
+   if f~=0 then for i=1,n do r[i]=r[i]~gmul(g[i+1],f) end end
+  end
+  return r
+ end
+
+ local function bits_of(s,ver)
+  local bits={}
+  local function put(v,n) for i=n-1,0,-1 do bits[#bits+1]=(v>>i)&1 end end
+  put(4,4)
+  put(#s, ver<=9 and 8 or 16)
+  for i=1,#s do put(s:byte(i),8) end
+  return bits,put
+ end
+
+ function Q.encode(s)
+  local ver
+  for v=1,10 do
+   local cap=VER[v][1]*8-4-(v<=9 and 8 or 16)
+   if #s*8<=cap then ver=v break end
+  end
+  if not ver then return nil,"слишком длинный адрес" end
+  local total,eccn,nb1,nb2=VER[ver][1],VER[ver][2],VER[ver][3],VER[ver][4]
+  local bits,put=bits_of(s,ver)
+  local capbits=total*8
+  for _=1,4 do if #bits<capbits then bits[#bits+1]=0 end end
+  while #bits%8~=0 do bits[#bits+1]=0 end
+  local data={}
+  for i=1,#bits,8 do
+   local b=0; for k=0,7 do b=(b<<1)|bits[i+k] end
+   data[#data+1]=b
+  end
+  local pad=0xEC
+  while #data<total do data[#data+1]=pad; pad=(pad==0xEC) and 0x11 or 0xEC end
+  -- блоки
+  local nblocks=nb1+nb2
+  local shortlen=total//nblocks
+  local blocks,pos={},1
+  for bi=1,nblocks do
+   local len=shortlen+((bi>nb1) and 1 or 0)
+   local d={}
+   for k=0,len-1 do d[#d+1]=data[pos+k] end
+   pos=pos+len
+   blocks[bi]={d=d,e=rsrem(d,eccn)}
+  end
+  local out={}
+  for k=1,shortlen+1 do for bi=1,nblocks do local d=blocks[bi].d; if d[k] then out[#out+1]=d[k] end end end
+  for k=1,eccn do for bi=1,nblocks do out[#out+1]=blocks[bi].e[k] end end
+  return Q.matrix(ver,out)
+ end
+
+ function Q.matrix(ver,cw)
+  local size=17+4*ver
+  local m,fn={},{}
+  for y=0,size-1 do m[y]={}; fn[y]={} for x=0,size-1 do m[y][x]=0; fn[y][x]=false end end
+  local function setf(x,y,v) if x>=0 and x<size and y>=0 and y<size then m[y][x]=v and 1 or 0; fn[y][x]=true end end
+  for i=0,size-1 do setf(6,i,i%2==0); setf(i,6,i%2==0) end
+  local function finder(cx,cy)
+   for dy=-4,4 do for dx=-4,4 do
+    local d=math.max(math.abs(dx),math.abs(dy))
+    setf(cx+dx,cy+dy,d~=2 and d~=4)
+   end end
+  end
+  finder(3,3); finder(size-4,3); finder(3,size-4)
+  local al=ALIGN[ver]; local n=#al
+  for i=1,n do for j=1,n do
+   if not ((i==1 and j==1) or (i==1 and j==n) or (i==n and j==1)) then
+    for dy=-2,2 do for dx=-2,2 do setf(al[i]+dx,al[j]+dy,math.max(math.abs(dx),math.abs(dy))~=1) end end
+   end
+  end end
+  local function fmt(mask)
+   local data=(0<<3)|mask          -- уровень M = 00
+   local rem=data
+   for _=1,10 do rem=(rem<<1)~((rem>>9)*0x537) end
+   local bits=((data<<10)|rem)~0x5412
+   local function bit(i) return ((bits>>i)&1)==1 end
+   for i=0,5 do setf(8,i,bit(i)) end
+   setf(8,7,bit(6)); setf(8,8,bit(7)); setf(7,8,bit(8))
+   for i=9,14 do setf(14-i,8,bit(i)) end
+   for i=0,7 do setf(size-1-i,8,bit(i)) end
+   for i=8,14 do setf(8,size-15+i,bit(i)) end
+   setf(8,size-8,true)
+  end
+  fmt(0)
+  if ver>=7 then
+   local rem=ver
+   for _=1,12 do rem=(rem<<1)~((rem>>11)*0x1F25) end
+   local bits=(ver<<12)|rem
+   for i=0,17 do
+    local c=((bits>>i)&1)==1
+    local a=size-11+i%3; local b=i//3
+    setf(a,b,c); setf(b,a,c)
+   end
+  end
+  -- данные
+  local i=0; local nbits=#cw*8
+  local right=size-1
+  while right>=1 do
+   if right==6 then right=5 end
+   for vert=0,size-1 do
+    for j=0,1 do
+     local x=right-j
+     local upward=((right+1)&2)==0
+     local y=upward and (size-1-vert) or vert
+     if not fn[y][x] and i<nbits then
+      m[y][x]=(cw[(i>>3)+1]>>(7-(i&7)))&1
+      i=i+1
+     end
+    end
+   end
+   right=right-2
+  end
+  local function mask(k)
+   for y=0,size-1 do for x=0,size-1 do
+    if not fn[y][x] then
+     local inv
+     if k==0 then inv=(x+y)%2==0 elseif k==1 then inv=y%2==0 elseif k==2 then inv=x%3==0
+     elseif k==3 then inv=(x+y)%3==0 elseif k==4 then inv=(x//3+y//2)%2==0
+     elseif k==5 then inv=(x*y)%2+(x*y)%3==0 elseif k==6 then inv=((x*y)%2+(x*y)%3)%2==0
+     else inv=((x+y)%2+(x*y)%3)%2==0 end
+     if inv then m[y][x]=m[y][x]~1 end
+    end
+   end end
+  end
+  local function penalty()
+   local p=0
+   local rows,cols={},{}
+   for y=0,size-1 do local t={} for x=0,size-1 do t[#t+1]=m[y][x] end rows[#rows+1]=table.concat(t) end
+   for x=0,size-1 do local t={} for y=0,size-1 do t[#t+1]=m[y][x] end cols[#cols+1]=table.concat(t) end
+   for _,list in ipairs({rows,cols}) do
+    for _,s in ipairs(list) do
+     local run=1
+     for k=2,#s do
+      if s:sub(k,k)==s:sub(k-1,k-1) then run=run+1
+      else if run>=5 then p=p+3+(run-5) end run=1 end
+     end
+     if run>=5 then p=p+3+(run-5) end
+     for _,pat in ipairs({"10111010000","00001011101"}) do
+      local init=1
+      while true do local a=s:find(pat,init,true); if not a then break end p=p+40; init=a+1 end
+     end
+    end
+   end
+   for y=0,size-2 do for x=0,size-2 do
+    local c=m[y][x]
+    if c==m[y][x+1] and c==m[y+1][x] and c==m[y+1][x+1] then p=p+3 end
+   end end
+   local dark=0
+   for y=0,size-1 do for x=0,size-1 do dark=dark+m[y][x] end end
+   local tot=size*size
+   local k=(math.abs(dark*20-tot*10)+tot-1)//tot-1
+   p=p+k*10
+   return p
+  end
+  local best,bp=0,nil
+  for k=0,7 do
+   mask(k); fmt(k)
+   local pe=penalty()
+   if not bp or pe<bp then bp=pe; best=k end
+   mask(k)
+  end
+  mask(best); fmt(best)
+  return m,size
+ end
+
+ -- BMP 1 бит, масштаб sc px на модуль, тихая зона 4 модуля
+ function Q.bmp(m,size,sc)
+  local q=4
+  local dim=(size+2*q)*sc
+  local stride=((dim+31)//32)*4
+  local rows={}
+  local white=string.rep("\0",stride)
+  for y=-q,size+q-1 do
+   local bytes={}
+   for i=1,stride do bytes[i]=0 end
+   if y>=0 and y<size then
+    for x=0,size-1 do
+     if m[y][x]==1 then
+      for px=(x+q)*sc,(x+q+1)*sc-1 do
+       local bi=px//8+1
+       bytes[bi]=bytes[bi]|(0x80>>(px%8))
+      end
+     end
+    end
+   end
+   local line=string.char(table.unpack(bytes))
+   if y<0 or y>=size then line=white end
+   rows[#rows+1]=string.rep(line,sc)
+  end
+  -- BMP хранит строки снизу вверх
+  local rev={}
+  for i=#rows,1,-1 do rev[#rev+1]=rows[i] end
+  local img=table.concat(rev)
+  local off=14+40+8
+  local hdr="BM"..string.pack("<I4I2I2I4",off+#img,0,0,off)
+  local dib=string.pack("<I4i4i4I2I2I4I4i4i4I4I4",40,dim,dim,1,1,0,#img,2835,2835,2,0)
+  local pal="\255\255\255\0".."\0\0\0\0"
+  return hdr..dib..pal..img
+ end
+
+ function Q.save(text,path)
+  local m,size=Q.encode(text)
+  if not m then return false,size end
+  local f=io.open(path,"wb")
+  if not f then return false,"не удалось записать файл" end
+  f:write(Q.bmp(m,size,12)); f:close()
+  return true
+ end
+end
+
+-- QR-код адреса суфлёра для приложения на телефоне: рисуется в окне Prompter поверх всего (см. loop)
+function Mobile.qr_show(url)
+ local m,size=Mobile.QR.encode(url)
+ if not m then return false end
+ local runs={}
+ for y=0,size-1 do
+  local x=0
+  while x<size do
+   if m[y][x]==1 then
+    local s=x
+    while x<size and m[y][x]==1 do x=x+1 end
+    runs[#runs+1]={s,y,x-s}
+   else x=x+1 end
+  end
+ end
+ Mobile.qrv={size=size,runs=runs,url=url}
+ return true
 end
 
 function Mobile.open(quiet)
@@ -5753,6 +6429,8 @@ function Mobile.open(quiet)
   lines[1]=T("http://IP-ПК:")..p..T("/prompter.html   (IP смотрите командой ipconfig)")
  end
  Mobile.url=lines[1]
+ local qrok=false
+ if #ips>0 then local okq,res=pcall(Mobile.qr_show,lines[1]); qrok=(okq and res) and true or false end
  if reaper.CF_SetClipboard and #ips>0 then pcall(reaper.CF_SetClipboard,lines[1]) end
  local msg=T("Страница суфлёра создана:\n")..tostring(info)..T("\n\nАдрес для телефона / планшета (одна Wi-Fi сеть с ПК):\n")..table.concat(lines,"\n").."\n\n"
  if port then
@@ -5760,6 +6438,7 @@ function Mobile.open(quiet)
  else
   msg=msg..T("ВНИМАНИЕ: веб-интерфейс REAPER не найден в reaper.ini. Включите его один раз:\nPreferences → Control/OSC/web → Add → «Web browser interface», порт 8080, нажмите OK.\n(Если вы только что включили его — адрес выше всё равно верный.)\n")
  end
+ if qrok then msg=msg..T("\nQR-код этого адреса появится в окне суфлёра после OK: в приложении Dubbing Prompter нажмите «Сканировать QR» и наведите камеру.\n") end
  msg=msg..T("\nЕсли телефон не подключается: разрешите reaper.exe в брандмауэре Windows для частной сети.\nСтраница обновляется сама при изменении реплик.")
  status=T("Суфлёр на телефон: ")..lines[1]
  if quiet then return msg end
@@ -5767,10 +6446,20 @@ function Mobile.open(quiet)
 end
 
 -- одна кнопка: страница суфлёра + сервер видео (если в проекте есть видео)
+-- сколько разных ролей в репликах (для нескольких телефонов нужен сервер: он следит, чтобы роли не повторялись)
+function Mobile.nroles()
+ local seen,n={},0
+ for _,r in ipairs(rows) do
+  local x=r.role
+  if x and x~="" and not seen[x] then seen[x]=true; n=n+1 end
+ end
+ return n
+end
+
 function Mobile.all()
  local msg=Mobile.open(true)
  if not msg then return end
- if (Mobile.vpath or "")=="" then
+ if (Mobile.vpath or "")=="" and Mobile.nroles()<2 then
   msg=msg.."\n"..T("В проекте нет видео: сервер видео не запускался.")
  else
   local bat=(Mobile.dir or "").."/MobileServer/start_server.bat"
@@ -6379,7 +7068,6 @@ TOOL_GROUPS={
  {name=T("Экспорт"),col=4,ids={11,17,23,27,28,30}},
  {name=T("Настройки"),col=4,ids={29,20,24,38,39,40,46}},
  {name=T("Сведение аниме"),col=4,ids={50}},
- {name=T("Телефон / планшет"),col=4,ids={51}},
 }
 end
 build_tool_tables()
@@ -6516,6 +7204,7 @@ function do_act(act)
  elseif act==17 then follow=not follow; save(); status=follow and T("Слежение за воспроизведением: вкл") or T("Слежение за воспроизведением: выкл")
  elseif act==18 then only_dub=not only_dub; save(); status=only_dub and T("Приглушение только там, где на дорожке дубляжа есть звук") or T("Приглушение по всем репликам")
  elseif act==19 then export_srt()
+ elseif act==33 then Mobile.all()
  elseif act==20 then to_regions()
  elseif act==21 then to_items()
  elseif act==22 then play_line(false)
@@ -6670,6 +7359,8 @@ function draw_shell()
   local b2=math.floor((gfx.measurestr(T("Экспорт…")) or 0)/KX)+28
   if home_btn(16,by+(TB-28)/2,b1,28,T("Импорт…"),{.17,.17,.18},{.85,.87,.90},13) then act=1 end
   if home_btn(16+b1+8,by+(TB-28)/2,b2,28,T("Экспорт…"),{.17,.17,.18},{.85,.87,.90},13) then act=19 end
+  local b3=math.floor((gfx.measurestr(T("Телефон…")) or 0)/KX)+28
+  if home_btn(16+b1+8+b2+8,by+(TB-28)/2,b3,28,T("Телефон…"),{.17,.17,.18},{.85,.87,.90},13) then act=33 end
   if hover then
    for j,d in ipairs({{"−",-0.15},{"+",0.15}}) do
     local cx=W-70+(j-1)*34
@@ -6686,7 +7377,7 @@ function draw_shell()
   local x0=W/2-(nn-1)*gap/2
   if TAB==1 then
    setf(13)
-   local lend=16+math.floor((gfx.measurestr(T("Импорт…")) or 0)/KX)+28+8+math.floor((gfx.measurestr(T("Экспорт…")) or 0)/KX)+28
+   local lend=16+math.floor((gfx.measurestr(T("Импорт…")) or 0)/KX)+28+8+math.floor((gfx.measurestr(T("Экспорт…")) or 0)/KX)+28+8+math.floor((gfx.measurestr(T("Телефон…")) or 0)/KX)+28
    x0=math.max(x0,lend+28)
   end
   local label=nil
@@ -6765,7 +7456,7 @@ function draw_shell()
 end
 
 local function draw()
- ui_locked=edit_mode or (HOME_LOCK and TAB==1)
+ ui_locked=edit_mode or (Mobile.qrv~=nil) or (HOME_LOCK and TAB==1)
  local a=draw_shell()
  if a then do_act(a) end
  if edit_mode then draw_edit_modal() end
@@ -6789,11 +7480,11 @@ function dub_handle_drop()
   elseif e=="mkv" or e=="mp4" or e=="avi" or e=="mov" or e=="webm" or e=="m4v" or e=="wmv" or e=="mpg" or e=="mpeg" or e=="ts" or e=="wav" or e=="mp3" or e=="flac" then media=media or p end
  end
  if media then
-  reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
+  dub_ub(); dub_pur(1)
   reaper.SetEditCurPos(0,false,false)
   reaper.InsertMedia(media,1)
-  reaper.PreventUIRefresh(-1); reaper.UpdateArrange()
-  reaper.Undo_EndBlock(T("Dubbing System: добавить видео"),-1)
+  dub_pur(-1); reaper.UpdateArrange()
+  dub_ue(T("Dubbing System: добавить видео"),-1)
   status=T("Видео добавлено: ")..(media:match("([^\\/]+)$") or media)
  end
  -- как у кнопки «Импорт…»: субтитры из файла или из вшитой в видео дорожки (если их несколько, спросит язык) → регионы и итемы
@@ -6803,14 +7494,8 @@ function dub_handle_drop()
   if e~="wav" and e~="mp3" and e~="flac" then import_from_video(media,true) end
  end
  if (subs or media) and #rows>0 then
-  local _,nm,nr=reaper.CountProjectMarkers(0)
-  if nr==0 then to_regions(true) end
-  local has=false
-  for i=0,reaper.CountTracks(0)-1 do
-   local _,tn=reaper.GetSetMediaTrackInfo_String(reaper.GetTrack(0,i),"P_NAME","",false)
-   if tn=="Dubbing Subtitles (text items)" then has=true end
-  end
-  if not has then to_items(true) end
+  to_regions(true) -- не создаёт дубликатов уже существующих своих регионов
+  if #own_tr_existing()==0 then to_items(true) end
   status=T("Готово: реплик ")..#rows..T(", регионы и текстовые итемы созданы")
  end
 end
@@ -6819,6 +7504,19 @@ local function loop()
  local ch=gfx.getchar()
  dub_handle_drop()
  if ch==-1 then quit_loop(); return end
+ if Mobile.qrv and ch~=0 then Mobile.qrv=nil; ch=0 end   -- любая клавиша закрывает QR
+ -- проект закрыли/открыли другой/вернули Undo: реплики в проекте не совпадают с теми, что показаны, — перечитываем их из проекта
+ local tsync=reaper.time_precise()
+ if tsync-(subsync_t or 0)>0.7 then
+  subsync_t=tsync
+  local _,rawnow=reaper.GetProjExtState(0,SEC,K.subs)
+  if rawnow~=SUBRAW then
+   load_saved(); mark_dirty(); selected=1; scroll=0; undo_stack={}; last_ver_str=serialize_rows(); dub_cleaned=false
+   status=T("Проект изменился: реплики загружены из проекта")
+  end
+ end
+ local tnow=reaper.time_precise()
+ if tnow-(tr_pos_t or 0)>3 then tr_pos_t=tnow; own_tr_pos_save() end   -- запоминаем, где стоит дорожка (даже если её передвинули вручную)
  -- map the real window onto the W x H canvas: positions stretch, text keeps its proportions
  refresh_layout()
  MX=gfx.mouse_x; MY=gfx.mouse_y
@@ -6863,6 +7561,26 @@ local function loop()
   for i,l in ipairs(L) do txt(40,30+(i-1)*30,l,(i==1) and 20 or 15,C.text) end
   if pressed() then show_help=false end
  end
+
+ do local qv=Mobile.qrv
+  if qv then
+   rect(0,0,W,H,{.03,.04,.06})
+   local n=qv.size+8
+   local avail=math.min(gfx.w,gfx.h*0.62)
+   local sz=math.max(2,math.floor(avail/n))
+   local tot=sz*n
+   local ox=math.floor((gfx.w-tot)/2); local oy=math.floor(gfx.h*0.13)
+   gfx.set(1,1,1,1); gfx.rect(ox,oy,tot,tot,1)
+   gfx.set(0,0,0,1)
+   for _,r in ipairs(qv.runs) do gfx.rect(ox+(r[1]+4)*sz,oy+(r[2]+4)*sz,r[3]*sz,sz,1) end
+   txt(24,H*0.03,T("Сканируйте QR в приложении Dubbing Prompter на телефоне"),17,C.text)
+   txt(24,H*0.80,qv.url,16,C.text)
+   txt(24,H*0.88,T("Esc, Enter или клик — закрыть"),14,C.muted)
+   local now=reaper.time_precise()
+   qv.shown=qv.shown or now
+   if raw_pressed() and now-qv.shown>0.5 then Mobile.qrv=nil end
+  end
+ end
  Mobile.tick()
  autosave_version()
  lastcap=gfx.mouse_cap
@@ -6875,25 +7593,38 @@ local function loop()
     if x then reaper.SetExtState("DubbingPrompter","pos",x..","..y..","..w..","..h,true) end end
   end end
  gfx.update()
- reaper.defer(loop)
+ reaper.defer(dub_loop_guard)
+end
+
+-- главный цикл под защитой: Lua-ошибка не убивает суфлёр молча и не оставляет интерфейс замороженным
+function dub_loop_guard()
+ local ok,err=xpcall(loop,function(e) return debug.traceback(tostring(e),2) end)
+ if DUB_PUR~=0 or DUB_UNDO~=0 then dub_recover() end   -- блок не живёт дольше кадра
+ if ok then DUB_ERRN=0; return end
+ DUB_ERRN=(DUB_ERRN or 0)+1
+ local lp=reaper.GetResourcePath().."/DubbingPrompter_error.txt"
+ local f=io.open(lp,"ab"); if f then f:write(os.date("%Y-%m-%d %H:%M:%S"),"  ",tostring(err),"\n\n"); f:close() end
+ if DUB_ERRN<=3 then
+  status=T("Ошибка в суфлёре (записана в DubbingPrompter_error.txt), работа продолжается")
+  reaper.defer(dub_loop_guard)
+ else
+  reaper.ShowMessageBox(T("Суфлёр остановлен: ошибка повторяется. Подробности в файле:\n")..lp.."\n\n"..tostring(err):sub(1,400),"Dubbing Prompter",0)
+ end
 end
 
 -- при открытии суфлёра возвращаем регионы и итемы, которые были убраны при закрытии
 function dub_restore_on_open()
  if #rows==0 then return end
- local wr=reaper.GetExtState("DubbingPrompter","restore_regions")=="1"
- local wi=reaper.GetExtState("DubbingPrompter","restore_items")=="1"
+ -- старые глобальные флаги (до 8.0.32) относились к неизвестному проекту: сбрасываем и не используем
+ reaper.DeleteExtState("DubbingPrompter","restore_regions",true)
+ reaper.DeleteExtState("DubbingPrompter","restore_items",true)
+ local wr=own_get("restore_regions")=="1"
+ local wi=own_get("restore_items")=="1"
  if not wr and not wi then return end
- local _,nm,nr=reaper.CountProjectMarkers(0)
- if wr and nr==0 then to_regions(true) end
- local has=false
- for i=0,reaper.CountTracks(0)-1 do
-  local _,tn=reaper.GetSetMediaTrackInfo_String(reaper.GetTrack(0,i),"P_NAME","",false)
-  if tn=="Dubbing Subtitles (text items)" then has=true end
- end
- if wi and not has then to_items(true) end
- reaper.SetExtState("DubbingPrompter","restore_regions","0",true)
- reaper.SetExtState("DubbingPrompter","restore_items","0",true)
+ -- регионы: возвращаем только отсутствующие свои регионы, пользовательские не трогаем и дубликатов не создаём
+ if wr then to_regions(true) end
+ if wi and #own_tr_existing()==0 then to_items(true) end
+ own_flag_set(false,false)
 end
 load_saved(); mark_dirty(); last_ver_str=serialize_rows(); load_prefs()
 dub_restore_on_open()
@@ -6906,4 +7637,4 @@ function dub_gfx_init()
 end
 dub_gfx_init() -- default window size; resizable, layout scales with it
 reaper.atexit(function() save(); dub_clean_on_close(); if dub_rec_off then set_dub_fx(true) end end)
-loop()
+dub_loop_guard()

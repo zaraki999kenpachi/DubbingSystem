@@ -5,6 +5,12 @@
       <metadata>
         <description><![CDATA[Workstation for dubbing sound directors: prompter with the current line, subtitle import (SRT/ASS/SSA/VTT/TXT or tracks embedded in MKV/MP4 via ffmpeg), roles, recorded marks, takes, regions and text items synced with the cursor. Works together with Dubbing_SubOverlay.lua.]]></description>
       </metadata>
+      <version name="8.0.33" author="zaraki999kenpachi" time="2026-11-28T12:00:00Z">
+        <changelog><![CDATA[Fixes: REAPER freezing during playback (screen-capture black-bar detection removed), loop guard, faster mobile-server IP lookup, ffprobe timeout. Mobile server: stricter token check.]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
+        <source file="MobileServer/server.py" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/server.py</source>
+        <source file="MobileServer/start_server.bat" main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/MobileServer/start_server.bat</source>
+      </version>
       <version name="8.0.31" author="zaraki999kenpachi" time="2026-11-06T04:00:00Z">
         <changelog><![CDATA[New: "Show roles" switch in the More menu (hides role names in the prompter and list, role colours on items/regions and the role name in the subtitle overlay). Role name colour in the prompter now matches the overlay and the timeline. Subtitles extracted from a video keep their roles (ASS/SSA tracks are no longer converted to SRT). Fix: line text no longer clipped in a low docked window; 3-2-1 countdown before the next line.]]></changelog>
         <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_Prompter.lua</source>
@@ -153,6 +159,10 @@
       </version>
     </reapack>
     <reapack name="Dubbing_SubOverlay.lua" type="script" desc="Dubbing SubOverlay: subtitles over the video window">
+      <version name="8.0.17" author="zaraki999kenpachi" time="2026-11-28T12:00:00Z">
+        <changelog><![CDATA[Font list is now built without any windows or processes (no cmd/reg popups), garbage font names cleaned, screen-capture measuring removed (fixes freezes/crashes).]]></changelog>
+        <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_SubOverlay.lua</source>
+      </version>
       <version name="8.0.2" author="zaraki999kenpachi" time="2026-10-31T12:00:00Z">
         <changelog><![CDATA[Installer and ReaPack now use the same folder (no duplicate scripts).]]></changelog>
         <source main="main">https://raw.githubusercontent.com/zaraki999kenpachi/DubbingSystem/main/Various/Dubbing_SubOverlay.lua</source>

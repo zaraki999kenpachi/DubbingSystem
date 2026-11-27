@@ -11,11 +11,14 @@
 
   GET /info    -> JSON: {"ok":true,"name":...,"size":...,"audio":[кодеки],"proxy":bool}  или  {"ok":false,"error":"..."}
   GET /video   -> видеофайл (поддерживает Range, HEAD); /video?src=proxy -> лёгкая копия со звуком AAC
+  GET /roles?dev=ID[&role=РОЛЬ]  -> роли телефонов: одна роль — один телефон (role= пусто — освободить)
   GET /        -> страница диагностики
 
 Запуск: start_server.bat  (или: python server.py --port 8765 --config prompter_server.json)
 """
 import argparse
+import hmac
+import ipaddress
 import json
 import os
 import shutil
@@ -37,7 +40,58 @@ ALLOWED = {
 CHUNK = 256 * 1024
 CONFIG = ''
 PORT = 8765
+MAX_VIDEO_STREAMS = 8                       # одновременных потоков видео
+_STREAMS = threading.BoundedSemaphore(MAX_VIDEO_STREAMS)
+STATS_LOCK = threading.Lock()
 STATS = {'start': time.time(), 'requests': 0, 'video_requests': 0, 'bytes': 0}
+
+# Роли телефонов: одна роль занята только одним телефоном. Телефон шлёт запрос каждые ~15 с;
+# если телефон замолчал на CLAIM_TTL секунд (закрыли страницу, сел аккумулятор), роль освобождается.
+CLAIMS = {}                  # роль -> (id телефона, время последнего сигнала)
+CLAIMS_LOCK = threading.Lock()
+CLAIM_TTL = 45.0
+CLAIMS_MAX = 64
+
+
+DEVS = {}                               # устройство -> (когда появилось, когда последний раз отвечало)
+DEV_TTL = 20.0
+
+
+def claims_op(dev, role=None):
+    """role=None — только обновить сигнал и вернуть список; role='' — освободить роли телефона;
+    role='X' — занять X (если свободна или уже его). Возвращает (конфликт, мои роли, роли других)."""
+    now = time.time()
+    dev = (dev or '')[:64]
+    role = None if role is None else role[:80]
+    with CLAIMS_LOCK:
+        for d in [d for d, (f, ts) in DEVS.items() if now - ts > DEV_TTL]:
+            del DEVS[d]
+        if dev:
+            DEVS[dev] = (DEVS[dev][0] if dev in DEVS else now, now)
+        devs = [d for d, v in sorted(DEVS.items(), key=lambda kv: (kv[1][0], kv[0]))]
+        for r in [r for r, (d, ts) in CLAIMS.items() if now - ts > CLAIM_TTL]:
+            del CLAIMS[r]
+        conflict = False
+        if role is not None:
+            if role == '':
+                for r in [r for r, (d, ts) in CLAIMS.items() if d == dev]:
+                    del CLAIMS[r]
+            else:
+                holder = CLAIMS.get(role)
+                if holder and holder[0] != dev:
+                    conflict = True
+                elif len(CLAIMS) < CLAIMS_MAX or role in CLAIMS:
+                    for r in [r for r, (d, ts) in CLAIMS.items() if d == dev and r != role]:
+                        del CLAIMS[r]
+                    CLAIMS[role] = (dev, now)
+        for r, (d, ts) in list(CLAIMS.items()):
+            if d == dev:
+                CLAIMS[r] = (d, now)           # сигнал «я жив»
+        mine = sorted(r for r, (d, ts) in CLAIMS.items() if d == dev)
+        taken = sorted(r for r, (d, ts) in CLAIMS.items() if d != dev)
+    holders = set(d for r, (d, ts) in CLAIMS.items())
+    devs = [d for d in devs if d not in holders or d == dev]   # телефоны с ручной ролью в автораспределении не участвуют
+    return conflict, mine, taken, devs
 
 
 def log(msg):
@@ -53,7 +107,7 @@ def read_config(path):
             return json.load(f), None
     except FileNotFoundError:
         return None, ('Файл настроек не найден: %s. В Dubbing Prompter выберите '
-                      '«Суфлёр: сервер видео».' % path)
+                      '«Суфлёр: сервер видео».' % os.path.basename(path))
     except Exception as e:  # битый JSON, нет прав и т.п.
         return None, 'Не удалось прочитать настройки: %s' % e
 
@@ -70,7 +124,7 @@ def current_video(path):
     if ext not in ALLOWED:
         return None, 'Тип файла не поддерживается: %s' % (ext or 'без расширения')
     if not os.path.isfile(v):
-        return None, 'Видеофайл не найден: %s' % v
+        return None, 'Видеофайл не найден: %s' % os.path.basename(v)
     return v, None
 
 
@@ -181,15 +235,41 @@ def local_ips():
     return sorted(i for i in ips if not i.startswith('127.') and not i.startswith('169.254.'))
 
 
+def config_token(path):
+    cfg, err = read_config(path)
+    if err:
+        return ''
+    return str(cfg.get('token') or '')
+
+
+def private_origin(origin):
+    """Origin страницы суфлёра (веб-интерфейс REAPER в локальной сети): разрешаем только частные/локальные адреса."""
+    try:
+        host = urlparse(origin).hostname or ''
+    except ValueError:
+        return False
+    if host == 'localhost' or host.endswith('.local'):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return ip.is_private or ip.is_loopback or ip.is_link_local
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
-    server_version = 'DubbingVideo/1.0'
+    server_version = 'DubbingVideo/1.1'
+    timeout = 30                         # медленные/зависшие соединения закрываются
 
     def log_message(self, fmt, *args):   # свой краткий лог
         pass
 
     def _cors(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
+        origin = self.headers.get('Origin') or ''
+        if origin and private_origin(origin):
+            self.send_header('Access-Control-Allow-Origin', origin)
+            self.send_header('Vary', 'Origin')
         self.send_header('Access-Control-Allow-Headers', 'Range, Content-Type')
         self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
         self.send_header('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length')
@@ -222,14 +302,41 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self._route(False)
 
+    def _authorized(self):
+        """Если Prompter записал токен в настройки, запрос должен его содержать (?t=...). Без токена в настройках — как раньше."""
+        cfg, err = read_config(CONFIG)
+        if err and os.path.exists(CONFIG):      # файл есть, но не читается (битый / пишется прямо сейчас): ещё раз, потом — закрыто
+            time.sleep(0.05)
+            cfg, err = read_config(CONFIG)
+            if err:
+                return False
+        want = str((cfg or {}).get('token') or '') if not err else ''
+        if not want:
+            return True
+        got = (parse_qs(urlparse(self.path).query).get('t') or [''])[0]
+        return hmac.compare_digest(got.encode('utf-8'), want.encode('utf-8'))
+
     def _route(self, head):
-        STATS['requests'] += 1
+        with STATS_LOCK:
+            STATS['requests'] += 1
         try:
             path = urlparse(self.path).path
+            if path in ('/info', '/video', '/roles') and not self._authorized():
+                self._json(403, {'ok': False, 'error': 'Нет доступа: обновите страницу суфлёра на телефоне'}, head)
+                return
             if path == '/info':
                 self._info(head)
             elif path == '/video':
                 self._video(head)
+            elif path == '/roles':
+                q = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+                dev = (q.get('dev') or [''])[0]
+                role = (q.get('role') or [None])[0]
+                if not dev:
+                    self._json(400, {'ok': False, 'error': 'нет dev'}, head)
+                else:
+                    conflict, mine, taken, devs = claims_op(dev, role)
+                    self._json(200, {'ok': True, 'conflict': conflict, 'mine': mine, 'taken': taken, 'devs': devs}, head)
             elif path in ('/', '/index.html'):
                 self._home(head)
             else:
@@ -273,21 +380,28 @@ class Handler(BaseHTTPRequestHandler):
             return
         start, end = rng if rng else (0, size - 1)
         length = end - start + 1
-        STATS['video_requests'] += 1
-        if start == 0 or not rng:
-            log('видео: %s, Range=%s' % (os.path.basename(v), rng_header or '-'))
-        self.send_response(206 if rng else 200)
-        self.send_header('Content-Type', ctype)
-        self.send_header('Accept-Ranges', 'bytes')
-        self.send_header('Content-Length', str(length))
-        if rng:
-            self.send_header('Content-Range', 'bytes %d-%d/%d' % (start, end, size))
-        self.send_header('Cache-Control', 'no-store')
-        self._cors()
-        self.end_headers()
-        if head:
-            return
+        got = False
+        if not head:
+            got = _STREAMS.acquire(blocking=False)
+            if not got:
+                self._json(503, {'ok': False, 'error': 'Слишком много одновременных потоков'}, head)
+                return
         try:
+            with STATS_LOCK:
+                STATS['video_requests'] += 1
+            if start == 0 or not rng:
+                log('видео: %s, Range=%s' % (os.path.basename(v), rng_header or '-'))
+            self.send_response(206 if rng else 200)
+            self.send_header('Content-Type', ctype)
+            self.send_header('Accept-Ranges', 'bytes')
+            self.send_header('Content-Length', str(length))
+            if rng:
+                self.send_header('Content-Range', 'bytes %d-%d/%d' % (start, end, size))
+            self.send_header('Cache-Control', 'no-store')
+            self._cors()
+            self.end_headers()
+            if head:
+                return
             with open(v, 'rb') as f:
                 f.seek(start)
                 remaining = length
@@ -298,9 +412,13 @@ class Handler(BaseHTTPRequestHandler):
                         break
                     self.wfile.write(chunk)
                     remaining -= len(chunk)
-                    STATS['bytes'] += len(chunk)
+                    with STATS_LOCK:
+                        STATS['bytes'] += len(chunk)
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, TimeoutError):
             self.close_connection = True      # телефон перемотал или закрыл — это нормально
+        finally:
+            if got:
+                _STREAMS.release()
 
     def _home(self, head):
         v, err = current_video(CONFIG)
@@ -310,7 +428,7 @@ class Handler(BaseHTTPRequestHandler):
             state = '<p style="color:#c00"><b>Видео недоступно:</b> %s</p>' % escape(err)
         else:
             state = '<p style="color:#070"><b>Видео готово:</b> %s (%.1f МБ)</p>' % (
-                escape(v), os.path.getsize(v) / 1048576.0)
+                escape(os.path.basename(v)), os.path.getsize(v) / 1048576.0)
         html = ('<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta http-equiv="refresh" content="5">'
                 '<title>Сервер видео Dubbing Prompter</title></head><body style="font-family:sans-serif;max-width:720px;margin:24px auto;padding:0 12px">'
                 '<h2>Сервер видео Dubbing Prompter работает</h2>%s'
@@ -318,7 +436,7 @@ class Handler(BaseHTTPRequestHandler):
                 '<p>Настройки: <code>%s</code><br>Запросов: %d, видео-запросов: %d, передано: %.1f МБ, работает: %d с</p>'
                 '<p>Если телефон не подключается: разрешите <b>python.exe</b> в брандмауэре Windows для частной сети '
                 'и проверьте, что телефон и ПК в одной Wi-Fi сети.</p></body></html>') % (
-            state, rows, escape(CONFIG), STATS['requests'], STATS['video_requests'],
+            state, rows, escape(os.path.basename(CONFIG)), STATS['requests'], STATS['video_requests'],
             STATS['bytes'] / 1048576.0, int(time.time() - STATS['start']))
         self._send(200, html.encode('utf-8'), 'text/html; charset=utf-8', head)
 
@@ -350,11 +468,12 @@ def main():
         pass
     ap = argparse.ArgumentParser(description='Сервер видео для Dubbing Prompter')
     ap.add_argument('--port', type=int, default=8765, help='порт (по умолчанию 8765)')
+    ap.add_argument('--bind', default='0.0.0.0', help='адрес для прослушивания (по умолчанию все интерфейсы, нужно для телефона)')
     ap.add_argument('--config', default=default_config(), help='файл настроек, который пишет Prompter')
     args = ap.parse_args()
     CONFIG, PORT = args.config, args.port
     try:
-        srv = Server(('0.0.0.0', PORT), Handler)
+        srv = Server((args.bind, PORT), Handler)
     except OSError as e:
         print('ОШИБКА: не удалось занять порт %d: %s' % (PORT, e))
         print('Возможно, сервер уже запущен (закройте другое окно сервера) или порт занят другой программой.')

@@ -1,5 +1,5 @@
 -- @description Dubbing SubOverlay
--- @version 8.0.4
+-- @version 8.0.17
 -- @author zaraki999kenpachi
 -- @license MIT
 -- @about
@@ -68,6 +68,9 @@ local S = {
   wt = 4,                -- weight: 1 Regular | 2 Medium | 3 Semibold | 4 Bold | 5 Black
   exact = false,         -- exact position in % of the video (pos_x / pos_y) instead of mode + offset
   pos_x = 50, pos_y = 86,
+  en_dim = 100,          -- brightness of the English lines in the English + Russian mode, % (100 = same as Russian)
+  out_scale = false,     -- outline / shadow grow and shrink with the text size
+  nobar_manual = false,  -- the picture has no black bar: the text stands lower (chosen by hand)
 }
 
 local DEFAULTS = {}
@@ -185,14 +188,39 @@ if reaper.GetExtState(CFG, "even_v2") ~= "1" then              -- one time: the 
   save_settings()
   reaper.SetExtState(CFG, "even_v2", "1", true)
 end
-S.edit = false
-for _, k in ipairs({ "pos_x", "pos_y", "dx", "offset", "gap", "fade", "text_w", "en_dy", "ru_dy" }) do S[k] = math.floor((tonumber(S[k]) or 0) + 0.5) end
 if reaper.GetExtState(CFG, "wt") == "" then                      -- older saved settings (bold on/off, 0..2)
   local ow = tonumber(reaper.GetExtState(CFG, "weight"))
   if ow then S.wt = ({ [0] = 1, [1] = 4, [2] = 5 })[math.floor(ow)] or 4 else S.wt = S.bold and 4 or 1 end
 end
-S.wt = math.max(1, math.min(5, math.floor(S.wt)))
-S.bold = S.wt >= 4   -- Bold and Black use the bold font face
+
+-- a font name must be valid UTF-8 text: older builds read the registry (OEM code page) and saved names like
+-- "Bookman Old Style <broken bytes> (TrueType)". Everything from the first broken byte is cut, "(TrueType)" is dropped.
+local function clean_font_name(s)
+  s = tostring(s or "")
+  local ok, bad = utf8.len(s)
+  if not ok then s = s:sub(1, bad - 1) end
+  s = s:gsub("\239\191\189.*$", ""):gsub("%c", ""):gsub("%s*%(TrueType%)%s*$", ""):gsub("%s*%(OpenType%)%s*$", ""):gsub("^%s+", ""):gsub("%s+$", "")
+  return s
+end
+
+local function normalize_settings()
+  S.edit = false
+  S.font_name = clean_font_name(S.font_name)
+  S.font_custom = clean_font_name(S.font_custom)
+  for _, k in ipairs({ "pos_x", "pos_y", "dx", "offset", "gap", "fade", "text_w", "en_dy", "ru_dy", "h", "size", "scale", "shadow", "shadow_blur",
+      "plate", "bg", "out_op", "warn_cps", "mode", "en_dim" }) do S[k] = math.floor((tonumber(S[k]) or 0) + 0.5) end
+  S.wt = math.max(1, math.min(5, math.floor(S.wt)))
+  -- every value is kept inside the range of its slider (a value from an old / edited / imported settings file would otherwise
+  -- sit outside the slider)
+  for k, r in pairs({ fade = { 0, 600 }, shadow_blur = { 0, 30 }, gap = { 0, 30 }, text_w = { 30, 100 }, scale = { 30, 400 },
+      size = { 12, 160 }, h = { 40, 600 }, offset = { -300, 300 }, dx = { -600, 600 }, en_dy = { -150, 150 }, ru_dy = { -150, 150 },
+      bg = { 0, 255 }, shadow = { 0, 100 }, plate = { 0, 100 }, out_op = { 0, 100 }, outline = { 0, 8 }, warn_cps = { 0, 40 },
+      pos_x = { 0, 100 }, pos_y = { 0, 100 }, mode = { 1, 4 }, en_dim = { 30, 100 } }) do
+    if type(S[k]) == "number" then S[k] = math.max(r[1], math.min(r[2], S[k])) end
+  end
+  S.bold = S.wt >= 4   -- Bold and Black use the bold font face
+end
+normalize_settings()
 
 local function ulen(s) return utf8.len(s) or #s end
 
@@ -206,6 +234,7 @@ local YELLOW = 0xFFD64FFF
 local subs, view, roles, role_idx = {}, {}, {}, {}
 local raw_cache, last_check = nil, 0
 local sig_cache, tsig, sig_time = nil, nil, -10
+local last_sc = nil
 
 -- saved line: start \t end \t text \t role [\t done \t mark \t note \t orig]
 local function parse(raw)
@@ -239,6 +268,7 @@ end
 local SEP = package.config:sub(1, 1)
 local cache_dir = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_cache" .. SEP
 local LANG_LABEL = { ru = "Русский", both = "Английский + русский", en = "Английский" }
+if LANG_LABEL[S.lang] == nil then S.lang = "ru" end
 local LANG_ORDER = { "ru", "both", "en" }
 local have_en = false   -- is there any English text for the current video
 
@@ -266,7 +296,11 @@ end
 local function sc_time(str)
   str = str:gsub(",", ".")
   local h, m, sec = str:match("^%s*(%d+):(%d+):([%d%.]+)")
-  if not h then return 0 end
+  if not h then
+    m, sec = str:match("^%s*(%d+):([%d%.]+)")                 -- WebVTT may omit the hours: MM:SS.mmm
+    if not m then return 0 end
+    return tonumber(m) * 60 + (tonumber(sec) or 0)
+  end
   return tonumber(h) * 3600 + tonumber(m) * 60 + (tonumber(sec) or 0)
 end
 
@@ -275,6 +309,7 @@ local function parse_srt(txt)
   for l in (txt:gsub("\r", "") .. "\n"):gmatch("(.-)\n") do lines[#lines + 1] = l end
   while i <= #lines do
     local a, b = lines[i]:match("(%d+:%d%d:%d%d[,.]%d+)%s*%-%->%s*(%d+:%d%d:%d%d[,.]%d+)")
+    if not a then a, b = lines[i]:match("(%d%d:%d%d[,.]%d+)%s*%-%->%s*(%d%d:%d%d[,.]%d+)") end
     if a then
       local ta, tb, tx = sc_time(a), sc_time(b), {}
       i = i + 1
@@ -308,6 +343,43 @@ local function parse_ass(txt)
   return out
 end
 
+-- Subtitle files are often NOT UTF-8: Russian .srt files are usually Windows-1251, some are UTF-16. Convert to UTF-8,
+-- otherwise the text is garbage (and cuts a line in the middle of a character).
+local CP1251 = { [0x80] = 0x402, [0x81] = 0x403, [0x82] = 0x201A, [0x83] = 0x453, [0x84] = 0x201E, [0x85] = 0x2026, [0x86] = 0x2020,
+  [0x87] = 0x2021, [0x88] = 0x20AC, [0x89] = 0x2030, [0x8A] = 0x409, [0x8B] = 0x2039, [0x8C] = 0x40A, [0x8D] = 0x40C, [0x8E] = 0x40B,
+  [0x8F] = 0x40F, [0x90] = 0x452, [0x91] = 0x2018, [0x92] = 0x2019, [0x93] = 0x201C, [0x94] = 0x201D, [0x95] = 0x2022, [0x96] = 0x2013,
+  [0x97] = 0x2014, [0x99] = 0x2122, [0x9A] = 0x459, [0x9B] = 0x203A, [0x9C] = 0x45A, [0x9D] = 0x45C, [0x9E] = 0x45B, [0x9F] = 0x45F,
+  [0xA0] = 0xA0, [0xA1] = 0x40E, [0xA2] = 0x45E, [0xA3] = 0x408, [0xA4] = 0xA4, [0xA5] = 0x490, [0xA6] = 0xA6, [0xA7] = 0xA7,
+  [0xA8] = 0x401, [0xA9] = 0xA9, [0xAA] = 0x404, [0xAB] = 0xAB, [0xAC] = 0xAC, [0xAD] = 0xAD, [0xAE] = 0xAE, [0xAF] = 0x407,
+  [0xB0] = 0xB0, [0xB1] = 0xB1, [0xB2] = 0x406, [0xB3] = 0x456, [0xB4] = 0x491, [0xB5] = 0xB5, [0xB6] = 0xB6, [0xB7] = 0xB7,
+  [0xB8] = 0x451, [0xB9] = 0x2116, [0xBA] = 0x454, [0xBB] = 0xBB, [0xBC] = 0x458, [0xBD] = 0x405, [0xBE] = 0x455, [0xBF] = 0x457 }
+local function to_utf8(txt)
+  local bom = txt:sub(1, 2)
+  if bom == "\255\254" or bom == "\254\255" then                 -- UTF-16 with a byte order mark
+    local le, out, i = (bom == "\255\254"), {}, 3
+    while i + 1 <= #txt do
+      local a, b = txt:byte(i, i + 1)
+      local cu = le and ((b << 8) | a) or ((a << 8) | b)
+      i = i + 2
+      if cu >= 0xD800 and cu <= 0xDBFF and i + 1 <= #txt then
+        local a2, b2 = txt:byte(i, i + 1)
+        local lo = le and ((b2 << 8) | a2) or ((a2 << 8) | b2)
+        if lo >= 0xDC00 and lo <= 0xDFFF then cu = 0x10000 + ((cu - 0xD800) << 10) + (lo - 0xDC00); i = i + 2 end
+      end
+      if cu >= 0xD800 and cu <= 0xDFFF then cu = 0xFFFD end
+      out[#out + 1] = utf8.char(cu)
+    end
+    return table.concat(out)
+  end
+  txt = txt:gsub("^\239\187\191", "")                             -- UTF-8 byte order mark
+  if utf8.len(txt) then return txt end
+  return (txt:gsub("[\128-\255]", function(ch)                    -- not valid UTF-8: Windows-1251
+    local c = ch:byte()
+    if c >= 0xC0 then return utf8.char(0x410 + c - 0xC0) end
+    return utf8.char(CP1251[c] or 0xFFFD)
+  end))
+end
+
 -- the media the subtitle file belongs to: the selected item, else the video
 local function sidecar_path()
   local it = reaper.GetSelectedMediaItem(0, 0)
@@ -330,7 +402,7 @@ local function sidecar_cues()
   if not f then return {} end
   local txt = f:read("a") or ""
   f:close()
-  txt = txt:gsub("^\239\187\191", "")   -- UTF-8 BOM
+  txt = to_utf8(txt)
   local ext = path:match("%.(%w+)$"):lower()
   local list = (ext == "ass" or ext == "ssa") and parse_ass(txt) or parse_srt(txt)
   table.sort(list, function(x, y) return x[1] < y[1] end)
@@ -472,10 +544,24 @@ local function compose(base)
     cues = #en > 0 and en or ru
   elseif mode == "both" and #en > 0 and #ru > 0 then
     table.sort(en, function(a, b) return a[1] < b[1] end)
+    -- the English cues are sorted by start: only those that can overlap a Russian cue are looked at (a long film has
+    -- thousands of cues; comparing every pair froze the overlay for a second)
+    local maxlen = 0
+    for _, e in ipairs(en) do if e[2] - e[1] > maxlen then maxlen = e[2] - e[1] end end
+    local function first_en(t)
+      local lo, hi, res = 1, #en, #en + 1
+      while lo <= hi do
+        local mid = (lo + hi) // 2
+        if en[mid][1] >= t then res = mid; hi = mid - 1 else lo = mid + 1 end
+      end
+      return res
+    end
     cues = {}
     for _, c in ipairs(ru) do
       local best, bo
-      for _, e in ipairs(en) do
+      for k = first_en(c[1] - maxlen), #en do
+        local e = en[k]
+        if e[1] >= c[2] then break end
         local o = overlap(c, e)
         if o > 0 and (not bo or o > bo) then best, bo = e, o end
       end
@@ -496,8 +582,11 @@ local function compose(base)
 end
 -- <<< LANG END
 
+-- a saved role filter that does not exist in this project must not hide every line
+local function role_filter_on() return S.role_filter ~= "" and role_idx[S.role_filter] ~= nil end
+
 local function rebuild_view()
-  if S.role_filter == "" then
+  if not role_filter_on() then
     view = subs
   else
     view = {}
@@ -510,7 +599,12 @@ local function refresh()
   if t - last_check < 0.5 then return end
   last_check = t
   local _, raw = reaper.GetProjExtState(0, SEC, KEY)
-  if t - sig_time >= 1 then sig_time = t; tsig = tracks_sig() end   -- tracks / video / language (1 s)
+  -- tracks / video / language: the signature walks every subtitle item, so it is recomputed only when the project changed
+  -- (state change count) or every 10 s (a changed file on disk, another video); a language change forces it
+  local sc = reaper.GetProjectStateChangeCount and reaper.GetProjectStateChangeCount(0) or nil
+  if t - sig_time >= 10 or (sc ~= last_sc and t - sig_time >= 0.5) or tsig == nil then
+    sig_time = t; last_sc = sc; tsig = tracks_sig()
+  end
   if raw ~= raw_cache or tsig ~= sig_cache then
     raw_cache, sig_cache = raw, tsig
     local base
@@ -528,7 +622,7 @@ local function active(pos)
     if view[mid].start <= pos then idx = mid; lo = mid + 1 else hi = mid - 1 end
   end
   local list = {}
-  for i = idx, math.max(1, idx - 8), -1 do
+  for i = idx, math.max(1, idx - 40), -1 do      -- a long line may have started many lines ago
     local s = view[i]
     if s and pos < s.finish then table.insert(list, 1, s) end
   end
@@ -635,7 +729,9 @@ end
 -- Font list (families that have Cyrillic). Opening the overlay must be instant, so the list comes from a cache file;
 -- the registry is scanned later IN THE BACKGROUND (a little per frame) only when the cache is missing / old or when
 -- "Обновить список шрифтов" is pressed.
-local FLIST = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fontlist.txt"
+local FLIST = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fontlist2.txt"   -- (the v1 file came from the registry: broken names, ignored)
+pcall(os.remove, reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fontlist.txt")   -- caches of older builds (registry, broken names)
+pcall(os.remove, reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fonts.txt")
 local function read_fontlist()
   local f = io.open(FLIST, "rb")
   if not f then return nil, 0 end
@@ -643,63 +739,94 @@ local function read_fontlist()
   for line in f:lines() do
     line = line:gsub("\r$", "")
     local t = line:match("^#t=(%d+)")
-    if t then stamp = tonumber(t) or 0 elseif line ~= "" and line:sub(1, 1) ~= "@" then names[#names + 1] = line end
+    if t then stamp = tonumber(t) or 0 elseif line ~= "" and line:sub(1, 1) ~= "@" and clean_font_name(line) == line then names[#names + 1] = line end
   end
   f:close()
   return names, stamp
 end
 
-local FONT_KEYS = { "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
-                    "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts" }
-local FVERD = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fonts.txt"   -- per-face verdicts (Cyrillic yes / no)
+local FVERD = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_fonts2.txt"   -- per-face cache: "path|face<TAB>family" (empty family = no Cyrillic / not a base face)
 
--- stage 1: read the verdict cache; stage 2/3: one registry key per call (blocking, once each)
-local function fscan_new()
-  local st = { entries = {}, known = {}, fresh = {}, verdict = {}, order = {}, seen = false, key = 1, i = 1 }
-  local cf = io.open(FVERD, "rb")
-  if cf then
-    for line in cf:lines() do
-      local k, v = line:match("^(.-)\t([01])$")
-      if k then st.known[k] = (v == "1") end
-    end
-    cf:close()
+-- The font list is built WITHOUT starting any process (no cmd / reg windows): the font folders are listed with
+-- EnumerateFiles and each font file is read directly (name table = family, cmap = Cyrillic).
+local function utf16be_to_utf8(s)
+  local out = {}
+  for i = 1, #s - 1, 2 do
+    local c = (s:byte(i) << 8) | s:byte(i + 1)
+    if c >= 0xD800 and c <= 0xDFFF then return nil end          -- surrogates: not a family name we need
+    out[#out + 1] = utf8.char(c)
   end
-  return st
+  return table.concat(out)
 end
 
--- the registry is read by `reg query` started in the BACKGROUND (negative timeout = do not wait) into a temp file;
--- the file is picked up in later frames, so the window never waits for it
-local function fscan_launch(key, tmp)
-  os.remove(tmp)
-  local cmd = 'cmd.exe /c "reg query "' .. key .. '" > "' .. tmp .. '" 2>&1"'
-  return pcall(reaper.ExecProcess, cmd, -1)
-end
-
-local function fscan_parse(st, text)
-  local windir = os.getenv("WINDIR") or "C:\\Windows"
-  for line in text:gmatch("[^\r\n]+") do
-    local nm, file = line:match("^%s+(.-)%s+REG_SZ%s+(.-)%s*$")
-    if nm and file then
-      st.seen = true
-      local path = file
-      if not (file:match("^%a:") or file:match("^[\\/]")) then path = windir .. "\\Fonts\\" .. file end
-      local ext = (file:match("%.(%w+)$") or ""):lower()
-      if ext == "ttf" or ext == "otf" or ext == "ttc" or ext == "otc" then
-        st.entries[#st.entries + 1] = { nm = nm:gsub("%s*%b()%s*$", ""), path = path, file = file }
+-- family name (nameID 1) of the face at `base`, nil for Bold / Italic variants (their plain face carries the family)
+local function font_family(f, base)
+  f:seek("set", base)
+  local hdr = f:read(12)
+  if not hdr or #hdr < 12 then return nil end
+  local nt = u16(hdr, 5)
+  if nt < 1 or nt > 200 then return nil end
+  local dir = f:read(16 * nt)
+  if not dir or #dir < 16 * nt then return nil end
+  local off, len
+  for i = 0, nt - 1 do
+    if dir:sub(i * 16 + 1, i * 16 + 4) == "name" then off, len = u32(dir, i * 16 + 9), u32(dir, i * 16 + 13); break end
+  end
+  if not off or len < 18 or len > 400000 then return nil end
+  f:seek("set", off)
+  local nm = f:read(len)
+  if not nm or #nm < 18 then return nil end
+  local count, so = u16(nm, 3), u16(nm, 5)
+  local fam, famr, sub = nil, 0, nil
+  for i = 0, count - 1 do
+    local q = 7 + i * 12
+    if q + 11 > #nm then break end
+    local pid, lid, nid, l, o = u16(nm, q), u16(nm, q + 4), u16(nm, q + 6), u16(nm, q + 8), u16(nm, q + 10)
+    if nid == 1 or nid == 2 then
+      local raw = nm:sub(so + o + 1, so + o + l)
+      local txt
+      if pid == 3 or pid == 0 then txt = utf16be_to_utf8(raw)
+      elseif pid == 1 and not raw:find("[\128-\255]") then txt = raw end
+      if txt and txt ~= "" then
+        local rank = (pid == 3 and lid == 0x409) and 3 or (pid == 3 and 2 or 1)
+        if nid == 1 then if rank > famr then fam, famr = txt, rank end
+        elseif not sub then sub = txt end
       end
     end
   end
+  if not fam or fam:find("[%c]") then return nil end
+  local sl = (sub or ""):lower()
+  if sl == "bold" or sl == "italic" or sl == "bold italic" or sl == "oblique" or sl == "bold oblique" then return nil end
+  return fam
 end
 
--- is the temp file complete (it exists and its size has stopped growing)? returns its text or nil
-local function fscan_poll(tmp, last)
-  local f = io.open(tmp, "rb")
-  if not f then return nil end
-  local text = f:read("a") or ""
-  f:close()
-  if #text > 0 and last[tmp] == #text then return text end
-  last[tmp] = #text
-  return nil
+local function fscan_new()
+  local st = { entries = {}, known = {}, fresh = {}, verdict = {}, order = {}, seen = false, i = 1 }
+  local cf = io.open(FVERD, "rb")
+  if cf then
+    for line in cf:lines() do
+      local k, v = line:match("^(.-)\t(.*)$")
+      if k then st.known[k] = (v or ""):gsub("\r$", "") end
+    end
+    cf:close()
+  end
+  local dirs = { (os.getenv("WINDIR") or "C:\\Windows") .. "\\Fonts" }
+  local la = os.getenv("LOCALAPPDATA")
+  if la then dirs[#dirs + 1] = la .. "\\Microsoft\\Windows\\Fonts" end
+  for _, d in ipairs(dirs) do
+    local i = 0
+    while i < 5000 do
+      local fn = reaper.EnumerateFiles(d, i)
+      if not fn then break end
+      i = i + 1
+      local ext = (fn:match("%.(%w+)$") or ""):lower()
+      if ext == "ttf" or ext == "otf" or ext == "ttc" or ext == "otc" then
+        st.seen = true
+        st.entries[#st.entries + 1] = { path = d .. "\\" .. fn }
+      end
+    end
+  end
+  return st
 end
 
 -- reads the font files for at most `budget` seconds; true when everything is done
@@ -708,17 +835,38 @@ local function fscan_step(st, budget)
   while st.i <= #st.entries do
     local e = st.entries[st.i]
     st.i = st.i + 1
-    local face = 0
-    for part in (e.nm .. " & "):gmatch("(.-) & ") do
-      if part ~= "" then
-        local ck = part .. "|" .. face
-        local v = st.known[ck]
-        if v == nil then v = file_has_cyrillic(e.path, face); st.fresh[#st.fresh + 1] = ck .. "\t" .. (v and "1" or "0"); st.known[ck] = v end
-        if v and not st.verdict[part:lower()] then
-          st.verdict[part:lower()] = part
-          st.order[#st.order + 1] = part
-        end
-        face = face + 1
+    local ck0 = e.path .. "|0"
+    local need = st.known[ck0] == nil
+    local nf = 1
+    if not need then
+      -- cached: ttc faces are stored as path|0, path|1, ...
+      while st.known[e.path .. "|" .. nf] ~= nil do nf = nf + 1 end
+    else
+      local fh = io.open(e.path, "rb")
+      if fh then
+        pcall(function()
+          local tag = fh:read(4)
+          local faces = 1
+          if tag == "ttcf" then fh:seek("set", 8); faces = math.min(u32(fh:read(4), 1), 64) end
+          for face = 0, faces - 1 do
+            local base = 0
+            if tag == "ttcf" then fh:seek("set", 12 + face * 4); base = u32(fh:read(4), 1) end
+            local fam = font_family(fh, base)
+            if fam and not font_has(fh, base, { 0x0416, 0x044F, 0x0451 }) then fam = nil end
+            st.known[e.path .. "|" .. face] = fam or ""
+            st.fresh[#st.fresh + 1] = e.path .. "|" .. face .. "\t" .. (fam or "")
+          end
+          nf = faces
+        end)
+        fh:close()
+      end
+      if st.known[ck0] == nil then st.known[ck0] = ""; st.fresh[#st.fresh + 1] = ck0 .. "\t" end   -- unreadable: do not retry it every time
+    end
+    for face = 0, nf - 1 do
+      local fam = st.known[e.path .. "|" .. face]
+      if fam and fam ~= "" and not st.verdict[fam:lower()] then
+        st.verdict[fam:lower()] = fam
+        st.order[#st.order + 1] = fam
       end
     end
     if reaper.time_precise() - t0 > budget then return false end
@@ -742,6 +890,7 @@ local function fscan_finish(st)
     if not is_variant and not seenf[low] and nm:sub(1, 1) ~= "@" then seenf[low] = true; out[#out + 1] = nm end   -- "@Name" = vertical-writing duplicates
   end
   table.sort(out, function(x, y) return x:lower() < y:lower() end)
+  if #out == 0 then return out end                       -- nothing found: do not write a cache (it would block rescans for 30 days)
   local wf = io.open(FLIST, "wb")
   if wf then wf:write("#t=", tostring(os.time()), "\n"); for _, nm in ipairs(out) do wf:write(nm, "\n") end wf:close() end
   return out
@@ -757,7 +906,7 @@ end
 -- background scan state: runs when the cache is missing or older than 30 days (Windows only)
 local fs = { done = true, wait = 0, stage = 0 }
 local function fonts_rescan(delay)
-  if package.config:sub(1, 1) ~= "\\" or not reaper.ExecProcess then return end
+  if package.config:sub(1, 1) ~= "\\" or not reaper.EnumerateFiles then return end
   fs = { done = false, wait = delay or 0, stage = 0 }
 end
 if not cached_fonts or (os.time() - (cached_stamp or 0)) > 30 * 86400 then fonts_rescan(45) end
@@ -766,34 +915,14 @@ local function font_scan_tick()
   if fs.done then return end
   if fs.wait > 0 then fs.wait = fs.wait - 1; return end
   if fs.stage == 0 then
-    fs.st = fscan_new(); fs.last = {}; fs.t0 = reaper.time_precise(); fs.tmp = {}
-    local base = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_reg"
-    local started = false
-    for k, key in ipairs(FONT_KEYS) do
-      fs.tmp[k] = base .. k .. ".tmp"
-      local ok = fscan_launch(key, fs.tmp[k])
-      started = started or ok
-    end
-    if started then fs.stage = 1 else fs.done = true end
+    local ok, st = pcall(fscan_new)
+    if not ok then fs.done = true; return end
+    fs.st = st; fs.stage = 2
     return
   end
-  if fs.stage == 1 then                                  -- wait (frame by frame) for both registry dumps
-    local texts, n = {}, 0
-    for k, tmp in ipairs(fs.tmp) do
-      texts[k] = fs.got and fs.got[k] or fscan_poll(tmp, fs.last)
-      if texts[k] then n = n + 1 end
-    end
-    fs.got = texts
-    if n == #fs.tmp or reaper.time_precise() - fs.t0 > 20 then
-      for k, tmp in ipairs(fs.tmp) do
-        if texts[k] then fscan_parse(fs.st, texts[k]) end
-        os.remove(tmp)
-      end
-      fs.stage = 2
-    end
-    return
-  end
-  if fscan_step(fs.st, 0.006) then
+  local ok, fin = pcall(fscan_step, fs.st, 0.006)
+  if not ok then fs.done = true; fs.st = nil; return end
+  if fin then
     local out = fscan_finish(fs.st)
     fs.done = true; fs.st = nil
     for _, nm in ipairs(out or {}) do
@@ -807,7 +936,9 @@ if S.font_name ~= "" and S.font_custom == "" then
   if not have then S.font_custom = S.font_name end
 end
 local custom_idx = nil   -- index of the user's own font in FONT_NAMES
-if S.font_custom ~= "" then FONT_NAMES[#FONT_NAMES + 1] = S.font_custom; custom_idx = #FONT_NAMES end   -- last item = own font
+if S.font_custom ~= "" and not in_base[S.font_custom:lower()] then          -- last item = own font (only when it is not in the list already)
+  FONT_NAMES[#FONT_NAMES + 1] = S.font_custom; in_base[S.font_custom:lower()] = true; custom_idx = #FONT_NAMES
+end
 -- the saved font is remembered by name (the list differs between computers)
 if S.font_name ~= "" then
   for i, nm in ipairs(FONT_NAMES) do if nm == S.font_name then S.font = i; break end end
@@ -817,10 +948,12 @@ if S.font < 1 or S.font > #FONT_NAMES then S.font = 1 end
 local bold_flag = (reaper.ImGui_FontFlags_Bold and reaper.ImGui_FontFlags_Bold()) or 0
 local fonts = {}
 -- creates and attaches a font; returns false if ReaImGui refuses (then the font works after restarting the overlay)
+local nfont_made = 0   -- every font is two ImGui objects that live until the overlay is closed: at most 24 fonts per run
 local function ensure_font(i)
   if fonts[i] then return true end
   local name = FONT_NAMES[i]
-  if not name then return false end
+  if not name or nfont_made >= 24 then return false end
+  nfont_made = nfont_made + 1
   pcall(function()
     local reg = reaper.ImGui_CreateFont(name, 0)
     local bold = (bold_flag ~= 0) and reaper.ImGui_CreateFont(name, bold_flag) or reg
@@ -831,6 +964,13 @@ local function ensure_font(i)
   return fonts[i] ~= nil
 end
 ensure_font(1)         -- the others are made when they are picked (opening must be fast)
+if not fonts[1] then                                   -- the first font could not be made: try the generic one, else stop with a message
+  FONT_NAMES[1] = "sans-serif"
+  if not ensure_font(1) then
+    reaper.ShowMessageBox("Не удалось создать шрифт (ReaImGui).\n\nОбнови ReaImGui через ReaPack и запусти скрипт снова.", "Dubbing SubOverlay", 0)
+    return
+  end
+end
 ensure_font(S.font)
 
 -- "Black" weight: the family's real Black face is used (Arial -> Arial Black, Segoe UI -> Segoe UI Black): this is what CH
@@ -904,83 +1044,7 @@ local function video_rect()
   end
 end
 
--- ---- automatic measurement of the black bars (letterbox) of the picture ----
--- The picture is measured on the screen: the first row from the top (of the video's client area) that is not black; the
--- bottom bar is the same. To keep the text from jumping between scenes:
---   * a bar value counts only when it is seen in 3 different places of the film (3 s slots), a dark scene alone does not;
---   * once confirmed, the bar stays (full-frame scenes do not cancel it) and only a smaller confirmed value replaces it;
---   * the confirmed value is remembered for this video (as a fraction of the height), so the next run starts with it.
--- Does not run while the menu is open (the menu window would be measured as picture).
-local bar_state = { key = "", est = nil, cand = nil, hist = {}, n = 0, t = -10, low = 0, status = "" }
 local menu_open = false
-local function detect_bar(l, t, r, b)
-  local B = bar_state
-  local w, h = math.floor(r - l), math.floor(b - t)
-  local key = w .. "x" .. h .. "|" .. (cur_vkey or "-")
-  if key ~= B.key then
-    B.key = key; B.est = nil; B.cand = nil; B.hist = {}; B.n = 0; B.low = 0; B.status = "измеряю…"
-    local saved = cur_vkey and tonumber(reaper.GetExtState(CFG, "bar_" .. cur_vkey))
-    if saved and saved >= 0 and saved < 0.45 then B.est = math.floor(saved * h + 0.5); B.cand = B.est; B.status = "авто: полоса " .. B.est .. " px (запомнена)" end
-  end
-  if not (reaper.JS_GDI_GetScreenDC and reaper.JS_LICE_CreateBitmap and reaper.JS_LICE_GetDC and reaper.JS_GDI_Blit
-      and reaper.JS_LICE_GetPixel and reaper.JS_LICE_DestroyBitmap) then
-    B.status = "авто недоступно (нужен js_ReaScriptAPI, Windows)"; return nil
-  end
-  if menu_open then return B.est end
-  local now = reaper.time_precise()
-  local playing = (reaper.GetPlayState() & 1) == 1
-  if now - B.t < 0.4 or (not playing and B.n >= 4) then return B.est end
-  B.t = now
-  local half = h // 2
-  if w < 80 or half < 40 then return B.est end
-  local scr = reaper.JS_GDI_GetScreenDC()
-  if not scr then return B.est end
-  local ok, found = pcall(function()
-    local bmp = reaper.JS_LICE_CreateBitmap(true, w, half)
-    if not bmp then return nil end
-    local res
-    pcall(function()
-      reaper.JS_GDI_Blit(reaper.JS_LICE_GetDC(bmp), 0, 0, scr, math.floor(l), math.floor(t), w, half)
-      local cols = {}
-      for k = 1, 9 do cols[k] = math.floor(w * k / 10) end
-      for y = 0, half - 1, 2 do
-        for _, x in ipairs(cols) do
-          local c = reaper.JS_LICE_GetPixel(bmp, x, y)
-          if ((c >> 16) & 255) > 28 or ((c >> 8) & 255) > 28 or (c & 255) > 28 then res = y; return end
-        end
-      end
-    end)
-    reaper.JS_LICE_DestroyBitmap(bmp)
-    return res
-  end)
-  pcall(reaper.JS_GDI_ReleaseDC, nil, scr)                      -- screen DC: window handle is NULL
-  if ok and found then
-    B.n = B.n + 1
-    local pos = playing and reaper.GetPlayPosition() or reaper.GetCursorPosition()
-    if found >= 20 and found <= h * 0.45 then
-      B.low = 0
-      local bk = math.floor(found / 4 + 0.5) * 4
-      local e = B.hist[bk]
-      if not e then e = { slots = {}, n = 0 }; B.hist[bk] = e end
-      local slot = math.floor(pos / 3)
-      if not e.slots[slot] then e.slots[slot] = true; e.n = e.n + 1 end
-      if e.n >= 3 and (not B.cand or bk < B.cand) then
-        B.cand = bk; B.est = bk
-        if cur_vkey then reaper.SetExtState(CFG, "bar_" .. cur_vkey, string.format("%.4f", bk / h), true) end
-      elseif not B.cand and (not B.est or B.est == 0 or found < B.est) then
-        B.est = found                                         -- provisional (not confirmed yet)
-      end
-    elseif found < 3 then
-      B.low = B.low + 1                                       -- "no bar": believed only when it repeats and no bar was confirmed
-      if B.low >= 3 and not B.cand then B.est = 0 end
-    end
-  end
-  if B.cand then B.status = string.format("авто: полоса %d px (подтверждена)", B.cand)
-  elseif B.est and B.est >= 20 then B.status = string.format("авто: полоса ~%d px (проверяю)", B.est)
-  elseif B.est == 0 then B.status = "авто: чёрной полосы нет"
-  else B.status = "авто: измеряю…" end
-  return B.est
-end
 
 -- is the video window full screen (it covers its whole monitor)? then our window must be above it
 local function is_fullscreen(l, t, r, b)
@@ -1051,8 +1115,9 @@ local function put(dl, x, y, col, str)
   end
 end
 
-local function draw_lines(dl, wx, wy, ww, y, c, font, size, col, outline, frac, hi, plate, offs)
+local function draw_lines(dl, wx, wy, ww, y, c, font, size, col, outline, frac, hi, plate, offs, dim)
   local p = push_font(font, size)
+  local sk = S.out_scale and (size / 40) or 1            -- outline / shadow follow the text size (40 px = the reference size)
   if plate then                                        -- the plate under the text (CH: rounded 6 px box, black)
     local pa = S.plate * 2.55
     if S.edit then pa = math.max(pa, 90) end           -- in the "move" mode the text always has a faint plate
@@ -1060,13 +1125,12 @@ local function draw_lines(dl, wx, wy, ww, y, c, font, size, col, outline, frac, 
     if pa > 0 then
       local mw = 0
       for i, l in ipairs(c.lines) do if l ~= "" then mw = math.max(mw, c.widths[i]) end end
-      local pd = S.outline + 4
+      local pd = S.outline * sk + 4
       local x0, y0 = wx + (ww - mw) / 2 + dx_eff, wy + y
       reaper.ImGui_DrawList_AddRectFilled(dl, x0 - pd, y0 - pd, x0 + mw + pd, y0 + #c.lines * c.lh + pd, pa, 6)
     end
   end
-  local oc = (S.out_col & 0xFFFFFF00) | math.floor((col & 0xFF) * S.out_op / 100 + 0.5) -- outline color, alpha follows the text
-  local ow = S.outline
+  local ow = S.outline * sk
   local nhi, off = 0, 0
   if frac then
     local total = 0
@@ -1077,10 +1141,17 @@ local function draw_lines(dl, wx, wy, ww, y, c, font, size, col, outline, frac, 
     if l ~= "" then
       local x = wx + (ww - c.widths[i]) / 2 + dx_eff
       local yy = wy + y + (i - 1) * c.lh + (offs and offs[i] or 0)
+      local lcol, lhi = col, hi                        -- this line's colours (the English lines can be dimmer)
+      local dm = dim and dim[i]
+      if dm and dm < 1 then
+        lcol = (col & 0xFFFFFF00) | math.floor((col & 0xFF) * dm + 0.5)
+        if hi then lhi = (hi & 0xFFFFFF00) | math.floor((hi & 0xFF) * dm + 0.5) end
+      end
+      local oc = (S.out_col & 0xFFFFFF00) | math.floor((lcol & 0xFF) * S.out_op / 100 + 0.5) -- outline color, alpha follows the text
       if S.shadow > 0 and S.shadow_blur > 0 then       -- soft shadow: two rings of dim black copies
-        local sa = math.floor((col & 0xFF) * S.shadow / 100 * 0.3 + 0.5)
+        local sa = math.floor((lcol & 0xFF) * S.shadow / 100 * 0.3 + 0.5)
         if sa > 0 then
-          for _, rad in ipairs({ S.shadow_blur * 0.4, S.shadow_blur * 0.8 }) do
+          for _, rad in ipairs({ S.shadow_blur * sk * 0.4, S.shadow_blur * sk * 0.8 }) do
             for _, o in ipairs(OUT) do reaper.ImGui_DrawList_AddText(dl, x + o[1] * rad, yy + o[2] * rad, sa, l) end
           end
         end
@@ -1092,15 +1163,19 @@ local function draw_lines(dl, wx, wy, ww, y, c, font, size, col, outline, frac, 
       local k = frac and math.max(0, math.min(len, nhi - off)) or 0
       off = off + len
       if k <= 0 then
-        put(dl, x, yy, col, l)
+        put(dl, x, yy, lcol, l)
       elseif k >= len then
-        put(dl, x, yy, hi, l)
+        put(dl, x, yy, lhi, l)
       else
         local cut = utf8.offset(l, k + 1)
-        local left, right = l:sub(1, cut - 1), l:sub(cut)
-        put(dl, x, yy, hi, left)
-        local lw = reaper.ImGui_CalcTextSize(ctx, left)
-        put(dl, x + lw, yy, col, right)
+        if not cut then
+          put(dl, x, yy, lhi, l)
+        else
+          local left, right = l:sub(1, cut - 1), l:sub(cut)
+          put(dl, x, yy, lhi, left)
+          local lw = reaper.ImGui_CalcTextSize(ctx, left)
+          put(dl, x + lw, yy, lcol, right)
+        end
       end
     end
   end
@@ -1129,9 +1204,64 @@ local function section(label)
   return open and true or false
 end
 
+-- ---------- profile: every setting in one text file (to move the look to another computer) ----------
+local PROFILE = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_profile.txt"
+local profile_msg = ""
+local function profile_save()
+  local f = io.open(PROFILE, "wb")
+  if not f then profile_msg = "Не удалось записать файл профиля"; return end
+  f:write("#DubbingSubOverlay profile v1\n")
+  local keys = {}
+  for k in pairs(DEFAULTS) do if k ~= "edit" then keys[#keys + 1] = k end end
+  table.sort(keys)
+  for _, k in ipairs(keys) do
+    local v = S[k]
+    f:write(k, "=", type(v) == "boolean" and (v and "1" or "0") or tostring(v), "\n")
+  end
+  f:close()
+  profile_msg = "Профиль сохранён: " .. PROFILE
+end
+
+local function profile_load()
+  local f = io.open(PROFILE, "rb")
+  if not f then profile_msg = "Файл профиля не найден: " .. PROFILE; return end
+  local n = 0
+  for line in f:lines() do
+    line = line:gsub("\r$", "")
+    local k, v = line:match("^([%w_]+)=(.*)$")
+    local d = nil
+    if k then d = DEFAULTS[k] end
+    if d ~= nil and k ~= "edit" then
+      if type(d) == "boolean" then S[k] = (v == "1")
+      elseif type(d) == "number" then S[k] = tonumber(v) or S[k]
+      else S[k] = v end
+      n = n + 1
+    end
+  end
+  f:close()
+  if n == 0 then profile_msg = "В файле нет настроек"; return end
+  normalize_settings()
+  if LANG_LABEL[S.lang] == nil then S.lang = "ru" end
+  local idx
+  if S.font_name ~= "" then
+    for i, nm in ipairs(FONT_NAMES) do if nm:lower() == S.font_name:lower() then idx = i; break end end
+    if not idx then                                      -- a font this computer does not list: use the own-font slot
+      S.font_custom = S.font_name
+      if custom_idx then FONT_NAMES[custom_idx] = S.font_name; fonts[custom_idx] = nil; idx = custom_idx
+      else FONT_NAMES[#FONT_NAMES + 1] = S.font_name; idx = #FONT_NAMES; custom_idx = idx end
+    end
+  end
+  S.font = idx or 1
+  ensure_font(S.font)
+  fitcache = {}; fitcount = 0
+  sig_cache = nil; last_check = 0; sig_time = -10
+  rebuild_view(); save_settings()
+  profile_msg = "Профиль загружен (" .. n .. " параметров)"
+end
+
 local function draw_menu()
   local changed, c = false, false
-  reaper.ImGui_TextDisabled(ctx, "сборка 25.11a · быстрый запуск, шрифты из кэша")
+  reaper.ImGui_TextDisabled(ctx, "сборка 25.11m · список шрифтов без окон, без замера экрана")
   if reaper.ImGui_Button(ctx, "Пресет: субтитры на видео") then
     S.attach = true; S.mode = 1; S.h = 170; S.size = 40; S.rel = true; S.scale = 65; S.bg = 0; S.title = false; changed = true
   end
@@ -1160,6 +1290,9 @@ local function draw_menu()
     if reaper.ImGui_RadioButton(ctx, "Под видео", S.mode == 3) then S.mode = 3; S.exact = false; changed = true end
     if reaper.ImGui_RadioButton(ctx, "Как в CH: внизу картинки, в полосе", S.mode == 4) then S.mode = 4; S.exact = false; changed = true end
     reaper.ImGui_Text(ctx, string.format("окно по Y: нужно %d, на экране %s, поправка %d (высота %d)", diag.want, diag.os and tostring(diag.os) or "?", diag.cy, math.floor(diag.h + 0.5)))
+    if S.mode == 4 then
+      c, S.nobar_manual = reaper.ImGui_Checkbox(ctx, "Видео без чёрной полосы: текст у самого низа", S.nobar_manual); changed = changed or c
+    end
     c, S.offset = reaper.ImGui_SliderInt(ctx, "Отступ, px", S.offset, -300, 300); changed = changed or c
     c, S.topmost = reaper.ImGui_Checkbox(ctx, "Всегда поверх окон (на полном экране видео автоматически)", S.topmost); changed = changed or c
     if not reaper.JS_Window_Find then reaper.ImGui_Text(ctx, "Нужен js_ReaScriptAPI (ReaPack)") end
@@ -1169,7 +1302,7 @@ local function draw_menu()
   if section("Текст") then
     if reaper.ImGui_BeginCombo(ctx, "Шрифт", FONT_NAMES[S.font] or FONT_NAMES[1]) then
       for i, name in ipairs(FONT_NAMES) do
-        if reaper.ImGui_Selectable(ctx, name, i == S.font) then
+        if reaper.ImGui_Selectable(ctx, name .. "##f" .. i, i == S.font) then
           S.font = i; S.font_name = name; changed = true; fitcache = {}; fitcount = 0; ensure_font(i)
         end
       end
@@ -1219,12 +1352,14 @@ local function draw_menu()
     local top = math.floor((S.color & 0xFF) / 2.55 + 0.5)
     c, top = reaper.ImGui_SliderInt(ctx, "Прозрачность текста, %", top, 0, 100)
     if c then S.color = (S.color & 0xFFFFFF00) | math.floor(top * 2.55 + 0.5); changed = true end
+    c, S.en_dim = reaper.ImGui_SliderInt(ctx, "Английский (режим EN+RU): яркость, %", S.en_dim, 30, 100); changed = changed or c
     c, S.text_w = reaper.ImGui_SliderInt(ctx, "Ширина текста, % панели", S.text_w, 30, 100); changed = changed or c
     c, S.gap = reaper.ImGui_SliderInt(ctx, "Межстрочный интервал, px", S.gap, 0, 30); changed = changed or c
     if c then fitcache = {}; fitcount = 0 end
   end
   if section("Обводка и тень") then
     c, S.outline = reaper.ImGui_SliderDouble(ctx, "Толщина обводки, px", S.outline, 0, 8, "%.1f"); changed = changed or c
+    c, S.out_scale = reaper.ImGui_Checkbox(ctx, "Обводка и тень растут вместе с размером текста", S.out_scale); changed = changed or c
     local oc
     c, oc = reaper.ImGui_ColorEdit3(ctx, "Цвет обводки", S.out_col >> 8, reaper.ImGui_ColorEditFlags_NoInputs())
     if c then S.out_col = ((oc & 0xFFFFFF) << 8) | 0xFF; changed = true end
@@ -1293,23 +1428,61 @@ local function draw_menu()
   if changed then save_settings() end
   if reaper.ImGui_Button(ctx, "Сбросить настройки к умолчанию") then
     for k, v in pairs(DEFAULTS) do S[k] = v end
+    fitcache = {}; fitcount = 0
+    sig_cache = nil; last_check = 0; sig_time = -10        -- the language may have changed: rebuild the subtitles now
     rebuild_view(); save_settings()
   end
+  if reaper.ImGui_Button(ctx, "Сохранить профиль в файл") then profile_save() end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_Button(ctx, "Загрузить профиль") then profile_load() end
+  if profile_msg ~= "" then reaper.ImGui_TextDisabled(ctx, profile_msg) end
   reaper.ImGui_Separator(ctx)
   return reaper.ImGui_Button(ctx, "Закрыть оверлей")
 end
 local closing = false
 local edit_moved = false
 
+-- A frame that takes long (REAPER would look frozen) is written to DubbingSubOverlay_log.txt with the time of each phase,
+-- so a freeze can be traced to its cause. At most 40 lines; nothing is written while all is fast.
+local slow_n, lap_t, lap_s = 0, 0, {}
+local function lap(name)
+  local t = reaper.time_precise()
+  lap_s[#lap_s + 1] = string.format("%s=%.0f", name, (t - lap_t) * 1000)
+  lap_t = t
+end
+local function slow_log(total)
+  if slow_n >= 40 then return end
+  slow_n = slow_n + 1
+  local f = io.open(reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_log.txt", "ab")
+  if f then
+    f:write(os.date("%Y-%m-%d %H:%M:%S"), string.format("  frame %.0f ms (ms per phase) %s\n", total * 1000, table.concat(lap_s, " ")))
+    f:close()
+  end
+end
+
+-- start / end marker (see the end of the file)
+local RUNF = reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_run.txt"
+local function run_marker(on)
+  if on then
+    local f = io.open(RUNF, "wb")
+    if f then f:write(os.date("%Y-%m-%d %H:%M:%S"), "  v8.0.17\n"); f:close() end
+  else
+    os.remove(RUNF)
+  end
+end
+
 local function loop()
-  font_scan_tick()
-  refresh()
+  lap_t = reaper.time_precise(); lap_s = {}
+  local frame_t0 = lap_t
+  font_scan_tick(); lap("fonts")
+  refresh(); lap("refresh")
   reaper.SetExtState(CFG, "hb", tostring(reaper.time_precise()), false)
   if reaper.GetExtState(CFG, "quit") == "1" then closing = true end
 
   local playing = (reaper.GetPlayState() & 1) == 1
   local pos = playing and reaper.GetPlayPosition() or reaper.GetCursorPosition()
   local act, nxt = active(pos)
+  lap("state")
 
   reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_WindowBorderSize(), 0)
   reaper.ImGui_PushStyleVar(ctx, reaper.ImGui_StyleVar_WindowPadding(), 12, 6)
@@ -1319,7 +1492,7 @@ local function loop()
   if not S.title then wflags = wflags | reaper.ImGui_WindowFlags_NoTitleBar() end
 
   local l, t, r, b, cb, ctp
-  local bar_now = nil
+  local nobar = false             -- the picture fills the whole video window (no black bar): the text stands lower
   local bottom_gap = nil          -- mode 4: the last text line stands this many px above the bottom edge of the video window
   if S.attach then l, t, r, b, cb, ctp = video_rect() end
   if l then
@@ -1336,7 +1509,8 @@ local function loop()
       -- never change, so the text does not jump. The size comes from the video height (as in CH).
       panel_h = math.max(S.h, (b - t) * 0.5)
       y = b - panel_h - S.offset
-      bottom_gap = math.max(8, math.floor((b - t) * 0.025))
+      nobar = S.nobar_manual                                     -- the picture has no black bar (chosen in the menu)                                      -- measured on the screen (confirmed in several places), see above
+      bottom_gap = nobar and math.max(3, math.floor((b - t) * 0.012)) or math.max(8, math.floor((b - t) * 0.025))
     elseif S.mode == 2 then y = b - S.h - S.offset                -- bottom edge, inside the video
     else y = b + S.offset end                                     -- below the video
     y, panel_h = math.floor(y + 0.5), math.floor(panel_h + 0.5)             -- whole pixels only: no fractions in the window geometry
@@ -1367,6 +1541,7 @@ local function loop()
   -- window background (black + alpha); in the bar mode the window is taller than the bar, so the backing is drawn only over the bar
   local backing = bottom_gap and S.h                  -- height of the backing strip at the bottom (bar mode only)
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_WindowBg(), backing and 0 or (S.bg & 0xFF))
+  lap("window")
   local visible, open = reaper.ImGui_Begin(ctx, "Dubbing SubOverlay", true, wflags)
   if visible then
     local ww, wh = reaper.ImGui_GetWindowSize(ctx)
@@ -1380,7 +1555,7 @@ local function loop()
 
     -- what to show: active lines, or a 3-2-1 countdown before the next one
     -- actor mode: when a role is chosen, its lines are shown larger
-    local boost = (S.actor_big and S.role_filter ~= "") and 1.3 or 1
+    local boost = (S.actor_big and role_filter_on()) and 1.3 or 1
     -- text size: % of the video height like in CH (grows and shrinks with the video window), else pixels
     local fsize = S.size
     if S.rel and l and b > t then fsize = math.max(10, math.floor((b - t) * 0.09 * S.scale / 100)) end
@@ -1415,7 +1590,7 @@ local function loop()
 
     local avail = wh - pad * 2 - bar_h - role_h - nh
     if #blocks > 0 then
-      local shown, displays = {}, {}
+      local displays = {}
       for i, bk in ipairs(blocks) do
         local d = bk.text
         if multi and S.show_role and bk.role ~= "" then d = bk.role .. ": " .. d end
@@ -1432,7 +1607,14 @@ local function loop()
         if S.exact then      -- exact position chosen: the block is centred at pos_y of the video window (as CH does)
           local cy = t + (S.pos_y / 100) * (b - t) - wy
           y = math.max(0, math.min(cy - total_h / 2, ((cb or b) - wy) - total_h))
-        else                 -- default: the last line stands on the bottom edge of the video window (8 px gap)
+        elseif #blocks == 1 and not blocks[1].countdown and not nobar then
+          -- default: the text block is CENTRED at one fixed place of the black bar, whatever the number of lines (a single line
+          -- does not sink to the bottom edge; a block of two lines stands as before: its last line 8 px above the bottom edge)
+          local vb = (cb or b) - wy
+          local lh1 = layouts[1].lh
+          y = math.min(vb - bottom_gap - total_h, vb - bottom_gap - lh1 * 0.75 - total_h / 2)   -- 0.75: a bit lower than the exact middle
+          y = math.max(0, y)
+        else                 -- several lines shown together: the last one stands on the bottom edge of the video window
           y = math.max(0, ((cb or b) - wy) - bottom_gap - total_h)
         end
       end
@@ -1487,7 +1669,13 @@ local function loop()
             offs[k] = ((bk.s.kind == "en" or k <= n_en) and S.en_dy or S.ru_dy) + (even and even[k] or 0)
           end
         end
-        draw_lines(dl, wx, wy, ww, y, c, font, size, col, outline, frac, hi, true, offs)
+        local dim                                        -- English lines of the English + Russian block: dimmer, if chosen
+        if S.en_dim < 100 and bk.s and bk.s.en_part and not bk.countdown then
+          dim = {}
+          local n_en = #layout(bk.s.en_part, font, size, maxw).lines
+          for k = 1, #c.lines do dim[k] = (k <= n_en) and (S.en_dim / 100) or 1 end
+        end
+        draw_lines(dl, wx, wy, ww, y, c, font, size, col, outline, frac, hi, true, offs, dim)
         y = y + #c.lines * c.lh
       end
     end
@@ -1505,7 +1693,6 @@ local function loop()
     end
 
     -- status badge of the current line (bottom-left): number, verdict, takes, overrun
-    local tf = cur_font()
     if S.badge and first and first.s then
       local n, over = take_stats(first.s)
       local parts = { "№" .. (first.s.no or "?") }
@@ -1616,14 +1803,29 @@ local function loop()
 
   reaper.ImGui_PopStyleColor(ctx, 1)
   reaper.ImGui_PopStyleVar(ctx, 2)
+  lap("draw")
+  local frame_dt = reaper.time_precise() - frame_t0
+  if frame_dt > 0.25 then slow_log(frame_dt) end
 
   if open and not closing then
     reaper.defer(loop)
   else
     reaper.DeleteExtState(CFG, "hb", false)
     reaper.DeleteExtState(CFG, "quit", false)
+    run_marker(false)
   end
 end
 
-reaper.atexit(function() reaper.DeleteExtState(CFG, "hb", false) end)
+-- start / end marker: if REAPER closes while the overlay runs (crash, kill), the next start writes it into the log
+do
+  local f = io.open(RUNF, "rb")
+  if f then
+    local was = f:read("*l") or ""
+    f:close()
+    local lf = io.open(reaper.GetResourcePath() .. SEP .. "DubbingSubOverlay_log.txt", "ab")
+    if lf then lf:write(os.date("%Y-%m-%d %H:%M:%S"), "  прошлый запуск (", was, ") закончился аварийно: REAPER закрылся, пока работал оверлей\n"); lf:close() end
+  end
+end
+run_marker(true)
+reaper.atexit(function() reaper.DeleteExtState(CFG, "hb", false); run_marker(false) end)
 loop()

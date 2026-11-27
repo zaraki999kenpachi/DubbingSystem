@@ -18,7 +18,7 @@ Download from [Releases](https://github.com/zaraki999kenpachi/DubbingSystem/rele
 Subtitles embedded in MKV/MP4 need ffmpeg and ffprobe (in `Scripts/Dubbing System` or on PATH). The video overlay needs ReaImGui and js_ReaScriptAPI.
 
 ## Windows SmartScreen note
-The Windows installer is signed with the author's own certificate (Kenpachi Zaraki). Windows does not publicly trust it yet, so it may show "Windows protected your PC". Click **More info** and then **Run anyway**. The whole source code is in this repository, and the installer only copies the scripts, fonts and optional REAPER plugins into your REAPER resource folder. You can verify the download with `SHA256SUMS.txt` from the release. If you prefer not to run an installer, use ReaPack (see below).
+The Windows installer is signed with the author's own certificate (zaraki999kenpachi). Windows does not publicly trust it yet, so it may show "Windows protected your PC". Click **More info** and then **Run anyway**. The whole source code is in this repository, and the installer only copies the scripts, fonts and optional REAPER plugins into your REAPER resource folder. You can verify the download with `SHA256SUMS.txt` from the release. If you prefer not to run an installer, use ReaPack (see below).
 
 ## Code signing policy
 See the [Code signing policy](CODE_SIGNING_POLICY.md): what is signed, by whom, and privacy.
